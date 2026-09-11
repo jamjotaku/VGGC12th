@@ -24,9 +24,61 @@
 <body class="bg-gray-100 min-h-screen">
   <div id="app" class="container mx-auto p-4 flex flex-col md:flex-row gap-6">
     
-    <!-- 左側：マップ -->
-    <div class="w-full md:w-1/2 flex flex-col">
-      <h1 class="text-2xl font-bold mb-4">VGGC 12th 会場マップ</h1>
+    <!-- 左側：マップとイベント情報 -->
+    <div class="w-full md:w-1/2 flex flex-col gap-4">
+      
+      <!-- イベント概要 -->
+      <div class="bg-white rounded shadow p-5">
+        <h2 class="text-xl font-bold mb-3 border-b pb-2 text-gray-800">イベント概要</h2>
+        <div class="mb-5 text-sm md:text-base space-y-1">
+          <p><span class="font-bold text-gray-700 w-12 inline-block">日時:</span> 11月14日(土)</p>
+          <p><span class="font-bold text-gray-700 w-12 inline-block">会場:</span> 東京流通センター(TRC) 第一展示場</p>
+        </div>
+        
+        <h3 class="font-bold text-lg mb-3 text-gray-700 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+          </svg>
+          タイムテーブル
+        </h3>
+        <ul class="text-sm space-y-3">
+          <li class="flex border-b border-gray-100 pb-2">
+            <span class="w-20 md:w-24 font-bold text-gray-800 shrink-0">9:45 -</span>
+            <span class="text-gray-700 leading-tight">一般参加者(前売りカタログをお持ちの方)受付</span>
+          </li>
+          <li class="flex border-b border-gray-100 pb-2">
+            <span class="w-20 md:w-24 font-bold text-gray-800 shrink-0 leading-tight">10:00 -<br>11:40</span>
+            <div>
+              <p class="text-gray-700 font-bold">サークル入場</p>
+              <p class="text-xs text-gray-500 mt-1 leading-tight">この時刻を過ぎますと、一時的にご入場いただけない場合があります。</p>
+            </div>
+          </li>
+          <li class="flex border-b border-gray-100 pb-2">
+            <span class="w-20 md:w-24 font-bold text-gray-800 shrink-0">10:00 -</span>
+            <div>
+              <p class="text-gray-700 font-bold">更衣室利用開始</p>
+              <p class="text-xs text-gray-500 mt-1 leading-tight">サークル参加者の利用を優先します。</p>
+            </div>
+          </li>
+          <li class="flex border-b border-gray-100 pb-2">
+            <span class="w-20 md:w-24 font-bold text-gray-800 shrink-0">12:00</span>
+            <span class="text-gray-700 font-bold">即売会開始</span>
+          </li>
+          <li class="flex border-b border-gray-100 pb-2">
+            <span class="w-20 md:w-24 font-bold text-gray-800 shrink-0">15:30</span>
+            <span class="text-gray-700 font-bold">即売会終了</span>
+          </li>
+          <li class="flex pt-1">
+            <span class="w-20 md:w-24 font-bold text-gray-800 shrink-0">15:45 -</span>
+            <div>
+              <p class="text-gray-700 font-bold">アフターイベント</p>
+              <p class="text-xs text-gray-500 mt-1 leading-tight">最長17:00頃まで行います。</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <h1 class="text-2xl font-bold mt-2 mb-1">VGGC 12th 会場マップ</h1>
       <div class="map-container bg-white rounded shadow p-2 mb-4">
         <p class="text-sm text-gray-500 mb-2">※ 以下の画像エリアに会場マップの画像（map.png等）を設定してください。ピンチアウトで拡大できます。</p>
         <!-- ユーザーがアップロードするであろう画像。現状はダミーまたはプレースホルダ -->
