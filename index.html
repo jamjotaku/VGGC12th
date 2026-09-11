@@ -31,25 +31,21 @@
     <!-- ナビゲーションバー -->
     <nav class="bg-white shadow-sm border-b px-4 py-3 flex justify-between items-center z-10 sticky top-0">
       <div class="font-bold text-lg text-gray-800">
-        VGGC 12th <span v-if="isReadOnly" class="ml-2 text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded">閲覧専用モード（共有リスト）</span>
+        VGGC 12th <span v-if="isReadOnly" class="ml-2 text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded">閲覧専用モード</span>
       </div>
       <div class="flex items-center gap-3">
-        <!-- 閲覧専用モードの場合は「自分のリストに戻る」ボタン -->
-        <button v-if="isReadOnly" @click="exitReadOnly" class="text-sm bg-gray-800 text-white px-3 py-1.5 rounded hover:bg-gray-700">
+        <button v-if="isReadOnly" @click="exitReadOnly" class="text-sm bg-gray-800 text-white px-3 py-1.5 rounded hover:bg-gray-700 transition">
           自分のリストに戻る
         </button>
         
-        <!-- ログインしていない場合 -->
         <template v-if="!user && !isReadOnly">
           <button @click="showAuthModal = true" class="text-sm bg-blue-600 text-white px-4 py-1.5 rounded font-bold hover:bg-blue-700 transition shadow-sm">
             ログイン / 同期
           </button>
         </template>
         
-        <!-- ログインしている場合 -->
         <template v-if="user && !isReadOnly">
           <div class="flex items-center gap-3">
-            <!-- ユーザーIDの表示（ダミーアドレスの @ より前を表示） -->
             <span class="text-xs text-gray-600 font-bold hidden sm:inline">{{ user.email.split('@')[0] }}</span>
             <span v-if="isSaving" class="text-xs text-gray-400">保存中...</span>
             <span v-else class="text-xs text-green-500">保存完了</span>
@@ -67,128 +63,170 @@
     </nav>
 
     <!-- メインコンテンツ -->
-    <div class="container mx-auto p-4 flex flex-col md:flex-row gap-6 flex-1">
+    <div class="container mx-auto p-4 flex flex-col md:flex-row gap-6 flex-1 h-full">
       
       <!-- 左側：マップとイベント情報 -->
       <div class="w-full md:w-1/2 flex flex-col gap-4">
-        <div class="bg-white rounded shadow p-5">
-          <h2 class="text-xl font-bold mb-3 border-b pb-2 text-gray-800">イベント概要</h2>
-          <div class="mb-5 text-sm md:text-base space-y-1">
-            <p><span class="font-bold text-gray-700 w-12 inline-block">日時:</span> 11月14日(土)</p>
-            <p><span class="font-bold text-gray-700 w-12 inline-block">会場:</span> 東京流通センター(TRC) 第一展示場</p>
+        <!-- イベント概要（折りたたみ可能にするとスマホで見やすいですが一旦そのまま） -->
+        <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+          <div class="flex justify-between items-center mb-2 border-b pb-2">
+            <h2 class="text-lg font-bold text-gray-800">イベント概要</h2>
+            <div class="text-sm text-gray-600 font-bold">11月14日(土) @ TRC第一展示場</div>
           </div>
           
-          <h3 class="font-bold text-lg mb-3 text-gray-700 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
-            </svg>
-            タイムテーブル
-          </h3>
-          <ul class="text-sm space-y-3">
-            <li class="flex border-b border-gray-100 pb-2"><span class="w-20 md:w-24 font-bold text-gray-800 shrink-0">9:45 -</span><span class="text-gray-700 leading-tight">一般参加者(前売りカタログをお持ちの方)受付</span></li>
-            <li class="flex border-b border-gray-100 pb-2"><span class="w-20 md:w-24 font-bold text-gray-800 shrink-0 leading-tight">10:00 -<br>11:40</span><div><p class="text-gray-700 font-bold">サークル入場</p><p class="text-xs text-gray-500 mt-1 leading-tight">この時刻を過ぎますと、一時的にご入場いただけない場合があります。</p></div></li>
-            <li class="flex border-b border-gray-100 pb-2"><span class="w-20 md:w-24 font-bold text-gray-800 shrink-0">10:00 -</span><div><p class="text-gray-700 font-bold">更衣室利用開始</p><p class="text-xs text-gray-500 mt-1 leading-tight">サークル参加者の利用を優先します。</p></div></li>
-            <li class="flex border-b border-gray-100 pb-2"><span class="w-20 md:w-24 font-bold text-gray-800 shrink-0">12:00</span><span class="text-gray-700 font-bold">即売会開始</span></li>
-            <li class="flex border-b border-gray-100 pb-2"><span class="w-20 md:w-24 font-bold text-gray-800 shrink-0">15:30</span><span class="text-gray-700 font-bold">即売会終了</span></li>
-            <li class="flex pt-1"><span class="w-20 md:w-24 font-bold text-gray-800 shrink-0">15:45 -</span><div><p class="text-gray-700 font-bold">アフターイベント</p><p class="text-xs text-gray-500 mt-1 leading-tight">最長17:00頃まで行います。</p></div></li>
+          <ul class="text-xs space-y-2">
+            <li class="flex"><span class="w-16 font-bold text-gray-800">9:45-</span><span class="text-gray-700">一般参加者受付</span></li>
+            <li class="flex"><span class="w-16 font-bold text-gray-800">10:00-</span><span class="text-gray-700">サークル入場 (11:40迄) / 更衣室開始</span></li>
+            <li class="flex"><span class="w-16 font-bold text-blue-600">12:00</span><span class="text-blue-700 font-bold">即売会開始</span></li>
+            <li class="flex"><span class="w-16 font-bold text-red-500">15:30</span><span class="text-red-600 font-bold">即売会終了</span></li>
+            <li class="flex"><span class="w-16 font-bold text-gray-800">15:45-</span><span class="text-gray-700">アフターイベント (最長17:00)</span></li>
           </ul>
         </div>
 
-        <h1 class="text-2xl font-bold mt-2 mb-1">VGGC 12th 会場マップ</h1>
-        <div class="map-container bg-white rounded shadow p-2 mb-4">
-          <p class="text-sm text-gray-500 mb-2">※ ピンチアウトで拡大できます。</p>
+        <h1 class="text-xl font-bold mt-2">VGGC 12th 会場マップ</h1>
+        <div class="map-container bg-white rounded-lg shadow-sm p-1 border border-gray-100 mb-2">
           <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy" onerror="this.onerror=null; this.src='https://via.placeholder.com/1200x800.png?text=No+Map+Image';">
         </div>
         
-        <div class="bg-white rounded shadow p-4">
-          <h2 class="text-lg font-bold mb-2">配置ブロック</h2>
-          <div class="flex flex-wrap gap-2">
-            <button v-for="block in blocks" :key="block" @click="filterBlock = filterBlock === block ? '' : block"
-                    :class="['px-3 py-1 rounded text-sm font-bold transition', filterBlock === block ? 'bg-blue-600 text-white shadow-inner' : 'bg-gray-200 text-gray-700 hover:bg-gray-300']">
+        <div class="bg-white rounded-lg shadow-sm p-3 border border-gray-100">
+          <h2 class="text-sm font-bold mb-2 text-gray-600">配置ブロックで絞り込み (サークル検索用)</h2>
+          <div class="flex flex-wrap gap-1.5">
+            <button v-for="block in blocks" :key="block" @click="toggleBlock(block)"
+                    :class="['px-2.5 py-1 rounded text-xs font-bold transition', filterBlock === block ? 'bg-blue-600 text-white shadow-inner' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']">
               {{ block }}
             </button>
-            <button v-show="filterBlock" @click="filterBlock = ''" class="px-3 py-1 rounded text-sm font-bold bg-red-100 text-red-600 hover:bg-red-200 transition">
+            <button v-show="filterBlock" @click="filterBlock = ''" class="px-2.5 py-1 rounded text-xs font-bold bg-red-50 text-red-500 hover:bg-red-100 transition">
               クリア
             </button>
           </div>
         </div>
       </div>
 
-      <!-- 右側：リスト -->
-      <div class="w-full md:w-1/2 flex flex-col h-screen md:h-auto overflow-hidden">
-        <h1 class="text-2xl font-bold mb-4">サークルリスト</h1>
+      <!-- 右側：タブ切り替え式のリスト -->
+      <div class="w-full md:w-1/2 flex flex-col h-[calc(100vh-120px)] md:h-auto bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         
-        <div class="bg-white p-4 rounded shadow mb-4 flex-shrink-0">
-          <input type="text" v-model="searchQuery" placeholder="サークル名、ペンネームで検索..." 
-                 class="w-full px-4 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 transition">
-          
-          <div class="flex items-center justify-between">
-            <label class="flex items-center gap-2 cursor-pointer select-none px-3 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-md border border-pink-200 transition">
-              <input type="checkbox" v-model="showOnlySaved" class="w-4 h-4 text-pink-600 rounded focus:ring-pink-500">
-              <span class="text-sm font-bold flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                買い物リストのみ
-              </span>
-            </label>
-            <div class="text-sm text-gray-600 font-bold bg-gray-100 px-3 py-1 rounded-full">
-              チェック: {{ Object.keys(savedList).length }}件
-            </div>
-          </div>
+        <!-- タブヘッダー -->
+        <div class="flex border-b bg-gray-50 flex-shrink-0">
+          <button @click="activeTab = 'search'" :class="activeTab === 'search' ? 'border-blue-500 text-blue-700 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'" class="flex-1 py-3 border-b-2 font-bold text-sm transition">
+            サークル検索
+          </button>
+          <button @click="activeTab = 'list'" :class="activeTab === 'list' ? 'border-pink-500 text-pink-600 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'" class="flex-1 py-3 border-b-2 font-bold text-sm transition flex justify-center items-center gap-1">
+            買い物リスト <span class="bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full text-xs">{{ savedCount }}</span>
+          </button>
+          <button @click="activeTab = 'memo'" :class="activeTab === 'memo' ? 'border-green-500 text-green-700 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'" class="flex-1 py-3 border-b-2 font-bold text-sm transition">
+            フリーメモ
+          </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto bg-white shadow rounded relative">
-          <div v-if="loading" class="p-8 text-center text-gray-500 animate-pulse">データを読み込み中...</div>
-          <div v-else-if="filteredCircles.length === 0" class="p-8 text-center text-gray-500">該当するサークルが見つかりません。</div>
-          <ul v-else class="divide-y divide-gray-100">
-            <li v-for="circle in filteredCircles" :key="circle.circle_id" class="p-4 hover:bg-gray-50 transition relative">
-              
-              <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" title="買い物リストに追加"
-                      class="absolute top-4 right-4 p-2 rounded-full transition-transform active:scale-90"
-                      :class="savedList[circle.circle_id] ? 'bg-pink-100 text-pink-500' : 'bg-gray-100 text-gray-300 hover:bg-gray-200 hover:text-gray-400'">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" :fill="savedList[circle.circle_id] ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                </svg>
-              </button>
-              
-              <!-- 閲覧専用時のマーク -->
-              <div v-else-if="savedList[circle.circle_id]" class="absolute top-4 right-4 p-2 text-pink-500 bg-pink-50 rounded-full">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-              </div>
+        <!-- タブコンテンツエリア -->
+        <div class="flex-1 overflow-y-auto bg-gray-50 relative">
+          
+          <!-- ローディング -->
+          <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+            <div class="text-gray-400 font-bold animate-pulse">データを読み込み中...</div>
+          </div>
 
-              <div class="flex items-start gap-4">
-                <div class="flex-shrink-0 w-16 h-16 bg-gray-200 rounded overflow-hidden flex items-center justify-center border border-gray-200">
-                  <img v-if="circle.circlecut" :src="circle.circlecut" alt="サークルカット" class="object-cover w-full h-full" loading="lazy">
-                  <span v-else class="text-xs text-gray-400">No Image</span>
-                </div>
-                <div class="flex-1 pr-10">
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-bold rounded shadow-sm">
-                      {{ circle.space_sym }}-{{ circle.space_num }}
-                    </span>
-                    <h3 class="font-bold text-lg leading-tight text-gray-900">{{ circle.circle_name }}</h3>
+          <!-- =========================================
+               タブ1: サークル検索
+          ========================================== -->
+          <div v-show="activeTab === 'search'" class="p-0">
+            <div class="p-3 bg-white border-b sticky top-0 z-10">
+              <input type="text" v-model="searchQuery" placeholder="サークル名、ペンネームで検索..." 
+                     class="w-full px-4 py-2 text-sm rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            </div>
+            
+            <div v-if="filteredCircles.length === 0 && !loading" class="p-8 text-center text-gray-500 text-sm">該当するサークルが見つかりません。</div>
+            
+            <ul class="divide-y divide-gray-100">
+              <li v-for="circle in filteredCircles" :key="circle.circle_id" class="p-4 bg-white hover:bg-blue-50 transition relative">
+                
+                <!-- リスト追加ボタン (検索タブでは追加/削除のみ) -->
+                <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" title="買い物リストに追加"
+                        class="absolute top-4 right-4 p-2 rounded-full transition-all active:scale-90"
+                        :class="savedList[circle.circle_id] ? 'bg-pink-500 text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" :fill="savedList[circle.circle_id] ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" v-if="!savedList[circle.circle_id]" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" v-else />
+                  </svg>
+                </button>
+                <div v-else-if="savedList[circle.circle_id]" class="absolute top-4 right-4 p-1.5 text-pink-500 bg-pink-50 rounded-full text-xs font-bold">リスト登録済</div>
+
+                <div class="flex items-start gap-4">
+                  <div class="flex-shrink-0 w-12 h-12 bg-gray-100 rounded overflow-hidden flex items-center justify-center border border-gray-200">
+                    <img v-if="circle.circlecut" :src="circle.circlecut" alt="カット" class="object-cover w-full h-full" loading="lazy">
                   </div>
-                  <p class="text-sm text-gray-600 mb-1">{{ circle.penname }} <span class="text-xs text-gray-400">({{ circle.circle_kana }})</span></p>
-                  <div class="flex gap-3 text-xs mt-2">
-                    <a v-if="circle.twitter_id" :href="'https://twitter.com/' + circle.twitter_id" target="_blank" class="text-blue-500 hover:text-blue-700 transition">Twitter</a>
-                    <a v-if="circle.pixiv_url" :href="circle.pixiv_url" target="_blank" class="text-blue-500 hover:text-blue-700 transition">Pixiv</a>
-                    <a v-if="circle.site_url" :href="circle.site_url" target="_blank" class="text-blue-500 hover:text-blue-700 transition">Web</a>
+                  <div class="flex-1 pr-10">
+                    <div class="flex items-center gap-2 mb-0.5">
+                      <span class="inline-block px-1.5 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded">
+                        {{ circle.space_sym }}-{{ circle.space_num }}
+                      </span>
+                      <h3 class="font-bold text-base leading-tight text-gray-900">{{ circle.circle_name }}</h3>
+                    </div>
+                    <p class="text-xs text-gray-600">{{ circle.penname }}</p>
                   </div>
                 </div>
-              </div>
-              
-              <div v-if="savedList[circle.circle_id]" class="mt-4 bg-pink-50/50 p-3 rounded-lg border border-pink-100">
-                <div class="flex items-center gap-2 mb-2">
-                  <input type="checkbox" v-model="savedList[circle.circle_id].bought" :disabled="isReadOnly" :id="'bought-'+circle.circle_id" 
-                         class="w-4 h-4 text-pink-600 rounded border-pink-300 focus:ring-pink-500 cursor-pointer disabled:opacity-50">
-                  <label :for="'bought-'+circle.circle_id" class="text-sm font-bold select-none" :class="[savedList[circle.circle_id].bought ? 'text-gray-400 line-through' : 'text-pink-800', isReadOnly ? 'cursor-default' : 'cursor-pointer']">
-                    購入済み
-                  </label>
+              </li>
+            </ul>
+          </div>
+
+          <!-- =========================================
+               タブ2: 買い物リスト (個人ごとのメモ)
+          ========================================== -->
+          <div v-show="activeTab === 'list'" class="p-0">
+            <div v-if="savedCirclesList.length === 0" class="p-10 text-center flex flex-col items-center justify-center h-full">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+              <p class="text-gray-500 font-bold">買い物リストは空です</p>
+              <p class="text-xs text-gray-400 mt-2">「サークル検索」から追加ボタンを押すと<br>ここに表示されます。</p>
+            </div>
+            
+            <ul class="divide-y divide-pink-100">
+              <li v-for="circle in savedCirclesList" :key="circle.circle_id" class="p-4 bg-white relative">
+                
+                <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" title="リストから外す" class="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-500 transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+
+                <div class="flex items-start gap-3 mb-3">
+                  <span class="inline-block px-1.5 py-0.5 bg-pink-100 text-pink-800 text-[10px] font-bold rounded mt-0.5">
+                    {{ circle.space_sym }}-{{ circle.space_num }}
+                  </span>
+                  <div class="flex-1 pr-6">
+                    <h3 class="font-bold text-sm leading-tight text-gray-900">{{ circle.circle_name }}</h3>
+                    <p class="text-[10px] text-gray-500">{{ circle.penname }}</p>
+                  </div>
                 </div>
-                <textarea v-model="savedList[circle.circle_id].memo" :readonly="isReadOnly" placeholder="買いたい本、予算、優先度などをメモ..." 
-                          class="w-full px-3 py-2 text-sm rounded border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-16 bg-white placeholder-pink-300 read-only:bg-gray-50 read-only:text-gray-600 read-only:focus:ring-0 read-only:border-gray-200"></textarea>
-              </div>
-            </li>
-          </ul>
+                
+                <!-- 個人ごとのメモと購入チェック -->
+                <div class="bg-pink-50/50 p-3 rounded-lg border border-pink-100">
+                  <div class="flex items-center gap-2 mb-2">
+                    <input type="checkbox" v-model="savedList[circle.circle_id].bought" :disabled="isReadOnly" :id="'bought-'+circle.circle_id" 
+                           class="w-4 h-4 text-pink-600 rounded border-pink-300 focus:ring-pink-500 cursor-pointer disabled:opacity-50">
+                    <label :for="'bought-'+circle.circle_id" class="text-sm font-bold select-none" :class="[savedList[circle.circle_id].bought ? 'text-gray-400 line-through' : 'text-pink-800', isReadOnly ? 'cursor-default' : 'cursor-pointer']">
+                      購入済み
+                    </label>
+                  </div>
+                  <textarea v-model="savedList[circle.circle_id].memo" :readonly="isReadOnly" placeholder="アクスタ、新刊セット などのメモを入力..." 
+                            class="w-full px-3 py-2 text-sm rounded border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-16 bg-white placeholder-pink-300 read-only:bg-gray-50 read-only:text-gray-500"></textarea>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- =========================================
+               タブ3: フリーメモ
+          ========================================== -->
+          <div v-show="activeTab === 'memo'" class="p-4 h-full flex flex-col">
+            <div class="mb-3">
+              <h2 class="font-bold text-gray-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                フリーメモ
+              </h2>
+              <p class="text-xs text-gray-500 mt-1">差し入れ、ATMでおろすお金、飲み物など、サークルとは関係ない事柄を自由に書けるメモ帳です。</p>
+            </div>
+            <textarea v-model="freeMemoText" :readonly="isReadOnly" placeholder="・お茶を買う&#10;・フォロワーさんに挨拶する&#10;・14時に休憩" 
+                      class="flex-1 w-full p-4 text-sm rounded-lg border border-green-200 focus:outline-none focus:ring-2 focus:ring-green-400 resize-none bg-white placeholder-green-200 read-only:bg-gray-50 read-only:text-gray-600 shadow-inner"></textarea>
+          </div>
+
         </div>
       </div>
     </div>
@@ -276,10 +314,11 @@
         const loading = ref(true);
         const searchQuery = ref('');
         const filterBlock = ref('');
+        const activeTab = ref('search'); // 'search', 'list', 'memo'
         
         // App State
-        const showOnlySaved = ref(false);
         const savedList = ref({});
+        const freeMemoText = ref('');
         
         // Supabase & Auth State
         const user = ref(null);
@@ -307,31 +346,38 @@
           return url.toString();
         });
 
+        // Initialize free memo
+        const syncFreeMemoFromState = () => {
+          if (savedList.value['__FREE_MEMO__']) {
+            freeMemoText.value = savedList.value['__FREE_MEMO__'].text || '';
+          }
+        };
+
         onMounted(async () => {
-          // Check URL for shared list ID
           const urlParams = new URLSearchParams(window.location.search);
           const sharedListId = urlParams.get('list');
           
           if (sharedListId) {
             isReadOnly.value = true;
+            activeTab.value = 'list'; // 共有リストを開いた時はリストタブをデフォルトに
             await loadSharedList(sharedListId);
           } else {
-            // Normal flow: Check session
             const { data: { session } } = await supabaseClient.auth.getSession();
             user.value = session?.user || null;
             
             if (user.value) {
               await loadCloudList(user.value.id);
             } else {
-              // Load local storage fallback
               const stored = localStorage.getItem(STORAGE_KEY);
               if (stored) {
-                try { savedList.value = JSON.parse(stored); } catch (e) {}
+                try { 
+                  savedList.value = JSON.parse(stored); 
+                  syncFreeMemoFromState();
+                } catch (e) {}
               }
             }
           }
 
-          // Supabase Auth Listener
           supabaseClient.auth.onAuthStateChange(async (event, session) => {
             const currentUser = session?.user || null;
             user.value = currentUser;
@@ -340,7 +386,6 @@
             }
           });
 
-          // Fetch static data
           try {
             const res = await fetch('data.json');
             const data = await res.json();
@@ -353,77 +398,61 @@
           }
         });
 
-        // Load specific list for Read-Only mode
         const loadSharedList = async (id) => {
-          const { data, error } = await supabaseClient
-            .from('shopping_lists')
-            .select('list_data, is_public')
-            .eq('id', id)
-            .single();
-            
+          const { data, error } = await supabaseClient.from('shopping_lists').select('list_data, is_public').eq('id', id).single();
           if (data && data.is_public) {
             savedList.value = data.list_data || {};
+            syncFreeMemoFromState();
           } else {
             alert('共有リストが見つからないか、非公開に設定されています。');
             exitReadOnly();
           }
         };
 
-        // Load/Initialize user's own list
         const loadCloudList = async (userId) => {
-          const { data, error } = await supabaseClient
-            .from('shopping_lists')
-            .select('*')
-            .eq('user_id', userId)
-            .single();
-            
+          const { data, error } = await supabaseClient.from('shopping_lists').select('*').eq('user_id', userId).single();
           if (data) {
             savedList.value = data.list_data || {};
             isPublic.value = data.is_public;
             listId.value = data.id;
+            syncFreeMemoFromState();
           } else {
-            // Create new record, migrate local data to cloud on first sync
             const stored = localStorage.getItem(STORAGE_KEY);
             let initialData = {};
-            if (stored) {
-              try { initialData = JSON.parse(stored); } catch (e) {}
-            }
-            
-            const { data: newData, error: insertError } = await supabaseClient
-              .from('shopping_lists')
-              .insert({ user_id: userId, list_data: initialData })
-              .select().single();
-              
+            if (stored) { try { initialData = JSON.parse(stored); } catch (e) {} }
+            const { data: newData } = await supabaseClient.from('shopping_lists').insert({ user_id: userId, list_data: initialData }).select().single();
             if (newData) {
               savedList.value = newData.list_data;
               listId.value = newData.id;
+              syncFreeMemoFromState();
             }
           }
         };
 
-        // Auto-save logic
         let saveTimeout = null;
         watch(savedList, (newVal) => {
           if (isReadOnly.value) return; 
-
-          // Always save locally
           localStorage.setItem(STORAGE_KEY, JSON.stringify(newVal));
-
-          // Sync to cloud if logged in
           if (user.value) {
             clearTimeout(saveTimeout);
             isSaving.value = true;
             saveTimeout = setTimeout(async () => {
-              await supabaseClient
-                .from('shopping_lists')
-                .update({ list_data: newVal, updated_at: new Date().toISOString() })
-                .eq('user_id', user.value.id);
+              await supabaseClient.from('shopping_lists').update({ list_data: newVal, updated_at: new Date().toISOString() }).eq('user_id', user.value.id);
               isSaving.value = false;
             }, 1000); 
           }
         }, { deep: true });
 
-        // Toggles
+        // Watch free memo string and sync to savedList dictionary
+        watch(freeMemoText, (newText) => {
+          if (isReadOnly.value) return;
+          if (!savedList.value['__FREE_MEMO__']) {
+            savedList.value['__FREE_MEMO__'] = { text: newText };
+          } else {
+            savedList.value['__FREE_MEMO__'].text = newText;
+          }
+        });
+
         const toggleSave = (circleId) => {
           if (isReadOnly.value) return;
           if (savedList.value[circleId]) {
@@ -433,61 +462,43 @@
           }
         };
 
-        const togglePublicStatus = async () => {
-          if (!user.value) return;
-          await supabaseClient
-            .from('shopping_lists')
-            .update({ is_public: isPublic.value })
-            .eq('user_id', user.value.id);
+        const toggleBlock = (block) => {
+          filterBlock.value = filterBlock.value === block ? '' : block;
+          activeTab.value = 'search'; // 絞り込み時は検索タブに戻す
         };
 
-        // Auth Actions
+        const togglePublicStatus = async () => {
+          if (!user.value) return;
+          await supabaseClient.from('shopping_lists').update({ is_public: isPublic.value }).eq('user_id', user.value.id);
+        };
+
         const handleAuth = async () => {
-          authError.value = '';
-          authMessage.value = '';
-          
+          authError.value = ''; authMessage.value = '';
           if (!authId.value || !authId.value.match(/^[a-zA-Z0-9_]+$/)) {
-             authError.value = 'ユーザーIDは半角英数字とアンダースコア(_)のみ使用可能です。';
-             return;
+             authError.value = 'ユーザーIDは半角英数字とアンダースコア(_)のみ使用可能です。'; return;
           }
-          
-          // メールアドレスを要求するSupabaseの仕様を回避するため、
-          // 独自のIDからダミーのメールアドレスを生成する
           const dummyEmail = authId.value + '@vggc.dummy.local';
-          
           try {
             if (authMode.value === 'register') {
-              const { error } = await supabaseClient.auth.signUp({
-                email: dummyEmail,
-                password: authPassword.value,
-              });
+              const { error } = await supabaseClient.auth.signUp({ email: dummyEmail, password: authPassword.value });
               if (error) throw error;
               authMessage.value = '登録成功！ログインします...';
               setTimeout(() => { if (user.value) showAuthModal.value = false; }, 1000);
             } else {
-              const { error } = await supabaseClient.auth.signInWithPassword({
-                email: dummyEmail,
-                password: authPassword.value,
-              });
+              const { error } = await supabaseClient.auth.signInWithPassword({ email: dummyEmail, password: authPassword.value });
               if (error) throw error;
               showAuthModal.value = false;
             }
           } catch (err) {
-            if (err.message === 'Invalid login credentials') {
-              authError.value = 'IDまたはパスワードが間違っています。';
-            } else if (err.message.includes('User already registered')) {
-              authError.value = 'このユーザーIDは既に登録されています。';
-            } else {
-              authError.value = err.message || 'エラーが発生しました';
-            }
+            if (err.message === 'Invalid login credentials') authError.value = 'IDまたはパスワードが間違っています。';
+            else if (err.message.includes('User already registered')) authError.value = 'このユーザーIDは既に登録されています。';
+            else authError.value = err.message || 'エラーが発生しました';
           }
         };
 
         const signOut = async () => {
           await supabaseClient.auth.signOut();
-          savedList.value = {}; 
-          listId.value = null;
-          isPublic.value = false;
+          savedList.value = {}; listId.value = null; isPublic.value = false; freeMemoText.value = '';
         };
 
         const exitReadOnly = () => {
@@ -502,11 +513,16 @@
           setTimeout(() => copySuccess.value = false, 2000);
         };
 
-        // Filters
+        const savedCount = computed(() => {
+          return Object.keys(savedList.value).filter(k => k !== '__FREE_MEMO__').length;
+        });
+
+        const savedCirclesList = computed(() => {
+          return circles.value.filter(c => savedList.value[c.circle_id]);
+        });
+
         const filteredCircles = computed(() => {
           return circles.value.filter(circle => {
-            const isSaved = !!savedList.value[circle.circle_id];
-            if (showOnlySaved.value && !isSaved) return false;
             const matchQuery = !searchQuery.value || 
               (circle.circle_name && circle.circle_name.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
               (circle.penname && circle.penname.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
@@ -518,7 +534,7 @@
 
         return {
           circles, blocks, loading, searchQuery, filterBlock, filteredCircles,
-          showOnlySaved, savedList, toggleSave,
+          activeTab, savedCount, savedCirclesList, freeMemoText, savedList, toggleSave, toggleBlock,
           user, isSaving, isReadOnly, exitReadOnly,
           showAuthModal, authId, authPassword, authMode, authError, authMessage, handleAuth, signOut,
           showShareModal, isPublic, togglePublicStatus, shareUrl, copyShareUrl, copySuccess
