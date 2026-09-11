@@ -41,7 +41,7 @@
         
         <!-- ログインしていない場合 -->
         <template v-if="!user && !isReadOnly">
-          <button @click="showAuthModal = true" class="text-sm bg-blue-600 text-white px-4 py-1.5 rounded font-bold hover:bg-blue-700 transition">
+          <button @click="showAuthModal = true" class="text-sm bg-blue-600 text-white px-4 py-1.5 rounded font-bold hover:bg-blue-700 transition shadow-sm">
             ログイン / 同期
           </button>
         </template>
@@ -49,7 +49,8 @@
         <!-- ログインしている場合 -->
         <template v-if="user && !isReadOnly">
           <div class="flex items-center gap-3">
-            <span class="text-xs text-gray-500 hidden sm:inline">{{ user.email }}</span>
+            <!-- ユーザーIDの表示（ダミーアドレスの @ より前を表示） -->
+            <span class="text-xs text-gray-600 font-bold hidden sm:inline">{{ user.email.split('@')[0] }}</span>
             <span v-if="isSaving" class="text-xs text-gray-400">保存中...</span>
             <span v-else class="text-xs text-green-500">保存完了</span>
             
@@ -59,7 +60,7 @@
               </svg>
               共有
             </button>
-            <button @click="signOut" class="text-sm text-gray-600 hover:text-gray-800 underline">ログアウト</button>
+            <button @click="signOut" class="text-sm text-gray-500 hover:text-gray-800 underline">ログアウト</button>
           </div>
         </template>
       </div>
@@ -200,23 +201,23 @@
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
           <h2 class="text-xl font-bold mb-4 text-center">ログイン / 登録</h2>
-          <p class="text-sm text-gray-600 mb-4 text-center">アカウントを作成すると、別の端末からでも同じリストを編集・共有できるようになります。</p>
+          <p class="text-sm text-gray-600 mb-4 text-center">任意のユーザーIDとパスワードで登録・ログインできます。<br>（別の端末からでも同じリストを編集・共有できるようになります）</p>
           
           <div v-if="authError" class="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{{ authError }}</div>
           <div v-if="authMessage" class="bg-blue-50 text-blue-600 p-3 rounded mb-4 text-sm">{{ authMessage }}</div>
           
           <form @submit.prevent="handleAuth" class="space-y-4">
             <div>
-              <label class="block text-sm font-bold text-gray-700 mb-1">メールアドレス</label>
-              <input type="email" v-model="authEmail" required class="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500">
+              <label class="block text-sm font-bold text-gray-700 mb-1">ユーザーID（半角英数字）</label>
+              <input type="text" v-model="authId" pattern="[a-zA-Z0-9_]+" placeholder="例: vggc_user123" required class="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500">
             </div>
             <div>
               <label class="block text-sm font-bold text-gray-700 mb-1">パスワード</label>
               <input type="password" v-model="authPassword" required class="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500">
             </div>
             <div class="flex gap-3 pt-2">
-              <button type="submit" @click="authMode = 'login'" class="flex-1 bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">ログイン</button>
-              <button type="submit" @click="authMode = 'register'" class="flex-1 bg-gray-100 text-gray-800 py-2 rounded font-bold hover:bg-gray-200 border">新規登録</button>
+              <button type="submit" @click="authMode = 'login'" class="flex-1 bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700 transition">ログイン</button>
+              <button type="submit" @click="authMode = 'register'" class="flex-1 bg-gray-100 text-gray-800 py-2 rounded font-bold hover:bg-gray-200 border transition">新規登録</button>
             </div>
           </form>
         </div>
@@ -292,7 +293,7 @@
         const showShareModal = ref(false);
         
         // Auth Form
-        const authEmail = ref('');
+        const authId = ref('');
         const authPassword = ref('');
         const authMode = ref('login');
         const authError = ref('');
@@ -377,14 +378,11 @@
             .single();
             
           if (data) {
-            // Merge with local if cloud is empty, but for simplicity we just take cloud.
-            // (If user wants to migrate local to cloud, we could do it here).
             savedList.value = data.list_data || {};
             isPublic.value = data.is_public;
             listId.value = data.id;
           } else {
-            // Create new record
-            // Migrate local data to cloud on first sync
+            // Create new record, migrate local data to cloud on first sync
             const stored = localStorage.getItem(STORAGE_KEY);
             let initialData = {};
             if (stored) {
@@ -406,7 +404,7 @@
         // Auto-save logic
         let saveTimeout = null;
         watch(savedList, (newVal) => {
-          if (isReadOnly.value) return; // Never save if read-only
+          if (isReadOnly.value) return; 
 
           // Always save locally
           localStorage.setItem(STORAGE_KEY, JSON.stringify(newVal));
@@ -421,7 +419,7 @@
                 .update({ list_data: newVal, updated_at: new Date().toISOString() })
                 .eq('user_id', user.value.id);
               isSaving.value = false;
-            }, 1000); // 1s debounce
+            }, 1000); 
           }
         }, { deep: true });
 
@@ -447,31 +445,47 @@
         const handleAuth = async () => {
           authError.value = '';
           authMessage.value = '';
+          
+          if (!authId.value || !authId.value.match(/^[a-zA-Z0-9_]+$/)) {
+             authError.value = 'ユーザーIDは半角英数字とアンダースコア(_)のみ使用可能です。';
+             return;
+          }
+          
+          // メールアドレスを要求するSupabaseの仕様を回避するため、
+          // 独自のIDからダミーのメールアドレスを生成する
+          const dummyEmail = authId.value + '@vggc.dummy.local';
+          
           try {
             if (authMode.value === 'register') {
               const { error } = await supabaseClient.auth.signUp({
-                email: authEmail.value,
+                email: dummyEmail,
                 password: authPassword.value,
               });
               if (error) throw error;
-              authMessage.value = '登録成功！メールの確認が必要な場合があります（Supabaseの設定による）。そのままログインできる場合は閉じてください。';
-              setTimeout(() => { if (user.value) showAuthModal.value = false; }, 2000);
+              authMessage.value = '登録成功！ログインします...';
+              setTimeout(() => { if (user.value) showAuthModal.value = false; }, 1000);
             } else {
               const { error } = await supabaseClient.auth.signInWithPassword({
-                email: authEmail.value,
+                email: dummyEmail,
                 password: authPassword.value,
               });
               if (error) throw error;
               showAuthModal.value = false;
             }
           } catch (err) {
-            authError.value = err.message || 'エラーが発生しました';
+            if (err.message === 'Invalid login credentials') {
+              authError.value = 'IDまたはパスワードが間違っています。';
+            } else if (err.message.includes('User already registered')) {
+              authError.value = 'このユーザーIDは既に登録されています。';
+            } else {
+              authError.value = err.message || 'エラーが発生しました';
+            }
           }
         };
 
         const signOut = async () => {
           await supabaseClient.auth.signOut();
-          savedList.value = {}; // Clear memory
+          savedList.value = {}; 
           listId.value = null;
           isPublic.value = false;
         };
@@ -506,7 +520,7 @@
           circles, blocks, loading, searchQuery, filterBlock, filteredCircles,
           showOnlySaved, savedList, toggleSave,
           user, isSaving, isReadOnly, exitReadOnly,
-          showAuthModal, authEmail, authPassword, authMode, authError, authMessage, handleAuth, signOut,
+          showAuthModal, authId, authPassword, authMode, authError, authMessage, handleAuth, signOut,
           showShareModal, isPublic, togglePublicStatus, shareUrl, copyShareUrl, copySuccess
         }
       }
