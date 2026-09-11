@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>VGGC 12th サークルリスト & 会場マップ</title>
   
   <link rel="preload" href="data.json" as="fetch" crossorigin="anonymous">
@@ -14,155 +14,240 @@
   <script src="https://cdn.tailwindcss.com"></script>
   
   <style>
-    body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; }
-    .map-container { position: relative; width: 100%; overflow: auto; border: 1px solid #ccc; }
+    body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; -webkit-tap-highlight-color: transparent; }
+    .map-container { position: relative; width: 100%; overflow: auto; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: #fff; }
     .map-image { min-width: 800px; width: 100%; display: block; }
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: #f1f1f1; }
-    ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-    .modal-enter-active, .modal-leave-active { transition: opacity 0.3s ease; }
+    
+    /* カスタムスクロールバー */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    
+    .modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
     .modal-enter-from, .modal-leave-to { opacity: 0; }
+    
+    /* iOSのセーフエリア対応（ボトムナビゲーション用） */
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    
+    [v-cloak] { display: none; }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-  <div id="app" class="flex-1 flex flex-col" v-cloak>
+<body class="bg-gray-100 text-gray-800">
+  <!-- アプリ全体を画面の高さ(h-screen)に固定し、内部でスクロールさせる -->
+  <div id="app" class="h-[100dvh] flex flex-col overflow-hidden" v-cloak>
     
-    <!-- ナビゲーションバー -->
-    <nav class="bg-white shadow-sm border-b px-4 py-3 flex justify-between items-center z-10 sticky top-0">
-      <div class="font-bold text-lg text-gray-800">
-        VGGC 12th <span v-if="isReadOnly" class="ml-2 text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded">閲覧専用モード</span>
+    <!-- ナビゲーションバー (ヘッダー) -->
+    <nav class="bg-white shadow-sm border-b px-4 py-3 flex justify-between items-center z-20 flex-shrink-0">
+      <div class="font-bold text-lg flex items-center gap-2">
+        VGGC 12th 
+        <span v-if="isReadOnly" class="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full font-bold">閲覧専用モード</span>
       </div>
       <div class="flex items-center gap-3">
-        <button v-if="isReadOnly" @click="exitReadOnly" class="text-sm bg-gray-800 text-white px-3 py-1.5 rounded hover:bg-gray-700 transition">
-          自分のリストに戻る
+        <button v-if="isReadOnly" @click="exitReadOnly" class="text-sm bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition">
+          自分のリストへ戻る
         </button>
         
         <template v-if="!user && !isReadOnly">
-          <button @click="showAuthModal = true" class="text-sm bg-blue-600 text-white px-4 py-1.5 rounded font-bold hover:bg-blue-700 transition shadow-sm">
-            ログイン / 同期
+          <button @click="showAuthModal = true" class="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-sm flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+            <span class="hidden sm:inline">ログイン / 同期</span>
+            <span class="sm:hidden">ログイン</span>
           </button>
         </template>
         
         <template v-if="user && !isReadOnly">
           <div class="flex items-center gap-3">
-            <span class="text-xs text-gray-600 font-bold hidden sm:inline">{{ user.email.split('@')[0] }}</span>
-            <span v-if="isSaving" class="text-xs text-gray-400">保存中...</span>
-            <span v-else class="text-xs text-green-500">保存完了</span>
+            <div class="hidden sm:flex items-center gap-2">
+              <span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-md">{{ user.email.split('@')[0] }}</span>
+              <span v-if="isSaving" class="text-xs text-gray-400">保存中...</span>
+              <span v-else class="text-xs text-green-500">保存完了</span>
+            </div>
             
-            <button @click="showShareModal = true" class="text-sm bg-pink-50 text-pink-600 border border-pink-200 px-3 py-1.5 rounded hover:bg-pink-100 transition flex items-center gap-1 font-bold">
+            <button @click="showShareModal = true" class="text-sm bg-pink-50 text-pink-600 border border-pink-200 px-3 py-1.5 rounded-lg hover:bg-pink-100 transition flex items-center gap-1 font-bold">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
               共有
             </button>
-            <button @click="signOut" class="text-sm text-gray-500 hover:text-gray-800 underline">ログアウト</button>
+            <button @click="signOut" class="text-xs text-gray-500 hover:text-gray-800 underline hidden sm:block">ログアウト</button>
           </div>
         </template>
       </div>
     </nav>
 
-    <!-- メインコンテンツ -->
-    <div class="container mx-auto p-4 flex flex-col md:flex-row gap-6 flex-1 h-full">
+    <!-- メインレイアウト (2カラム) -->
+    <div class="flex-1 flex overflow-hidden bg-gray-100">
       
-      <!-- 左側：マップとイベント情報 -->
-      <div class="w-full md:w-1/2 flex flex-col gap-4">
-        <!-- イベント概要（折りたたみ可能にするとスマホで見やすいですが一旦そのまま） -->
-        <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
-          <div class="flex justify-between items-center mb-2 border-b pb-2">
-            <h2 class="text-lg font-bold text-gray-800">イベント概要</h2>
-            <div class="text-sm text-gray-600 font-bold">11月14日(土) @ TRC第一展示場</div>
+      <!-- =========================================
+           左側：マップエリア (PC専用、スマホでは非表示)
+      ========================================== -->
+      <div class="hidden md:flex w-5/12 lg:w-1/2 flex-col bg-white border-r shadow-sm overflow-y-auto">
+        <div class="p-6 space-y-6">
+          <!-- イベント概要 -->
+          <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-3">
+              <h2 class="text-lg font-bold text-gray-800">イベント概要</h2>
+              <div class="text-sm text-gray-600 font-bold bg-white px-3 py-1 rounded-full shadow-sm">11/14(土) @ TRC第一展示場</div>
+            </div>
+            <ul class="text-sm space-y-3">
+              <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">9:45-</span><span class="text-gray-700">一般参加者受付開始</span></li>
+              <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">10:00-</span><span class="text-gray-700">サークル入場 (11:40迄)<br>更衣室利用開始</span></li>
+              <li class="flex items-start"><span class="w-16 font-bold text-blue-600 shrink-0">12:00</span><span class="text-blue-700 font-bold">即売会開始</span></li>
+              <li class="flex items-start"><span class="w-16 font-bold text-red-500 shrink-0">15:30</span><span class="text-red-600 font-bold">即売会終了</span></li>
+              <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">15:45-</span><span class="text-gray-700">アフターイベント (最長17:00)</span></li>
+            </ul>
+          </div>
+
+          <!-- マップ -->
+          <div>
+            <h1 class="text-xl font-bold mb-3 text-gray-800">会場マップ</h1>
+            <div class="map-container shadow-inner">
+              <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy" onerror="this.onerror=null; this.src='https://via.placeholder.com/1200x800.png?text=No+Map+Image';">
+            </div>
           </div>
           
-          <ul class="text-xs space-y-2">
-            <li class="flex"><span class="w-16 font-bold text-gray-800">9:45-</span><span class="text-gray-700">一般参加者受付</span></li>
-            <li class="flex"><span class="w-16 font-bold text-gray-800">10:00-</span><span class="text-gray-700">サークル入場 (11:40迄) / 更衣室開始</span></li>
-            <li class="flex"><span class="w-16 font-bold text-blue-600">12:00</span><span class="text-blue-700 font-bold">即売会開始</span></li>
-            <li class="flex"><span class="w-16 font-bold text-red-500">15:30</span><span class="text-red-600 font-bold">即売会終了</span></li>
-            <li class="flex"><span class="w-16 font-bold text-gray-800">15:45-</span><span class="text-gray-700">アフターイベント (最長17:00)</span></li>
-          </ul>
-        </div>
-
-        <h1 class="text-xl font-bold mt-2">VGGC 12th 会場マップ</h1>
-        <div class="map-container bg-white rounded-lg shadow-sm p-1 border border-gray-100 mb-2">
-          <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy" onerror="this.onerror=null; this.src='https://via.placeholder.com/1200x800.png?text=No+Map+Image';">
-        </div>
-        
-        <div class="bg-white rounded-lg shadow-sm p-3 border border-gray-100">
-          <h2 class="text-sm font-bold mb-2 text-gray-600">配置ブロックで絞り込み (サークル検索用)</h2>
-          <div class="flex flex-wrap gap-1.5">
-            <button v-for="block in blocks" :key="block" @click="toggleBlock(block)"
-                    :class="['px-2.5 py-1 rounded text-xs font-bold transition', filterBlock === block ? 'bg-blue-600 text-white shadow-inner' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']">
-              {{ block }}
-            </button>
-            <button v-show="filterBlock" @click="filterBlock = ''" class="px-2.5 py-1 rounded text-xs font-bold bg-red-50 text-red-500 hover:bg-red-100 transition">
-              クリア
-            </button>
+          <!-- 配置ブロック絞り込み -->
+          <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <h2 class="text-sm font-bold mb-3 text-gray-600">配置ブロックで絞り込み (サークル検索用)</h2>
+            <div class="flex flex-wrap gap-2">
+              <button v-for="block in blocks" :key="block" @click="toggleBlock(block)"
+                      class="min-w-[40px] px-3 py-2 rounded-lg text-sm font-bold transition-all active:scale-95"
+                      :class="filterBlock === block ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-blue-50'">
+                {{ block }}
+              </button>
+              <button v-show="filterBlock" @click="filterBlock = ''" class="px-3 py-2 rounded-lg text-sm font-bold bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
+                クリア
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 右側：タブ切り替え式のリスト -->
-      <div class="w-full md:w-1/2 flex flex-col h-[calc(100vh-120px)] md:h-auto bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <!-- =========================================
+           右側：メインコンテンツ (スマホでは全画面)
+      ========================================== -->
+      <div class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50 relative">
         
-        <!-- タブヘッダー -->
-        <div class="flex border-b bg-gray-50 flex-shrink-0">
-          <button @click="activeTab = 'search'" :class="activeTab === 'search' ? 'border-blue-500 text-blue-700 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'" class="flex-1 py-3 border-b-2 font-bold text-sm transition">
-            サークル検索
+        <!-- PC専用タブヘッダー -->
+        <div class="hidden md:flex border-b bg-white shadow-sm z-10 flex-shrink-0">
+          <button @click="activeTab = 'search'" :class="activeTab === 'search' ? 'border-blue-500 text-blue-700 bg-blue-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-4 border-b-2 font-bold text-sm transition-colors">
+            🔍 サークル検索
           </button>
-          <button @click="activeTab = 'list'" :class="activeTab === 'list' ? 'border-pink-500 text-pink-600 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'" class="flex-1 py-3 border-b-2 font-bold text-sm transition flex justify-center items-center gap-1">
-            買い物リスト <span class="bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full text-xs">{{ savedCount }}</span>
+          <button @click="activeTab = 'list'" :class="activeTab === 'list' ? 'border-pink-500 text-pink-600 bg-pink-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-4 border-b-2 font-bold text-sm transition-colors flex justify-center items-center gap-2">
+            📝 買い物リスト <span class="bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full text-xs shadow-sm">{{ savedCount }}</span>
           </button>
-          <button @click="activeTab = 'memo'" :class="activeTab === 'memo' ? 'border-green-500 text-green-700 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'" class="flex-1 py-3 border-b-2 font-bold text-sm transition">
-            フリーメモ
+          <button @click="activeTab = 'memo'" :class="activeTab === 'memo' ? 'border-green-500 text-green-700 bg-green-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-4 border-b-2 font-bold text-sm transition-colors">
+            ✍️ フリーメモ
           </button>
         </div>
 
-        <!-- タブコンテンツエリア -->
-        <div class="flex-1 overflow-y-auto bg-gray-50 relative">
+        <!-- スクロール可能なコンテンツエリア -->
+        <div class="flex-1 overflow-y-auto w-full">
           
           <!-- ローディング -->
-          <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-            <div class="text-gray-400 font-bold animate-pulse">データを読み込み中...</div>
+          <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-gray-50/80 z-10 backdrop-blur-sm">
+            <div class="flex flex-col items-center gap-3">
+              <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <div class="text-gray-500 font-bold text-sm">読み込み中...</div>
+            </div>
           </div>
 
           <!-- =========================================
-               タブ1: サークル検索
+               [スマホ専用] マップ タブ
           ========================================== -->
-          <div v-show="activeTab === 'search'" class="p-0">
-            <div class="p-3 bg-white border-b sticky top-0 z-10">
-              <input type="text" v-model="searchQuery" placeholder="サークル名、ペンネームで検索..." 
-                     class="w-full px-4 py-2 text-sm rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          <div v-show="activeTab === 'map'" class="md:hidden p-4 space-y-6 pb-24">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-3">
+                <h2 class="text-lg font-bold text-gray-800">イベント概要</h2>
+                <div class="text-xs text-gray-600 font-bold bg-gray-100 px-2 py-1 rounded-md">11/14(土)</div>
+              </div>
+              <ul class="text-sm space-y-3">
+                <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">9:45-</span><span class="text-gray-700">一般参加者受付開始</span></li>
+                <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">10:00-</span><span class="text-gray-700">サークル入場 (11:40迄)<br>更衣室利用開始</span></li>
+                <li class="flex items-start"><span class="w-16 font-bold text-blue-600 shrink-0">12:00</span><span class="text-blue-700 font-bold">即売会開始</span></li>
+                <li class="flex items-start"><span class="w-16 font-bold text-red-500 shrink-0">15:30</span><span class="text-red-600 font-bold">即売会終了</span></li>
+                <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">15:45-</span><span class="text-gray-700">アフターイベント</span></li>
+              </ul>
             </div>
             
-            <div v-if="filteredCircles.length === 0 && !loading" class="p-8 text-center text-gray-500 text-sm">該当するサークルが見つかりません。</div>
+            <div>
+              <h1 class="text-lg font-bold mb-3 text-gray-800 px-1">会場マップ <span class="text-xs text-gray-500 font-normal ml-2">※ピンチアウトで拡大</span></h1>
+              <div class="map-container shadow-sm border-gray-200">
+                <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy" onerror="this.onerror=null; this.src='https://via.placeholder.com/1200x800.png?text=No+Map';">
+              </div>
+            </div>
+
+            <!-- スマホ用のブロック絞り込み -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <h2 class="text-sm font-bold mb-3 text-gray-600">配置ブロックで絞り込み (検索へ移動します)</h2>
+              <div class="flex flex-wrap gap-2">
+                <button v-for="block in blocks" :key="block" @click="toggleBlock(block)"
+                        class="min-w-[40px] px-3 py-2 rounded-lg text-sm font-bold transition-all active:scale-95"
+                        :class="filterBlock === block ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-50 text-gray-600 border border-gray-200'">
+                  {{ block }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- =========================================
+               探す (検索) タブ
+          ========================================== -->
+          <div v-show="activeTab === 'search'" class="flex flex-col min-h-full pb-20 md:pb-6">
             
-            <ul class="divide-y divide-gray-100">
-              <li v-for="circle in filteredCircles" :key="circle.circle_id" class="p-4 bg-white hover:bg-blue-50 transition relative">
+            <div class="p-3 md:p-4 bg-gray-50 sticky top-0 z-10">
+              <div class="relative shadow-sm rounded-xl overflow-hidden bg-white border border-gray-200">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <input type="text" v-model="searchQuery" placeholder="サークル名、ペンネームで検索..." 
+                       class="w-full pl-10 pr-4 py-3.5 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+              </div>
+              <!-- PC表示時はここで絞り込みクリアができるように -->
+              <div v-if="filterBlock" class="mt-2 flex items-center gap-2 px-1">
+                <span class="text-xs font-bold text-gray-500">選択中のブロック:</span>
+                <span class="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1">
+                  {{ filterBlock }}
+                  <button @click="filterBlock = ''" class="hover:text-blue-200">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </span>
+              </div>
+            </div>
+            
+            <div v-if="filteredCircles.length === 0 && !loading" class="flex-1 flex flex-col items-center justify-center p-8 text-gray-400">
+              <svg class="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <p class="font-bold text-sm">見つかりませんでした</p>
+            </div>
+            
+            <ul class="px-2 md:px-4 space-y-2">
+              <li v-for="circle in filteredCircles" :key="circle.circle_id" class="p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:border-blue-200 transition relative">
                 
-                <!-- リスト追加ボタン (検索タブでは追加/削除のみ) -->
-                <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" title="買い物リストに追加"
-                        class="absolute top-4 right-4 p-2 rounded-full transition-all active:scale-90"
+                <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" 
+                        class="absolute top-1/2 -translate-y-1/2 right-4 p-3 rounded-full transition-all active:scale-90 flex items-center justify-center"
                         :class="savedList[circle.circle_id] ? 'bg-pink-500 text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" :fill="savedList[circle.circle_id] ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" :fill="savedList[circle.circle_id] ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" v-if="!savedList[circle.circle_id]" />
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" v-else />
                   </svg>
                 </button>
-                <div v-else-if="savedList[circle.circle_id]" class="absolute top-4 right-4 p-1.5 text-pink-500 bg-pink-50 rounded-full text-xs font-bold">リスト登録済</div>
+                <div v-else-if="savedList[circle.circle_id]" class="absolute top-1/2 -translate-y-1/2 right-4 text-pink-500 bg-pink-50 p-2 rounded-full">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
 
                 <div class="flex items-start gap-4">
-                  <div class="flex-shrink-0 w-12 h-12 bg-gray-100 rounded overflow-hidden flex items-center justify-center border border-gray-200">
+                  <div class="flex-shrink-0 w-14 h-14 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center border border-gray-200 shadow-sm">
                     <img v-if="circle.circlecut" :src="circle.circlecut" alt="カット" class="object-cover w-full h-full" loading="lazy">
                   </div>
-                  <div class="flex-1 pr-10">
-                    <div class="flex items-center gap-2 mb-0.5">
-                      <span class="inline-block px-1.5 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded">
+                  <div class="flex-1 pr-12 flex flex-col justify-center min-h-[56px]">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded shadow-sm">
                         {{ circle.space_sym }}-{{ circle.space_num }}
                       </span>
-                      <h3 class="font-bold text-base leading-tight text-gray-900">{{ circle.circle_name }}</h3>
                     </div>
-                    <p class="text-xs text-gray-600">{{ circle.penname }}</p>
+                    <h3 class="font-bold text-base leading-tight text-gray-900 mb-0.5">{{ circle.circle_name }}</h3>
+                    <p class="text-xs text-gray-500">{{ circle.penname }}</p>
                   </div>
                 </div>
               </li>
@@ -170,92 +255,134 @@
           </div>
 
           <!-- =========================================
-               タブ2: 買い物リスト (個人ごとのメモ)
+               リスト タブ (買い物リスト)
           ========================================== -->
-          <div v-show="activeTab === 'list'" class="p-0">
-            <div v-if="savedCirclesList.length === 0" class="p-10 text-center flex flex-col items-center justify-center h-full">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-              <p class="text-gray-500 font-bold">買い物リストは空です</p>
-              <p class="text-xs text-gray-400 mt-2">「サークル検索」から追加ボタンを押すと<br>ここに表示されます。</p>
+          <div v-show="activeTab === 'list'" class="flex flex-col min-h-full pb-20 md:pb-6 p-2 md:p-4">
+            <div v-if="savedCirclesList.length === 0" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+              <div class="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mb-4">
+                <svg class="w-8 h-8 text-pink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+              </div>
+              <p class="font-bold text-gray-600 mb-1">リストは空です</p>
+              <p class="text-xs text-gray-400 leading-relaxed">「検索」タブからサークルを追加すると<br>ここに表示され、メモを残せます。</p>
             </div>
             
-            <ul class="divide-y divide-pink-100">
-              <li v-for="circle in savedCirclesList" :key="circle.circle_id" class="p-4 bg-white relative">
+            <ul class="space-y-3">
+              <li v-for="circle in savedCirclesList" :key="circle.circle_id" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
                 
-                <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" title="リストから外す" class="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-500 transition">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <!-- 削除ボタン (右上に小さく配置) -->
+                <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" title="リストから外す" class="absolute top-3 right-3 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors z-10">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
 
-                <div class="flex items-start gap-3 mb-3">
-                  <span class="inline-block px-1.5 py-0.5 bg-pink-100 text-pink-800 text-[10px] font-bold rounded mt-0.5">
-                    {{ circle.space_sym }}-{{ circle.space_num }}
-                  </span>
-                  <div class="flex-1 pr-6">
-                    <h3 class="font-bold text-sm leading-tight text-gray-900">{{ circle.circle_name }}</h3>
+                <!-- サークル情報ヘッダー -->
+                <div class="p-3 flex items-start gap-3 bg-white relative">
+                  <div class="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-md overflow-hidden border border-gray-200">
+                    <img v-if="circle.circlecut" :src="circle.circlecut" alt="カット" class="object-cover w-full h-full" loading="lazy">
+                  </div>
+                  <div class="flex-1 pr-8">
+                    <div class="flex items-center gap-1.5 mb-0.5">
+                      <span class="inline-block px-1.5 py-0.5 bg-pink-100 text-pink-800 text-[10px] font-bold rounded">
+                        {{ circle.space_sym }}-{{ circle.space_num }}
+                      </span>
+                      <h3 class="font-bold text-sm text-gray-900 truncate pr-2">{{ circle.circle_name }}</h3>
+                    </div>
                     <p class="text-[10px] text-gray-500">{{ circle.penname }}</p>
                   </div>
                 </div>
                 
-                <!-- 個人ごとのメモと購入チェック -->
-                <div class="bg-pink-50/50 p-3 rounded-lg border border-pink-100">
-                  <div class="flex items-center gap-2 mb-2">
-                    <input type="checkbox" v-model="savedList[circle.circle_id].bought" :disabled="isReadOnly" :id="'bought-'+circle.circle_id" 
-                           class="w-4 h-4 text-pink-600 rounded border-pink-300 focus:ring-pink-500 cursor-pointer disabled:opacity-50">
-                    <label :for="'bought-'+circle.circle_id" class="text-sm font-bold select-none" :class="[savedList[circle.circle_id].bought ? 'text-gray-400 line-through' : 'text-pink-800', isReadOnly ? 'cursor-default' : 'cursor-pointer']">
-                      購入済み
+                <!-- メモ入力エリア -->
+                <div class="bg-pink-50/40 p-3 border-t border-pink-100/50">
+                  <div class="flex justify-between items-center mb-2">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                      <div class="relative flex items-center justify-center w-5 h-5">
+                        <input type="checkbox" v-model="savedList[circle.circle_id].bought" :disabled="isReadOnly" class="peer w-5 h-5 appearance-none border-2 border-pink-300 rounded focus:ring-2 focus:ring-pink-500 focus:outline-none checked:bg-pink-500 checked:border-pink-500 disabled:opacity-50 transition-colors cursor-pointer">
+                        <svg class="absolute w-3.5 h-3.5 text-white pointer-events-none opacity-0 peer-checked:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                      </div>
+                      <span class="text-sm font-bold select-none transition-colors" :class="savedList[circle.circle_id].bought ? 'text-gray-400 line-through' : 'text-pink-800'">
+                        購入済み
+                      </span>
                     </label>
                   </div>
-                  <textarea v-model="savedList[circle.circle_id].memo" :readonly="isReadOnly" placeholder="アクスタ、新刊セット などのメモを入力..." 
-                            class="w-full px-3 py-2 text-sm rounded border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-16 bg-white placeholder-pink-300 read-only:bg-gray-50 read-only:text-gray-500"></textarea>
+                  <textarea v-model="savedList[circle.circle_id].memo" :readonly="isReadOnly" placeholder="アクスタ、新刊セットなどのメモ..." 
+                            class="w-full px-3 py-2 text-sm rounded-lg border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-16 bg-white placeholder-pink-300 read-only:bg-gray-50 read-only:text-gray-500 transition-shadow"></textarea>
                 </div>
               </li>
             </ul>
           </div>
 
           <!-- =========================================
-               タブ3: フリーメモ
+               フリーメモ タブ
           ========================================== -->
-          <div v-show="activeTab === 'memo'" class="p-4 h-full flex flex-col">
-            <div class="mb-3">
-              <h2 class="font-bold text-gray-800 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                フリーメモ
-              </h2>
-              <p class="text-xs text-gray-500 mt-1">差し入れ、ATMでおろすお金、飲み物など、サークルとは関係ない事柄を自由に書けるメモ帳です。</p>
+          <div v-show="activeTab === 'memo'" class="flex flex-col min-h-full pb-20 md:pb-6 p-4">
+            <div class="bg-white rounded-xl shadow-sm border border-green-100 p-4 h-full flex flex-col min-h-[300px]">
+              <div class="mb-3 flex items-center gap-2 border-b border-green-50 pb-2">
+                <div class="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                </div>
+                <div>
+                  <h2 class="font-bold text-gray-800 text-sm">フリーメモ</h2>
+                  <p class="text-[10px] text-gray-500">ATMや差し入れなど、サークル以外の予定に</p>
+                </div>
+              </div>
+              <textarea v-model="freeMemoText" :readonly="isReadOnly" placeholder="・お茶を買う&#10;・フォロワーさんに挨拶する&#10;・14時に休憩" 
+                        class="flex-1 w-full p-3 text-sm rounded-lg border-0 focus:ring-2 focus:ring-green-400 resize-none bg-green-50/30 placeholder-green-300 read-only:bg-gray-50 read-only:text-gray-600 transition-shadow"></textarea>
             </div>
-            <textarea v-model="freeMemoText" :readonly="isReadOnly" placeholder="・お茶を買う&#10;・フォロワーさんに挨拶する&#10;・14時に休憩" 
-                      class="flex-1 w-full p-4 text-sm rounded-lg border border-green-200 focus:outline-none focus:ring-2 focus:ring-green-400 resize-none bg-white placeholder-green-200 read-only:bg-gray-50 read-only:text-gray-600 shadow-inner"></textarea>
           </div>
 
         </div>
       </div>
     </div>
 
+    <!-- スマホ専用ボトムナビゲーション -->
+    <div class="md:hidden bg-white border-t border-gray-200 flex justify-around items-center pb-safe fixed bottom-0 w-full z-30 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+      <button @click="activeTab = 'map'" class="flex-1 py-2.5 flex flex-col items-center gap-1 transition-colors" :class="activeTab === 'map' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+        <span class="text-[10px] font-bold">マップ</span>
+      </button>
+      <button @click="activeTab = 'search'" class="flex-1 py-2.5 flex flex-col items-center gap-1 transition-colors" :class="activeTab === 'search' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <span class="text-[10px] font-bold">探す</span>
+      </button>
+      <button @click="activeTab = 'list'" class="flex-1 py-2.5 flex flex-col items-center gap-1 transition-colors relative" :class="activeTab === 'list' ? 'text-pink-600' : 'text-gray-400 hover:text-gray-600'">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+        <span class="text-[10px] font-bold">リスト</span>
+        <span v-if="savedCount > 0" class="absolute top-1 right-3 bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold shadow-sm">{{savedCount}}</span>
+      </button>
+      <button @click="activeTab = 'memo'" class="flex-1 py-2.5 flex flex-col items-center gap-1 transition-colors" :class="activeTab === 'memo' ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        <span class="text-[10px] font-bold">メモ</span>
+      </button>
+    </div>
+
     <!-- ログイン/登録モーダル -->
     <transition name="modal">
-      <div v-if="showAuthModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative">
-          <button @click="showAuthModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      <div v-if="showAuthModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
+          <button @click="showAuthModal = false" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
-          <h2 class="text-xl font-bold mb-4 text-center">ログイン / 登録</h2>
-          <p class="text-sm text-gray-600 mb-4 text-center">任意のユーザーIDとパスワードで登録・ログインできます。<br>（別の端末からでも同じリストを編集・共有できるようになります）</p>
+          <div class="text-center mb-6">
+            <h2 class="text-xl font-bold text-gray-800">ログイン / 登録</h2>
+            <p class="text-xs text-gray-500 mt-2 leading-relaxed">任意のユーザーIDを入力するだけで<br>別の端末でもリストを共有・同期できます。</p>
+          </div>
           
-          <div v-if="authError" class="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{{ authError }}</div>
-          <div v-if="authMessage" class="bg-blue-50 text-blue-600 p-3 rounded mb-4 text-sm">{{ authMessage }}</div>
+          <div v-if="authError" class="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm border border-red-100">{{ authError }}</div>
+          <div v-if="authMessage" class="bg-blue-50 text-blue-600 p-3 rounded-lg mb-4 text-sm border border-blue-100">{{ authMessage }}</div>
           
           <form @submit.prevent="handleAuth" class="space-y-4">
             <div>
               <label class="block text-sm font-bold text-gray-700 mb-1">ユーザーID（半角英数字）</label>
-              <input type="text" v-model="authId" pattern="[a-zA-Z0-9_]+" placeholder="例: vggc_user123" required class="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500">
+              <input type="text" v-model="authId" pattern="[a-zA-Z0-9_]+" placeholder="例: vggc_user123" required 
+                     class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
             </div>
             <div>
-              <label class="block text-sm font-bold text-gray-700 mb-1">パスワード</label>
-              <input type="password" v-model="authPassword" required class="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500">
+              <label class="block text-sm font-bold text-gray-700 mb-1">パスワード（6文字以上）</label>
+              <input type="password" v-model="authPassword" minlength="6" required 
+                     class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
             </div>
-            <div class="flex gap-3 pt-2">
-              <button type="submit" @click="authMode = 'login'" class="flex-1 bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700 transition">ログイン</button>
-              <button type="submit" @click="authMode = 'register'" class="flex-1 bg-gray-100 text-gray-800 py-2 rounded font-bold hover:bg-gray-200 border transition">新規登録</button>
+            <div class="flex gap-3 pt-4">
+              <button type="submit" @click="authMode = 'login'" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-sm">ログイン</button>
+              <button type="submit" @click="authMode = 'register'" class="flex-1 bg-white text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 border border-gray-200 transition-colors">新規登録</button>
             </div>
           </form>
         </div>
@@ -264,33 +391,38 @@
 
     <!-- 共有モーダル -->
     <transition name="modal">
-      <div v-if="showShareModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative">
-          <button @click="showShareModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      <div v-if="showShareModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
+          <button @click="showShareModal = false" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
-          <h2 class="text-xl font-bold mb-4 text-center">リストの共有</h2>
           
-          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border mb-4">
-            <span class="font-bold text-gray-700">リストを公開する</span>
+          <div class="text-center mb-6">
+            <div class="w-12 h-12 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800">リストを共有する</h2>
+          </div>
+          
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 mb-4">
+            <div>
+              <span class="font-bold text-gray-700 block text-sm">公開設定</span>
+              <span class="text-[10px] text-gray-500">オンにするとURLを知っている人が見れます</span>
+            </div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" v-model="isPublic" @change="togglePublicStatus" class="sr-only peer">
-              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
           
-          <div v-if="isPublic" class="space-y-2">
-            <p class="text-sm text-gray-600">以下のURLを共有すると、誰でもあなたの買い物リスト（閲覧専用）を見ることができます。</p>
+          <div v-if="isPublic" class="space-y-3">
             <div class="flex items-center gap-2">
-              <input type="text" readonly :value="shareUrl" class="flex-1 bg-gray-100 px-3 py-2 border rounded text-sm text-gray-600 focus:outline-none">
-              <button @click="copyShareUrl" class="bg-blue-600 text-white px-3 py-2 rounded text-sm font-bold hover:bg-blue-700 whitespace-nowrap">
+              <input type="text" readonly :value="shareUrl" class="flex-1 bg-gray-100 px-3 py-3 rounded-lg text-xs text-gray-600 border-0 focus:ring-0">
+              <button @click="copyShareUrl" class="bg-gray-800 text-white px-4 py-3 rounded-lg text-sm font-bold hover:bg-gray-700 whitespace-nowrap transition-colors">
                 コピー
               </button>
             </div>
-            <p v-if="copySuccess" class="text-xs text-green-600 mt-1">クリップボードにコピーしました！</p>
-          </div>
-          <div v-else class="text-sm text-gray-500 text-center py-4">
-            公開設定をオンにすると、共有用のURLが発行されます。
+            <p v-if="copySuccess" class="text-xs text-green-600 font-bold text-center">クリップボードにコピーしました！</p>
           </div>
         </div>
       </div>
@@ -302,7 +434,6 @@
     const { createApp, ref, computed, onMounted, watch } = Vue;
     const STORAGE_KEY = 'vggc12th_saved_list';
 
-    // Supabase Configuration
     const supabaseUrl = 'https://lgcwzlzrovdcjaywvmdk.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnY3d6bHpyb3ZkY2pheXd2bWRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMjA1NzksImV4cCI6MjEwNDY5NjU3OX0.-axEWTfGBNrtt2POQn7VgkCSCgQH2v3Wn2SIQSgvKYo';
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -314,24 +445,20 @@
         const loading = ref(true);
         const searchQuery = ref('');
         const filterBlock = ref('');
-        const activeTab = ref('search'); // 'search', 'list', 'memo'
+        const activeTab = ref('search'); // 'map', 'search', 'list', 'memo'
         
-        // App State
         const savedList = ref({});
         const freeMemoText = ref('');
         
-        // Supabase & Auth State
         const user = ref(null);
         const listId = ref(null);
         const isPublic = ref(false);
         const isSaving = ref(false);
         const isReadOnly = ref(false);
         
-        // UI Modals
         const showAuthModal = ref(false);
         const showShareModal = ref(false);
         
-        // Auth Form
         const authId = ref('');
         const authPassword = ref('');
         const authMode = ref('login');
@@ -346,7 +473,6 @@
           return url.toString();
         });
 
-        // Initialize free memo
         const syncFreeMemoFromState = () => {
           if (savedList.value['__FREE_MEMO__']) {
             freeMemoText.value = savedList.value['__FREE_MEMO__'].text || '';
@@ -359,7 +485,7 @@
           
           if (sharedListId) {
             isReadOnly.value = true;
-            activeTab.value = 'list'; // 共有リストを開いた時はリストタブをデフォルトに
+            activeTab.value = 'list';
             await loadSharedList(sharedListId);
           } else {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -443,7 +569,6 @@
           }
         }, { deep: true });
 
-        // Watch free memo string and sync to savedList dictionary
         watch(freeMemoText, (newText) => {
           if (isReadOnly.value) return;
           if (!savedList.value['__FREE_MEMO__']) {
@@ -464,7 +589,7 @@
 
         const toggleBlock = (block) => {
           filterBlock.value = filterBlock.value === block ? '' : block;
-          activeTab.value = 'search'; // 絞り込み時は検索タブに戻す
+          activeTab.value = 'search';
         };
 
         const togglePublicStatus = async () => {
