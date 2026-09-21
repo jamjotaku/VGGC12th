@@ -15,8 +15,35 @@
   
   <style>
     body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; -webkit-tap-highlight-color: transparent; }
-    .map-container { position: relative; width: 100%; overflow: auto; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: #fff; touch-action: pan-x pan-y; }
-    .map-image { min-width: 800px; width: 100%; display: block; user-select: none; }
+    
+    /* マップコンテナ（スクロール領域） */
+    .map-container { 
+      position: relative; 
+      width: 100%; 
+      overflow: auto; 
+      border: 1px solid #e5e7eb; 
+      border-radius: 0.5rem; 
+      background: #fff; 
+      -webkit-overflow-scrolling: touch; 
+    }
+    
+    /* マップインナー（画像とピンを内包して実寸サイズを保つ） */
+    .map-inner {
+      position: relative;
+      width: max-content; 
+      transform: translateZ(0); /* iOSの描画バグ（画像荒れ・残像）防止 */
+    }
+
+    /* マップ画像 */
+    .map-image { 
+      width: 900px; /* スマホでも見やすい固定幅（スクロールして見る） */
+      max-width: none; 
+      display: block; 
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none; /* 画像自体のドラッグ反応を無効化 */
+      transform: translateZ(0);
+    }
     
     /* カスタムスクロールバー */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -32,8 +59,15 @@
 
     /* ドラッグ可能な現在地ピン */
     .draggable-pin {
-      position: absolute; width: 32px; height: 32px; transform: translate(-50%, -100%);
-      cursor: grab; z-index: 10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+      position: absolute; 
+      width: 32px; 
+      height: 32px; 
+      transform: translate3d(-50%, -100%, 0); /* 3Dアクセラレーションで描画バグを防止 */
+      cursor: grab; 
+      z-index: 10; 
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+      will-change: left, top;
+      backface-visibility: hidden;
     }
     .draggable-pin:active { cursor: grabbing; }
   </style>
@@ -104,12 +138,14 @@
               <h1 class="text-xl font-bold text-gray-800">会場マップ</h1>
               <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">📍ピンをドラッグして現在地をメモ</span>
             </div>
-            <div class="map-container shadow-inner" ref="mapContainerPC" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchmove.prevent="dragPin" @touchend="stopDrag">
-              <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy">
-              <!-- 現在地ピン -->
-              <svg class="draggable-pin text-red-600" viewBox="0 0 24 24" fill="currentColor" :style="{ left: pinX + 'px', top: pinY + 'px' }" @mousedown.prevent="startDrag" @touchstart.prevent="startDrag">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-              </svg>
+            <!-- PC用マップコンテナ -->
+            <div class="map-container shadow-inner">
+              <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
+                <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy">
+                <svg class="draggable-pin text-red-600" viewBox="0 0 24 24" fill="currentColor" :style="{ left: pinX + 'px', top: pinY + 'px' }" @mousedown.prevent="startDrag" @touchstart.prevent="startDrag">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -141,17 +177,34 @@
                [スマホ専用] マップ タブ
           ========================================== -->
           <div v-show="activeTab === 'map'" class="md:hidden p-4 space-y-6 pb-24">
-            <!-- 省略: PCと同じマップ。ピンの機能もスマホ用コンテナに実装 -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-3">
+                <h2 class="text-lg font-bold text-gray-800">イベント概要</h2>
+                <div class="text-xs text-gray-600 font-bold bg-gray-100 px-2 py-1 rounded-md">11/14(土)</div>
+              </div>
+              <ul class="text-sm space-y-3">
+                <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">9:45-</span><span class="text-gray-700">一般参加者受付開始</span></li>
+                <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">10:00-</span><span class="text-gray-700">サークル入場 (11:40迄)<br>更衣室利用開始</span></li>
+                <li class="flex items-start"><span class="w-16 font-bold text-blue-600 shrink-0">12:00</span><span class="text-blue-700 font-bold">即売会開始</span></li>
+                <li class="flex items-start"><span class="w-16 font-bold text-red-500 shrink-0">15:30</span><span class="text-red-600 font-bold">即売会終了</span></li>
+                <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">15:45-</span><span class="text-gray-700">アフターイベント</span></li>
+              </ul>
+            </div>
+            
             <div>
               <div class="flex justify-between items-end mb-2">
                 <h1 class="text-lg font-bold text-gray-800 px-1">会場マップ</h1>
                 <span class="text-[10px] text-gray-500 bg-gray-200 px-2 py-1 rounded">📍ピンをドラッグ</span>
               </div>
-              <div class="map-container shadow-sm border-gray-200" ref="mapContainerSP" @touchmove.prevent="dragPin" @touchend="stopDrag" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag">
-                <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy">
-                <svg class="draggable-pin text-red-600" viewBox="0 0 24 24" fill="currentColor" :style="{ left: pinX + 'px', top: pinY + 'px' }" @mousedown.prevent="startDrag" @touchstart.prevent="startDrag">
-                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                </svg>
+              <!-- スマホ用マップコンテナ -->
+              <div class="map-container shadow-sm border-gray-200">
+                <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
+                  <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy">
+                  <!-- ピン自体にタッチした時だけスクロールを防止(prevent)する -->
+                  <svg class="draggable-pin text-red-600" viewBox="0 0 24 24" fill="currentColor" :style="{ left: pinX + 'px', top: pinY + 'px' }" @mousedown.prevent="startDrag" @touchstart.prevent="startDrag">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                  </svg>
+                </div>
               </div>
             </div>
 
@@ -160,7 +213,7 @@
               <h2 class="text-sm font-bold mb-3 text-gray-600">配置ブロックで探す</h2>
               <div class="flex flex-wrap gap-2">
                 <button v-for="block in blocks" :key="block" @click="toggleBlock(block)"
-                        class="min-w-[40px] px-3 py-2 rounded-lg text-sm font-bold transition-all"
+                        class="min-w-[40px] px-3 py-2 rounded-lg text-sm font-bold transition-all active:scale-95"
                         :class="filterBlock === block ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-50 text-gray-600 border border-gray-200'">
                   {{ block }}
                 </button>
@@ -201,7 +254,6 @@
                 </button>
 
                 <div class="flex items-start gap-4">
-                  <!-- サークルカット (クリックで拡大) -->
                   <div @click="openImage(circle.circlecut)" class="flex-shrink-0 w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center border border-gray-200 shadow-sm cursor-pointer hover:opacity-80 transition">
                     <img v-if="circle.circlecut" :src="circle.circlecut" alt="カット" class="object-cover w-full h-full" loading="lazy">
                     <span v-else class="text-[10px] text-gray-400">No Image</span>
@@ -212,7 +264,6 @@
                       <span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded shadow-sm">
                         {{ circle.space_sym }}-{{ circle.space_num }}
                       </span>
-                      <!-- X(Twitter) お品書き検索ボタン -->
                       <a v-if="circle.twitter_id" :href="`https://twitter.com/search?q=from%3A${circle.twitter_id}%20%E3%81%8A%E5%93%81%E6%9B%B8%E3%81%8D%20OR%20VGGC&f=live`" target="_blank" 
                          class="flex items-center gap-1 text-[10px] bg-gray-800 text-white px-2 py-0.5 rounded hover:bg-gray-700 transition">
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
@@ -232,7 +283,6 @@
           ========================================== -->
           <div v-show="activeTab === 'list'" class="flex flex-col min-h-full pb-20 md:pb-6 p-2 md:p-4">
             
-            <!-- リスト操作ツールバー -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <span class="text-xs font-bold text-gray-600">並び替え:</span>
@@ -276,7 +326,6 @@
                     </div>
                     <h3 class="font-bold text-sm text-gray-900 leading-tight mb-1">{{ circle.circle_name }}</h3>
                     
-                    <!-- 追加設定（優先度・金額・誰用か） -->
                     <div class="flex flex-wrap items-center gap-2 mt-2">
                       <select v-model="savedList[circle.circle_id].priority" :disabled="isReadOnly" class="text-xs border border-gray-200 rounded px-1 py-0.5 bg-gray-50 focus:ring-1 focus:ring-pink-400 outline-none" :class="priorityColors[savedList[circle.circle_id].priority]">
                         <option value="">優先度: なし</option>
@@ -365,7 +414,6 @@
 
     <!-- ログイン/登録モーダル -->
     <transition name="modal">
-      <!-- (省略しないようそのまま記述) -->
       <div v-if="showAuthModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
           <button @click="showAuthModal = false" class="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
@@ -384,7 +432,7 @@
       </div>
     </transition>
 
-    <!-- 共有モーダル (省略せず記述) -->
+    <!-- 共有モーダル -->
     <transition name="modal">
       <div v-if="showShareModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
@@ -440,9 +488,8 @@
         const authMessage = ref('');
         const copySuccess = ref(false);
 
-        // 新機能のステート
         const zoomedImage = ref(null);
-        const sortOrder = ref('default'); // 'default', 'space', 'priority'
+        const sortOrder = ref('default'); 
         const pinX = ref(100);
         const pinY = ref(100);
         let isDraggingPin = false;
@@ -545,8 +592,6 @@
           savedList.value['__FREE_MEMO__'].text = newText;
         });
 
-        // ピンの位置保存（負荷軽減のため遅延保存）
-        let pinSaveTimeout = null;
         const savePinPos = () => {
           if (isReadOnly.value) return;
           if (!savedList.value['__PIN_POS__']) savedList.value['__PIN_POS__'] = {};
@@ -559,7 +604,6 @@
           if (savedList.value[circleId]) {
             delete savedList.value[circleId];
           } else {
-            // 新規追加時に詳細プロパティを持たせる
             savedList.value[circleId] = { memo: '', bought: false, price: '', priority: '', forWho: '' };
           }
         };
@@ -567,12 +611,14 @@
         const toggleBlock = (block) => { filterBlock.value = filterBlock.value === block ? '' : block; activeTab.value = 'search'; };
         const openImage = (url) => { if (url) zoomedImage.value = url; };
         
-        // ピンのドラッグ制御
+        // ピンのドラッグ制御 (スクロールとコンフリクトしないように修正)
         const startDrag = () => { if(!isReadOnly.value) isDraggingPin = true; };
         const stopDrag = () => { if(isDraggingPin){ isDraggingPin = false; savePinPos(); } };
         const dragPin = (e) => {
           if (!isDraggingPin) return;
-          const container = e.currentTarget;
+          e.preventDefault(); // ピンを掴んでいる間だけスクロール(スワイプ)をブロック
+          
+          const container = e.currentTarget; // map-inner
           const rect = container.getBoundingClientRect();
           let clientX, clientY;
           if (e.touches && e.touches.length > 0) {
@@ -580,14 +626,15 @@
           } else {
              clientX = e.clientX; clientY = e.clientY;
           }
-          // コンテナ内での相対座標にスクロール量を足す
-          const x = clientX - rect.left + container.scrollLeft;
-          const y = clientY - rect.top + container.scrollTop;
-          pinX.value = Math.max(0, Math.min(x, container.scrollWidth));
-          pinY.value = Math.max(0, Math.min(y, container.scrollHeight));
+          
+          // コンテナ自体がスクロールされても、rect.left は画面上の位置を示すので
+          // 常に正確な相対座標(x, y)を取得できる
+          const x = clientX - rect.left;
+          const y = clientY - rect.top;
+          pinX.value = Math.max(0, Math.min(x, container.offsetWidth));
+          pinY.value = Math.max(0, Math.min(y, container.offsetHeight));
         };
 
-        // テキスト出力機能
         const exportToText = () => {
           let text = "📝 買い物リスト (VGGC 12th)\n";
           text += `合計予定額: ¥${totalPrice.value.toLocaleString()}\n\n`;
@@ -603,16 +650,8 @@
           navigator.clipboard.writeText(text).then(() => alert("クリップボードにコピーしました！X(Twitter)やメモ帳に貼り付けられます。"));
         };
 
-        // 合計金額の計算
         const totalPrice = computed(() => {
           let total = 0;
-          Object.keys(savedList.value).forEach(key => {
-            if (key.startsWith('__')) return;
-            const price = parseInt(savedList.value[key].price);
-            if (!isNaN(price) && !savedList.value[key].bought) total += price; // 未購入のものだけ足すか、全部足すか（今回は未購入の予定額とする、または全部でも可。一旦全体足すに変更）
-          });
-          // やっぱり全体足した方が予算管理しやすい
-          total = 0;
           Object.keys(savedList.value).forEach(key => {
              if (key.startsWith('__')) return;
              const price = parseInt(savedList.value[key].price);
@@ -621,7 +660,6 @@
           return total;
         });
 
-        // Computed
         const savedCount = computed(() => Object.keys(savedList.value).filter(k => !k.startsWith('__')).length);
         
         const sortedSavedCircles = computed(() => {
@@ -637,7 +675,7 @@
               const wa = weight[savedList.value[a.circle_id].priority || ''];
               const wb = weight[savedList.value[b.circle_id].priority || ''];
               if (wa !== wb) return wb - wa;
-              return 0; // 同率の場合は追加順（配列の元の順）
+              return 0; 
             });
           }
           return list;
@@ -654,7 +692,6 @@
           });
         });
 
-        // ログイン関連関数 (省略せずそのまま)
         const togglePublicStatus = async () => { if(user.value) await supabaseClient.from('shopping_lists').update({ is_public: isPublic.value }).eq('user_id', user.value.id); };
         const handleAuth = async () => {
           authError.value = ''; authMessage.value = '';
@@ -684,7 +721,6 @@
           user, isSaving, isReadOnly, exitReadOnly,
           showAuthModal, authId, authPassword, authMode, authError, authMessage, handleAuth, signOut,
           showShareModal, isPublic, togglePublicStatus, shareUrl, copyShareUrl, copySuccess,
-          // 新機能
           zoomedImage, openImage,
           sortOrder, priorityColors, totalPrice, exportToText,
           pinX, pinY, startDrag, stopDrag, dragPin
