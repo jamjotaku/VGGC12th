@@ -1,0 +1,21 @@
+{
+  "name": "VGGC 12th サークルリスト",
+  "short_name": "VGGC 12",
+  "description": "VGGC 12thの会場マップとサークルチェックリスト",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192x192.png?text=VGGC",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512x512.png?text=VGGC",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

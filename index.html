@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>VGGC 12th サークルリスト & 会場マップ</title>
   
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="apple-touch-icon" href="https://via.placeholder.com/192x192.png?text=VGGC">
+  
   <link rel="preload" href="data.json" as="fetch" crossorigin="anonymous">
   <link rel="preload" href="map.jpg" as="image">
   
@@ -727,6 +731,15 @@
         }
       }
     }).mount('#app')
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.error('SW registration failed:', err);
+        });
+      });
+    }
   </script>
 </body>
 </html>
