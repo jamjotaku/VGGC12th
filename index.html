@@ -18,7 +18,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   
   <style>
-    body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
     
     .map-container { 
       position: relative; 
@@ -230,8 +230,14 @@
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
+                <!-- UX改善: クリアボタン用に pr-10 に拡大 -->
                 <input type="text" v-model="searchQuery" placeholder="サークル名、ペンネームで検索..." 
-                       class="w-full pl-10 pr-4 py-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="w-full pl-10 pr-10 py-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                
+                <!-- UX改善: 検索クリアボタン -->
+                <button v-if="searchQuery" @click="searchQuery = ''" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
+                  <svg class="w-5 h-5 bg-gray-100 rounded-full p-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
               </div>
               <div v-if="filterBlock" class="mt-2 flex items-center gap-2 px-1">
                 <span class="text-xs font-bold text-gray-500">選択中のブロック:</span>
@@ -281,84 +287,114 @@
           <!-- =========================================
                リスト タブ (買い物リスト・予算・優先度)
           ========================================== -->
-          <div v-show="activeTab === 'list'" class="flex flex-col min-h-full pb-20 md:pb-6 p-2 md:p-4">
+          <div v-show="activeTab === 'list'" class="flex flex-col min-h-full pb-20 md:pb-6 relative">
             
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold text-gray-600">並び替え:</span>
-                <select v-model="sortOrder" class="text-sm bg-gray-50 border border-gray-200 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-pink-500">
-                  <option value="default">追加順</option>
-                  <option value="space">配置スペース順</option>
-                  <option value="priority">優先度順 (S→B)</option>
-                </select>
-              </div>
-              <div class="flex items-center gap-3">
-                <div class="text-sm font-bold bg-pink-50 text-pink-700 px-3 py-1.5 rounded-lg border border-pink-100">
-                  合計金額: <span class="text-lg">¥{{ totalPrice.toLocaleString() }}</span>
+            <!-- UX改善: スクロール追従（Sticky）するヘッダー -->
+            <div class="sticky top-0 z-20 bg-gray-50 p-3 md:p-4 border-b border-gray-200 shadow-sm">
+              
+              <!-- UX改善: 達成度プログレスバー -->
+              <div v-if="savedCount > 0" class="mb-3">
+                <div class="flex justify-between items-end mb-1 px-1">
+                  <span class="text-xs font-bold text-gray-600">お買い物 達成度</span>
+                  <span class="text-xs font-bold text-blue-600">{{ boughtCount }} / {{ savedCount }} <span class="text-gray-400 text-[10px]">サークル</span> ({{ progressPercent }}%)</span>
                 </div>
-                <button @click="exportToText" class="p-1.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700" title="テキストでコピー">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
-                </button>
+                <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
+                  <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out" :style="{ width: progressPercent + '%' }"></div>
+                </div>
               </div>
-            </div>
 
-            <div v-if="sortedSavedCircles.length === 0" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
-              <div class="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mb-4">
-                <svg class="w-8 h-8 text-pink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-              </div>
-              <p class="font-bold text-gray-600 mb-1">リストは空です</p>
-            </div>
-            
-            <ul class="space-y-3">
-              <li v-for="circle in sortedSavedCircles" :key="circle.circle_id" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative" :class="{'opacity-60': savedList[circle.circle_id].bought}">
+              <!-- ツールバー -->
+              <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-2 md:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 md:gap-3">
                 
-                <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" class="absolute top-3 right-3 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors z-10">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-
-                <div class="p-3 flex items-start gap-3 relative">
-                  <div @click="openImage(circle.circlecut)" class="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-md overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80">
-                    <img v-if="circle.circlecut" :src="circle.circlecut" alt="カット" class="object-cover w-full h-full" loading="lazy">
+                <div class="flex items-center justify-between gap-3">
+                  <!-- 並び替え -->
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-xs font-bold text-gray-500">並び:</span>
+                    <select v-model="sortOrder" class="text-xs font-bold bg-gray-50 border border-gray-200 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-pink-500 text-gray-700">
+                      <option value="default">追加順</option>
+                      <option value="space">配置順</option>
+                      <option value="priority">優先順</option>
+                    </select>
                   </div>
-                  <div class="flex-1 pr-8">
-                    <div class="flex items-center gap-1.5 mb-1">
-                      <span class="inline-block px-1.5 py-0.5 bg-pink-100 text-pink-800 text-[10px] font-bold rounded">{{ circle.space_sym }}-{{ circle.space_num }}</span>
+
+                  <!-- UX改善: 未購入のみ表示スイッチ -->
+                  <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold transition-colors px-2 py-1 rounded-md border select-none"
+                         :class="hideBought ? 'bg-pink-50 border-pink-200 text-pink-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'">
+                    <input type="checkbox" v-model="hideBought" class="accent-pink-500 w-3 h-3">
+                    未購入のみ
+                  </label>
+                </div>
+
+                <div class="flex items-center justify-end gap-2">
+                  <div class="text-sm font-bold bg-pink-50 text-pink-700 px-3 py-1.5 rounded-lg border border-pink-100 flex items-center">
+                    計: <span class="text-base ml-1">¥{{ totalPrice.toLocaleString() }}</span>
+                  </div>
+                  <button @click="exportToText" class="p-1.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 active:scale-95 transition-transform" title="テキストでコピー">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- リスト本体 -->
+            <div class="p-2 md:p-4">
+              <div v-if="sortedSavedCircles.length === 0" class="flex-1 flex flex-col items-center justify-center p-8 text-center mt-10">
+                <div class="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mb-4">
+                  <svg class="w-8 h-8 text-pink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                </div>
+                <p class="font-bold text-gray-600 mb-1">表示するサークルがありません</p>
+                <p v-if="hideBought && savedCount > 0" class="text-xs text-gray-400 mt-2">（「未購入のみ」がオンになっています）</p>
+              </div>
+              
+              <ul class="space-y-3">
+                <li v-for="circle in sortedSavedCircles" :key="circle.circle_id" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition-opacity duration-300" :class="{'opacity-50': savedList[circle.circle_id].bought}">
+                  
+                  <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" class="absolute top-3 right-3 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors z-10">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+
+                  <div class="p-3 flex items-start gap-3 relative">
+                    <div @click="openImage(circle.circlecut)" class="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-md overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80">
+                      <img v-if="circle.circlecut" :src="circle.circlecut" alt="カット" class="object-cover w-full h-full" loading="lazy">
                     </div>
-                    <h3 class="font-bold text-sm text-gray-900 leading-tight mb-1">{{ circle.circle_name }}</h3>
+                    <div class="flex-1 pr-8">
+                      <div class="flex items-center gap-1.5 mb-1">
+                        <span class="inline-block px-1.5 py-0.5 bg-pink-100 text-pink-800 text-[10px] font-bold rounded">{{ circle.space_sym }}-{{ circle.space_num }}</span>
+                      </div>
+                      <h3 class="font-bold text-sm text-gray-900 leading-tight mb-1">{{ circle.circle_name }}</h3>
+                      
+                      <div class="flex flex-wrap items-center gap-2 mt-2">
+                        <select v-model="savedList[circle.circle_id].priority" :disabled="isReadOnly" class="text-xs border border-gray-200 rounded px-1 py-1 bg-gray-50 focus:ring-1 focus:ring-pink-400 outline-none" :class="priorityColors[savedList[circle.circle_id].priority]">
+                          <option value="">優先度: -</option>
+                          <option value="S">S (絶対買う)</option>
+                          <option value="A">A (買いたい)</option>
+                          <option value="B">B (見に行く)</option>
+                        </select>
+                        <div class="flex items-center text-xs border border-gray-200 rounded bg-gray-50 overflow-hidden">
+                          <span class="px-1.5 text-gray-500">¥</span>
+                          <input type="number" v-model.number="savedList[circle.circle_id].price" :readonly="isReadOnly" placeholder="金額" class="w-14 py-1 px-1 bg-transparent outline-none focus:bg-white text-right">
+                        </div>
+                        <input type="text" v-model="savedList[circle.circle_id].forWho" :readonly="isReadOnly" placeholder="誰用？(例: 自分)" class="text-xs border border-gray-200 rounded px-1.5 py-1 bg-gray-50 w-24 outline-none focus:bg-white focus:ring-1 focus:ring-pink-400">
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="bg-pink-50/40 p-3 border-t border-pink-100/50 flex flex-col gap-3">
+                    <textarea v-model="savedList[circle.circle_id].memo" :readonly="isReadOnly" placeholder="メモを入力...（例: 新刊セット、アクスタ）" 
+                              class="w-full px-3 py-2 text-sm rounded-lg border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-12 bg-white placeholder-pink-300"></textarea>
                     
-                    <div class="flex flex-wrap items-center gap-2 mt-2">
-                      <select v-model="savedList[circle.circle_id].priority" :disabled="isReadOnly" class="text-xs border border-gray-200 rounded px-1 py-0.5 bg-gray-50 focus:ring-1 focus:ring-pink-400 outline-none" :class="priorityColors[savedList[circle.circle_id].priority]">
-                        <option value="">優先度: なし</option>
-                        <option value="S">S (絶対買う)</option>
-                        <option value="A">A (買いたい)</option>
-                        <option value="B">B (見に行く)</option>
-                      </select>
-                      <div class="flex items-center text-xs border border-gray-200 rounded bg-gray-50 overflow-hidden">
-                        <span class="px-1.5 text-gray-500">¥</span>
-                        <input type="number" v-model.number="savedList[circle.circle_id].price" :readonly="isReadOnly" placeholder="金額" class="w-16 py-0.5 px-1 bg-transparent outline-none focus:bg-white text-right">
-                      </div>
-                      <input type="text" v-model="savedList[circle.circle_id].forWho" :readonly="isReadOnly" placeholder="誰用？(例: 自分)" class="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-gray-50 w-24 outline-none focus:bg-white focus:ring-1 focus:ring-pink-400">
-                    </div>
+                    <!-- UX改善: 大型化された「購入済み」ボタン -->
+                    <button v-if="!isReadOnly" @click="savedList[circle.circle_id].bought = !savedList[circle.circle_id].bought"
+                            class="w-full py-2.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 border"
+                            :class="savedList[circle.circle_id].bought ? 'bg-gray-100 text-gray-500 border-gray-200 shadow-inner' : 'bg-pink-500 text-white border-pink-600 shadow hover:bg-pink-600 active:scale-95'">
+                      <svg v-if="savedList[circle.circle_id].bought" class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                      <svg v-else class="w-5 h-5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                      {{ savedList[circle.circle_id].bought ? '購入済み（タップで未購入に戻す）' : '🛒 購入済みにする' }}
+                    </button>
                   </div>
-                </div>
-                
-                <div class="bg-pink-50/40 p-3 border-t border-pink-100/50">
-                  <div class="flex justify-between items-center mb-2">
-                    <label class="flex items-center gap-2 cursor-pointer group">
-                      <div class="relative flex items-center justify-center w-5 h-5">
-                        <input type="checkbox" v-model="savedList[circle.circle_id].bought" :disabled="isReadOnly" class="peer w-5 h-5 appearance-none border-2 border-pink-300 rounded focus:ring-2 focus:ring-pink-500 checked:bg-pink-500 checked:border-pink-500 disabled:opacity-50 transition-colors cursor-pointer">
-                        <svg class="absolute w-3.5 h-3.5 text-white pointer-events-none opacity-0 peer-checked:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"></path></svg>
-                      </div>
-                      <span class="text-sm font-bold transition-colors" :class="savedList[circle.circle_id].bought ? 'text-gray-400 line-through' : 'text-pink-800'">
-                        購入済み
-                      </span>
-                    </label>
-                  </div>
-                  <textarea v-model="savedList[circle.circle_id].memo" :readonly="isReadOnly" placeholder="メモを入力..." 
-                            class="w-full px-3 py-2 text-sm rounded-lg border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-12 bg-white placeholder-pink-300"></textarea>
-                </div>
-              </li>
-            </ul>
+                </li>
+              </ul>
+            </div>
           </div>
 
           <!-- =========================================
@@ -368,7 +404,7 @@
             <div class="bg-white rounded-xl shadow-sm border border-green-100 p-4 h-full flex flex-col min-h-[300px]">
               <div class="mb-3 flex items-center gap-2 border-b border-green-50 pb-2">
                 <div class="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                 </div>
                 <h2 class="font-bold text-gray-800 text-sm">フリーメモ</h2>
               </div>
@@ -394,7 +430,11 @@
       <button @click="activeTab = 'list'" class="flex-1 py-2.5 flex flex-col items-center gap-1 transition-colors relative" :class="activeTab === 'list' ? 'text-pink-600' : 'text-gray-400 hover:text-gray-600'">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
         <span class="text-[10px] font-bold">リスト</span>
-        <span v-if="savedCount > 0" class="absolute top-1 right-3 bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">{{savedCount}}</span>
+        <!-- バッジにも進捗を反映すると親切 -->
+        <span v-if="savedCount > 0" class="absolute top-1 right-2 bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+          <span v-if="hideBought">{{ savedCount - boughtCount }}</span>
+          <span v-else>{{ savedCount }}</span>
+        </span>
       </button>
       <button @click="activeTab = 'memo'" class="flex-1 py-2.5 flex flex-col items-center gap-1 transition-colors" :class="activeTab === 'memo' ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
@@ -408,7 +448,7 @@
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
           <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
             <h2 class="font-bold text-lg text-gray-800">ℹ️ このアプリについて</h2>
-            <button @click="showHelpModal = false" class="p-2 text-gray-400 hover:bg-gray-200 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            <button @click="showHelpModal = false" class="p-2 text-gray-400 hover:bg-gray-200 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
           </div>
           <div class="p-5 overflow-y-auto space-y-5 text-sm text-gray-700">
             <div>
@@ -439,7 +479,7 @@
     <transition name="modal">
       <div v-if="zoomedImage" class="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm" @click="zoomedImage = null">
         <button class="absolute top-4 right-4 text-white p-2 bg-black/50 rounded-full hover:bg-black/70">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
         <img :src="zoomedImage" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" @click.stop>
       </div>
@@ -449,7 +489,7 @@
     <transition name="modal">
       <div v-if="showAuthModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
-          <button @click="showAuthModal = false" class="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+          <button @click="showAuthModal = false" class="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
           <div class="text-center mb-6"><h2 class="text-xl font-bold">ログイン / 登録</h2></div>
           <div v-if="authError" class="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{{ authError }}</div>
           <div v-if="authMessage" class="bg-blue-50 text-blue-600 p-3 rounded-lg mb-4 text-sm">{{ authMessage }}</div>
@@ -469,7 +509,7 @@
     <transition name="modal">
       <div v-if="showShareModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
-          <button @click="showShareModal = false" class="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+          <button @click="showShareModal = false" class="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
           <h2 class="text-xl font-bold text-center mb-6">リストを共有する</h2>
           <div class="flex justify-between p-4 bg-gray-50 rounded-xl border mb-4">
             <span class="font-bold text-sm">公開設定</span>
@@ -524,6 +564,8 @@
 
         const zoomedImage = ref(null);
         const sortOrder = ref('default'); 
+        const hideBought = ref(false); // ★新機能: 購入済みを隠す
+        
         const pinX = ref(100);
         const pinY = ref(100);
         let isDraggingPin = false;
@@ -551,7 +593,6 @@
         };
 
         onMounted(async () => {
-          // 初回アクセス時にヘルプモーダルを表示
           if (!localStorage.getItem('vggc_help_shown')) {
             showHelpModal.value = true;
             localStorage.setItem('vggc_help_shown', 'true');
@@ -619,7 +660,6 @@
           localStorage.setItem(STORAGE_KEY, JSON.stringify(newVal));
           if (user.value) {
             clearTimeout(saveTimeout); isSaving.value = true;
-            // サーバー負荷軽減のため、1000ms -> 3000msに延長
             saveTimeout = setTimeout(async () => {
               await supabaseClient.from('shopping_lists').update({ list_data: newVal, updated_at: new Date().toISOString() }).eq('user_id', user.value.id);
               isSaving.value = false;
@@ -692,6 +732,7 @@
           let total = 0;
           Object.keys(savedList.value).forEach(key => {
              if (key.startsWith('__')) return;
+             // UX改善: 購入済みは合計金額から引くかどうか。予算管理的に「全体予算」を見たいので今回は全て足すままとする
              const price = parseInt(savedList.value[key].price);
              if (!isNaN(price)) total += price;
           });
@@ -700,8 +741,23 @@
 
         const savedCount = computed(() => Object.keys(savedList.value).filter(k => !k.startsWith('__')).length);
         
+        // ★新機能: 購入済み数とプログレスバー計算
+        const boughtCount = computed(() => {
+          return Object.keys(savedList.value).filter(k => !k.startsWith('__') && savedList.value[k].bought).length;
+        });
+        const progressPercent = computed(() => {
+          if (savedCount.value === 0) return 0;
+          return Math.round((boughtCount.value / savedCount.value) * 100);
+        });
+        
         const sortedSavedCircles = computed(() => {
           let list = circles.value.filter(c => savedList.value[c.circle_id]);
+          
+          // ★新機能: 未購入のみ表示フィルター
+          if (hideBought.value) {
+            list = list.filter(c => !savedList.value[c.circle_id].bought);
+          }
+
           if (sortOrder.value === 'space') {
             list.sort((a, b) => {
               if (a.space_sym !== b.space_sym) return a.space_sym.localeCompare(b.space_sym);
@@ -761,7 +817,8 @@
           showShareModal, isPublic, togglePublicStatus, shareUrl, copyShareUrl, copySuccess,
           showHelpModal,
           zoomedImage, openImage,
-          sortOrder, priorityColors, totalPrice, exportToText,
+          sortOrder, hideBought, priorityColors, totalPrice, exportToText,
+          boughtCount, progressPercent, // ★新機能用のエクスポート
           pinX, pinY, startDrag, stopDrag, dragPin
         }
       }
