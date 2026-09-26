@@ -75,23 +75,24 @@
   <div id="app" class="h-[100dvh] flex flex-col overflow-hidden" v-cloak>
     
     <!-- ナビゲーションバー -->
-    <nav class="bg-white shadow-sm border-b px-4 py-3 flex justify-between items-center z-20 flex-shrink-0">
-      <div class="font-bold text-lg flex items-center gap-2">
+    <nav class="bg-white shadow-sm border-b px-3 md:px-4 py-2 md:py-3 flex justify-between items-center z-20 flex-shrink-0">
+      <div class="font-bold text-base md:text-lg flex items-center gap-2">
         VGGC 12th 
-        <span v-if="isReadOnly" class="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full font-bold">閲覧専用モード</span>
+        <span v-if="isReadOnly" class="text-[10px] md:text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full font-bold">閲覧専用</span>
       </div>
-      <div class="flex items-center gap-2 sm:gap-3">
+      <div class="flex items-center gap-2 md:gap-3">
         <!-- ヘルプボタン -->
-        <button @click="showHelpModal = true" class="p-1.5 text-gray-500 hover:bg-gray-100 rounded-full transition" title="ヘルプ・免責事項">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <button @click="showHelpModal = true" class="p-1 md:p-1.5 text-gray-500 hover:bg-gray-100 rounded-full transition" title="ヘルプ・免責事項">
+          <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </button>
 
-        <button v-if="isReadOnly" @click="exitReadOnly" class="text-sm bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition">
-          自分のリストへ戻る
+        <button v-if="isReadOnly" @click="exitReadOnly" class="text-xs md:text-sm bg-gray-800 text-white px-2 md:px-3 py-1.5 rounded-lg hover:bg-gray-700 transition">
+          <span class="hidden md:inline">自分のリストへ戻る</span>
+          <span class="md:hidden">戻る</span>
         </button>
         
         <template v-if="!user && !isReadOnly">
-          <button @click="showAuthModal = true" class="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-sm flex items-center gap-1">
+          <button @click="showAuthModal = true" class="text-xs md:text-sm bg-blue-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-sm flex items-center gap-1">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
             <span class="hidden sm:inline">ログイン / 同期</span>
             <span class="sm:hidden">ログイン</span>
@@ -99,18 +100,29 @@
         </template>
         
         <template v-if="user && !isReadOnly">
-          <div class="flex items-center gap-3">
-            <div class="hidden sm:flex items-center gap-2">
-              <span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-md">{{ user.email.split('@')[0] }}</span>
-              <span v-if="isSaving" class="text-xs text-gray-400">保存中...</span>
-              <span v-else class="text-xs text-green-500">保存完了</span>
+          <div class="flex items-center gap-1.5 md:gap-3">
+            <!-- ユーザーIDと保存ステータス（スマホではコンパクト表示） -->
+            <div class="flex items-center gap-1 bg-gray-50 border border-gray-100 px-1.5 md:px-2 py-1 rounded-md">
+              <span class="text-[10px] md:text-xs font-bold text-gray-600 max-w-[60px] md:max-w-[100px] truncate">{{ user.email.split('@')[0] }}</span>
+              <span v-if="isSaving" class="text-[10px] text-gray-400" title="保存中">
+                <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+              </span>
+              <span v-else class="text-[10px] text-green-500" title="保存完了">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+              </span>
             </div>
             
-            <button @click="showShareModal = true" class="text-sm bg-pink-50 text-pink-600 border border-pink-200 px-3 py-1.5 rounded-lg hover:bg-pink-100 transition flex items-center gap-1 font-bold">
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-              共有
+            <!-- 共有ボタン -->
+            <button @click="showShareModal = true" class="text-xs md:text-sm bg-pink-50 text-pink-600 border border-pink-200 p-1.5 md:px-3 md:py-1.5 rounded-lg hover:bg-pink-100 transition flex items-center gap-1 font-bold" title="共有">
+              <svg class="h-4 w-4 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+              <span class="hidden md:inline">共有</span>
             </button>
-            <button @click="signOut" class="text-xs text-gray-500 hover:text-gray-800 underline hidden sm:block">ログアウト</button>
+            
+            <!-- ログアウトボタン -->
+            <button @click="signOut" class="text-gray-500 hover:text-gray-800 p-1.5 md:p-0 transition flex items-center gap-1" title="ログアウト">
+              <svg class="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+              <span class="text-xs underline hidden md:block">ログアウト</span>
+            </button>
           </div>
         </template>
       </div>
