@@ -44,6 +44,7 @@
       -webkit-user-drag: none;
       pointer-events: none; 
       transform: translateZ(0);
+      transition: width 0.2s ease-out;
     }
     
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -67,8 +68,9 @@
       filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
       will-change: left, top;
       backface-visibility: hidden;
+      transition: left 0.2s ease-out, top 0.2s ease-out;
     }
-    .draggable-pin:active { cursor: grabbing; }
+    .draggable-pin:active { cursor: grabbing; transition: none; }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -104,12 +106,17 @@
             <!-- ユーザーIDと保存ステータス（スマホではコンパクト表示） -->
             <div class="flex items-center gap-1 bg-gray-50 border border-gray-100 px-1.5 md:px-2 py-1 rounded-md">
               <span class="text-[10px] md:text-xs font-bold text-gray-600 max-w-[60px] md:max-w-[100px] truncate">{{ user.email.split('@')[0] }}</span>
-              <span v-if="isSaving" class="text-[10px] text-gray-400" title="保存中">
-                <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-              </span>
-              <span v-else class="text-[10px] text-green-500" title="保存完了">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-              </span>
+              
+              <!-- オフライン/オンライン状態の表示 -->
+              <span v-if="!isOnline" class="text-[10px] text-red-500 font-bold px-0.5" title="圏外（データは端末内に保存されています）">圏外</span>
+              <template v-else>
+                <span v-if="isSaving" class="text-[10px] text-gray-400" title="保存中">
+                  <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                </span>
+                <span v-else class="text-[10px] text-green-500" title="保存完了">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                </span>
+              </template>
             </div>
             
             <!-- 共有ボタン -->
@@ -155,10 +162,17 @@
               <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">📍ピンをドラッグして現在地をメモ</span>
             </div>
             <!-- PC用マップコンテナ -->
-            <div class="map-container shadow-inner">
+            <div class="map-container shadow-inner relative">
+              
+              <!-- ズーム操作ボタン -->
+              <div class="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
+                <button @click="mapScale = Math.min(mapScale + 0.3, 2.5)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 hover:bg-gray-50 transition" title="拡大">＋</button>
+                <button @click="mapScale = Math.max(mapScale - 0.3, 0.4)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 hover:bg-gray-50 transition" title="縮小">－</button>
+              </div>
+
               <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
-                <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy">
-                <svg class="draggable-pin text-red-600" viewBox="0 0 24 24" fill="currentColor" :style="{ left: pinX + 'px', top: pinY + 'px' }" @mousedown.prevent="startDrag" @touchstart.prevent="startDrag">
+                <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
+                <svg class="draggable-pin text-red-600" viewBox="0 0 24 24" fill="currentColor" :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }" @mousedown.prevent="startDrag" @touchstart.prevent="startDrag">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                 </svg>
               </div>
@@ -211,10 +225,17 @@
                 <h1 class="text-lg font-bold text-gray-800 px-1">会場マップ</h1>
                 <span class="text-[10px] text-gray-500 bg-gray-200 px-2 py-1 rounded">📍ピンをドラッグ</span>
               </div>
-              <div class="map-container shadow-sm border-gray-200">
+              <div class="map-container shadow-sm border-gray-200 relative">
+                
+                <!-- ズーム操作ボタン -->
+                <div class="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
+                  <button @click="mapScale = Math.min(mapScale + 0.3, 2.5)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 transition" title="拡大">＋</button>
+                  <button @click="mapScale = Math.max(mapScale - 0.3, 0.4)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 transition" title="縮小">－</button>
+                </div>
+
                 <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
-                  <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy">
-                  <svg class="draggable-pin text-red-600" viewBox="0 0 24 24" fill="currentColor" :style="{ left: pinX + 'px', top: pinY + 'px' }" @mousedown.prevent="startDrag" @touchstart.prevent="startDrag">
+                  <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
+                  <svg class="draggable-pin text-red-600" viewBox="0 0 24 24" fill="currentColor" :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }" @mousedown.prevent="startDrag" @touchstart.prevent="startDrag">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                   </svg>
                 </div>
@@ -242,11 +263,9 @@
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
-                <!-- UX改善: クリアボタン用に pr-10 に拡大 -->
                 <input type="text" v-model="searchQuery" placeholder="サークル名、ペンネームで検索..." 
                        class="w-full pl-10 pr-10 py-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 
-                <!-- UX改善: 検索クリアボタン -->
                 <button v-if="searchQuery" @click="searchQuery = ''" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
                   <svg class="w-5 h-5 bg-gray-100 rounded-full p-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
@@ -301,10 +320,7 @@
           ========================================== -->
           <div v-show="activeTab === 'list'" class="flex flex-col min-h-full pb-20 md:pb-6 relative">
             
-            <!-- UX改善: スクロール追従（Sticky）するヘッダー -->
             <div class="sticky top-0 z-20 bg-gray-50 p-3 md:p-4 border-b border-gray-200 shadow-sm">
-              
-              <!-- UX改善: 達成度プログレスバー -->
               <div v-if="savedCount > 0" class="mb-3">
                 <div class="flex justify-between items-end mb-1 px-1">
                   <span class="text-xs font-bold text-gray-600">お買い物 達成度</span>
@@ -319,7 +335,6 @@
               <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-2 md:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 md:gap-3">
                 
                 <div class="flex items-center justify-between gap-3">
-                  <!-- 並び替え -->
                   <div class="flex items-center gap-1.5">
                     <span class="text-xs font-bold text-gray-500">並び:</span>
                     <select v-model="sortOrder" class="text-xs font-bold bg-gray-50 border border-gray-200 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-pink-500 text-gray-700">
@@ -329,7 +344,6 @@
                     </select>
                   </div>
 
-                  <!-- UX改善: 未購入のみ表示スイッチ -->
                   <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold transition-colors px-2 py-1 rounded-md border select-none"
                          :class="hideBought ? 'bg-pink-50 border-pink-200 text-pink-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'">
                     <input type="checkbox" v-model="hideBought" class="accent-pink-500 w-3 h-3">
@@ -395,7 +409,6 @@
                     <textarea v-model="savedList[circle.circle_id].memo" :readonly="isReadOnly" placeholder="メモを入力...（例: 新刊セット、アクスタ）" 
                               class="w-full px-3 py-2 text-sm rounded-lg border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-12 bg-white placeholder-pink-300"></textarea>
                     
-                    <!-- UX改善: 大型化された「購入済み」ボタン -->
                     <button v-if="!isReadOnly" @click="savedList[circle.circle_id].bought = !savedList[circle.circle_id].bought"
                             class="w-full py-2.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 border"
                             :class="savedList[circle.circle_id].bought ? 'bg-gray-100 text-gray-500 border-gray-200 shadow-inner' : 'bg-pink-500 text-white border-pink-600 shadow hover:bg-pink-600 active:scale-95'">
@@ -442,7 +455,6 @@
       <button @click="activeTab = 'list'" class="flex-1 py-2.5 flex flex-col items-center gap-1 transition-colors relative" :class="activeTab === 'list' ? 'text-pink-600' : 'text-gray-400 hover:text-gray-600'">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
         <span class="text-[10px] font-bold">リスト</span>
-        <!-- バッジにも進捗を反映すると親切 -->
         <span v-if="savedCount > 0" class="absolute top-1 right-2 bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
           <span v-if="hideBought">{{ savedCount - boughtCount }}</span>
           <span v-else>{{ savedCount }}</span>
@@ -460,7 +472,7 @@
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
           <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
             <h2 class="font-bold text-lg text-gray-800">ℹ️ このアプリについて</h2>
-            <button @click="showHelpModal = false" class="p-2 text-gray-400 hover:bg-gray-200 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            <button @click="showHelpModal = false" class="p-2 text-gray-400 hover:bg-gray-200 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
           </div>
           <div class="p-5 overflow-y-auto space-y-5 text-sm text-gray-700">
             <div>
@@ -563,6 +575,7 @@
         const isPublic = ref(false);
         const isSaving = ref(false);
         const isReadOnly = ref(false);
+        const isOnline = ref(navigator.onLine); // ★オフライン検知
         
         const showAuthModal = ref(false);
         const showShareModal = ref(false);
@@ -576,9 +589,11 @@
 
         const zoomedImage = ref(null);
         const sortOrder = ref('default'); 
-        const hideBought = ref(false); // ★新機能: 購入済みを隠す
+        const hideBought = ref(false);
         
-        const pinX = ref(100);
+        // ★マップズーム機能
+        const mapScale = ref(1.0);
+        const pinX = ref(100); // 基準サイズ(900px)に対する相対座標
         const pinY = ref(100);
         let isDraggingPin = false;
 
@@ -604,7 +619,30 @@
           }
         };
 
+        const saveToCloud = async (newVal) => {
+          if (!user.value || !isOnline.value || isReadOnly.value) return; 
+          clearTimeout(saveTimeout); isSaving.value = true;
+          saveTimeout = setTimeout(async () => {
+            try {
+              await supabaseClient.from('shopping_lists').update({ list_data: newVal, updated_at: new Date().toISOString() }).eq('user_id', user.value.id);
+            } catch (err) {
+              console.error('Cloud save failed:', err);
+            } finally {
+              isSaving.value = false;
+            }
+          }, 3000); 
+        };
+
         onMounted(async () => {
+          // オフライン・オンラインのイベントリスナー
+          window.addEventListener('online', () => {
+            isOnline.value = true;
+            if (user.value && !isReadOnly.value) saveToCloud(savedList.value);
+          });
+          window.addEventListener('offline', () => {
+            isOnline.value = false;
+          });
+
           if (!localStorage.getItem('vggc_help_shown')) {
             showHelpModal.value = true;
             localStorage.setItem('vggc_help_shown', 'true');
@@ -620,7 +658,7 @@
           } else {
             const { data: { session } } = await supabaseClient.auth.getSession();
             user.value = session?.user || null;
-            if (user.value) {
+            if (user.value && isOnline.value) {
               await loadCloudList(user.value.id);
             } else {
               const stored = localStorage.getItem(STORAGE_KEY);
@@ -633,7 +671,7 @@
           supabaseClient.auth.onAuthStateChange(async (event, session) => {
             const currentUser = session?.user || null;
             user.value = currentUser;
-            if (currentUser && !isReadOnly.value) await loadCloudList(currentUser.id);
+            if (currentUser && !isReadOnly.value && isOnline.value) await loadCloudList(currentUser.id);
           });
 
           try {
@@ -669,14 +707,10 @@
         let saveTimeout = null;
         watch(savedList, (newVal) => {
           if (isReadOnly.value) return; 
+          // 常にローカルには即時保存
           localStorage.setItem(STORAGE_KEY, JSON.stringify(newVal));
-          if (user.value) {
-            clearTimeout(saveTimeout); isSaving.value = true;
-            saveTimeout = setTimeout(async () => {
-              await supabaseClient.from('shopping_lists').update({ list_data: newVal, updated_at: new Date().toISOString() }).eq('user_id', user.value.id);
-              isSaving.value = false;
-            }, 3000); 
-          }
+          // オンラインならクラウドにも保存
+          saveToCloud(newVal);
         }, { deep: true });
 
         watch(freeMemoText, (newText) => {
@@ -721,8 +755,10 @@
           
           const x = clientX - rect.left;
           const y = clientY - rect.top;
-          pinX.value = Math.max(0, Math.min(x, container.offsetWidth));
-          pinY.value = Math.max(0, Math.min(y, container.offsetHeight));
+          
+          // マップスケールを考慮して、基準(900px)の座標に戻して保存
+          pinX.value = Math.max(0, Math.min(x, container.offsetWidth)) / mapScale.value;
+          pinY.value = Math.max(0, Math.min(y, container.offsetHeight)) / mapScale.value;
         };
 
         const exportToText = () => {
@@ -744,7 +780,6 @@
           let total = 0;
           Object.keys(savedList.value).forEach(key => {
              if (key.startsWith('__')) return;
-             // UX改善: 購入済みは合計金額から引くかどうか。予算管理的に「全体予算」を見たいので今回は全て足すままとする
              const price = parseInt(savedList.value[key].price);
              if (!isNaN(price)) total += price;
           });
@@ -753,7 +788,6 @@
 
         const savedCount = computed(() => Object.keys(savedList.value).filter(k => !k.startsWith('__')).length);
         
-        // ★新機能: 購入済み数とプログレスバー計算
         const boughtCount = computed(() => {
           return Object.keys(savedList.value).filter(k => !k.startsWith('__') && savedList.value[k].bought).length;
         });
@@ -765,7 +799,6 @@
         const sortedSavedCircles = computed(() => {
           let list = circles.value.filter(c => savedList.value[c.circle_id]);
           
-          // ★新機能: 未購入のみ表示フィルター
           if (hideBought.value) {
             list = list.filter(c => !savedList.value[c.circle_id].bought);
           }
@@ -800,6 +833,10 @@
 
         const togglePublicStatus = async () => { if(user.value) await supabaseClient.from('shopping_lists').update({ is_public: isPublic.value }).eq('user_id', user.value.id); };
         const handleAuth = async () => {
+          if (!isOnline.value) {
+            authError.value = 'オフライン状態ではログイン・登録できません。通信環境を確認してください。';
+            return;
+          }
           authError.value = ''; authMessage.value = '';
           const dummyEmail = authId.value + '@vggc.dummy.local';
           try {
@@ -824,14 +861,14 @@
         return {
           circles, blocks, loading, searchQuery, filterBlock, filteredCircles,
           activeTab, savedCount, sortedSavedCircles, freeMemoText, savedList, toggleSave, toggleBlock,
-          user, isSaving, isReadOnly, exitReadOnly,
+          user, isSaving, isOnline, isReadOnly, exitReadOnly, // ★ isOnline公開
           showAuthModal, authId, authPassword, authMode, authError, authMessage, handleAuth, signOut,
           showShareModal, isPublic, togglePublicStatus, shareUrl, copyShareUrl, copySuccess,
           showHelpModal,
           zoomedImage, openImage,
           sortOrder, hideBought, priorityColors, totalPrice, exportToText,
-          boughtCount, progressPercent, // ★新機能用のエクスポート
-          pinX, pinY, startDrag, stopDrag, dragPin
+          boughtCount, progressPercent,
+          mapScale, pinX, pinY, startDrag, stopDrag, dragPin // ★ mapScale公開
         }
       }
     }).mount('#app')
