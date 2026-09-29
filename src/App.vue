@@ -216,19 +216,26 @@
                 </button>
 
                 <div class="flex flex-col gap-3 pr-12">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="inline-block px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded shadow-sm border border-blue-200">
-                      {{ circle.space_sym }}-{{ circle.space_num }}
-                    </span>
-                    <!-- ★ DBから取得したメンバータグ（辞書のカラーコードとファンマーク適用） -->
-                    <span v-for="member in (circleExtraInfo[circle.circle_id]?.members || [])" :key="'m_'+member" class="px-2 py-0.5 text-[10px] font-bold rounded border shadow-sm flex items-center gap-0.5" :style="getMemberStyle(member)">
-                      <span>{{ getMemberMark(member) }}</span>
-                      {{ member }}
-                    </span>
+                  <div class="flex flex-col gap-1.5">
+                    <!-- サークル番号 -->
+                    <div class="flex">
+                      <span class="inline-block px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded shadow-sm border border-blue-200">
+                        {{ circle.space_sym }}-{{ circle.space_num }}
+                      </span>
+                    </div>
+                    <!-- ★ DBから取得したメンバータグ -->
+                    <div v-if="circleExtraInfo[circle.circle_id]?.members?.length" class="flex flex-wrap gap-1.5">
+                      <span v-for="member in circleExtraInfo[circle.circle_id].members" :key="'m_'+member" class="px-2 py-0.5 text-[10px] font-bold rounded border shadow-sm flex items-center gap-0.5" :style="getMemberStyle(member)">
+                        <span>{{ getMemberMark(member) }}</span>
+                        {{ member }}
+                      </span>
+                    </div>
                     <!-- ★ DBから取得した頒布物タグ -->
-                    <span v-for="tag in (circleExtraInfo[circle.circle_id]?.tags || [])" :key="tag" class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded border border-gray-200 shadow-sm">
-                      {{ tag }}
-                    </span>
+                    <div v-if="circleExtraInfo[circle.circle_id]?.tags?.length" class="flex flex-wrap gap-1.5">
+                      <span v-for="tag in circleExtraInfo[circle.circle_id].tags" :key="tag" class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded border border-gray-200 shadow-sm">
+                        {{ tag }}
+                      </span>
+                    </div>
                   </div>
                   <div>
                     <h3 class="font-bold text-lg leading-tight text-gray-900 mb-0.5">{{ circle.circle_name }}</h3>
@@ -315,18 +322,27 @@
                   </button>
 
                   <div class="p-4 flex flex-col gap-2 relative pr-8">
-                    <div class="flex items-center gap-2 flex-wrap mb-1">
-                      <span class="inline-block px-2 py-0.5 bg-pink-100 text-pink-800 text-xs font-bold rounded border border-pink-200">{{ circle.space_sym }}-{{ circle.space_num }}</span>
+                    <div class="flex flex-col gap-1.5 mb-1">
+                      <!-- サークル番号 -->
+                      <div class="flex">
+                        <span class="inline-block px-2 py-0.5 bg-pink-100 text-pink-800 text-xs font-bold rounded border border-pink-200">
+                          {{ circle.space_sym }}-{{ circle.space_num }}
+                        </span>
+                      </div>
                       
                       <!-- ★ メンバータグ -->
-                      <span v-for="member in (circleExtraInfo[circle.circle_id]?.members || [])" :key="'m_'+member" class="px-2 py-0.5 text-[10px] font-bold rounded border shadow-sm flex items-center gap-0.5" :style="getMemberStyle(member)">
-                        <span>{{ getMemberMark(member) }}</span>
-                        {{ member }}
-                      </span>
+                      <div v-if="circleExtraInfo[circle.circle_id]?.members?.length" class="flex flex-wrap gap-1.5">
+                        <span v-for="member in circleExtraInfo[circle.circle_id].members" :key="'m_'+member" class="px-2 py-0.5 text-[10px] font-bold rounded border shadow-sm flex items-center gap-0.5" :style="getMemberStyle(member)">
+                          <span>{{ getMemberMark(member) }}</span>
+                          {{ member }}
+                        </span>
+                      </div>
                       <!-- ★ 頒布物タグ -->
-                      <span v-for="tag in (circleExtraInfo[circle.circle_id]?.tags || [])" :key="tag" class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded border border-gray-200 shadow-sm">
-                        {{ tag }}
-                      </span>
+                      <div v-if="circleExtraInfo[circle.circle_id]?.tags?.length" class="flex flex-wrap gap-1.5">
+                        <span v-for="tag in circleExtraInfo[circle.circle_id].tags" :key="tag" class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded border border-gray-200 shadow-sm">
+                          {{ tag }}
+                        </span>
+                      </div>
                     </div>
                     <h3 class="font-bold text-base text-gray-900 leading-tight">{{ circle.circle_name }}</h3>
                     <div class="flex gap-2">
