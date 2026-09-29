@@ -16,11 +16,11 @@
   </style>
 </head>
 <body class="bg-gray-100 p-4 md:p-8">
-  <div id="app" class="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden" v-cloak>
+  <div id="app" class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden" v-cloak>
     
     <!-- ヘッダー -->
     <div class="bg-gray-800 text-white p-6 flex justify-between items-center">
-      <h1 class="text-xl md:text-2xl font-bold">VGGC 12th 管理画面 (タグ・お品書き設定)</h1>
+      <h1 class="text-xl md:text-2xl font-bold">VGGC 12th 管理画面 (メンバー・タグ・お品書き設定)</h1>
       <button v-if="user" @click="signOut" class="text-sm bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded transition">ログアウト</button>
     </div>
 
@@ -67,8 +67,9 @@
               <tr>
                 <th class="p-3 border-b border-r w-24">配置</th>
                 <th class="p-3 border-b border-r w-48">サークル名</th>
-                <th class="p-3 border-b border-r min-w-[200px]">タグ (カンマ区切り)</th>
-                <th class="p-3 border-b border-r min-w-[300px]">お品書き(X) URL</th>
+                <th class="p-3 border-b border-r min-w-[150px]">メンバー (カンマ区切り)</th>
+                <th class="p-3 border-b border-r min-w-[200px]">頒布物タグ (カンマ区切り)</th>
+                <th class="p-3 border-b border-r min-w-[250px]">お品書き(X) URL</th>
                 <th class="p-3 border-b text-center w-24">操作</th>
               </tr>
             </thead>
@@ -79,17 +80,27 @@
                 </td>
                 <td class="p-3 border-r font-bold">
                   {{ circle.circle_name }}
-                  <div class="text-[10px] text-gray-500 font-normal mt-0.5">@{{ circle.twitter_id }}</div>
+                  <div class="text-[10px] text-gray-500 font-normal mt-0.5">代表: {{ circle.penname }}</div>
                 </td>
+                
+                <!-- メンバータグ -->
+                <td class="p-3 border-r bg-green-50/20">
+                  <input type="text" v-model="editData[circle.circle_id].membersInput" placeholder="Aさん, Bさん" 
+                         class="w-full px-2 py-1.5 border border-green-200 rounded focus:ring-2 focus:ring-green-500 outline-none">
+                </td>
+                
+                <!-- 頒布物タグ -->
                 <td class="p-3 border-r">
-                  <input type="text" v-model="editData[circle.circle_id].tagsInput" placeholder="イラスト本, アクスタ, 新刊セット" 
+                  <input type="text" v-model="editData[circle.circle_id].tagsInput" placeholder="イラスト本, アクスタ" 
                          class="w-full px-2 py-1.5 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
-                  <div class="text-[10px] text-gray-400 mt-1">※カンマ(,)で区切ると複数バッジになります</div>
                 </td>
+                
+                <!-- お品書きURL -->
                 <td class="p-3 border-r">
                   <input type="text" v-model="editData[circle.circle_id].url" placeholder="https://x.com/..." 
                          class="w-full px-2 py-1.5 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
                 </td>
+                
                 <td class="p-3 text-center">
                   <button @click="saveCircle(circle.circle_id)" 
                           class="bg-blue-600 text-white px-4 py-1.5 rounded font-bold hover:bg-blue-700 active:scale-95 transition-transform flex items-center justify-center gap-1 w-full"
@@ -119,7 +130,7 @@
     createApp({
       setup() {
         const user = ref(null);
-        const authId = ref('admin'); // IDはadmin固定
+        const authId = ref('admin'); 
         const authPassword = ref('');
         const authMode = ref('login');
         const authError = ref('');
@@ -127,20 +138,30 @@
         const loading = ref(true);
         const circles = ref([]);
         const editData = ref({});
-        const saveStatus = ref({}); // 各サークルの保存状態 ('saved' | null)
+        const saveStatus = ref({}); 
         const searchQuery = ref('');
 
         onMounted(async () => {
           const { data: { session } } = await supabaseClient.auth.getSession();
-          user.value = session?.user || null;
           
-          if (user.value) {
+          // 一般ユーザーとしてログインしている場合のログインバイパス対策
+          if (session?.user && session.user.email !== 'admin@vggc.dummy.local') {
+            await supabaseClient.auth.signOut();
+            user.value = null;
+            authError.value = '一般ユーザーとしてログインしていました。安全のため一度ログアウトしました。管理者パスワードを入力してログインし直してください。';
+          } else if (session?.user) {
+            user.value = session.user;
             await loadData();
           }
 
           supabaseClient.auth.onAuthStateChange((event, session) => {
-            user.value = session?.user || null;
-            if (user.value) loadData();
+            // イベント発火時も念のためチェック
+            if (session?.user && session.user.email === 'admin@vggc.dummy.local') {
+              user.value = session.user;
+              loadData();
+            } else {
+              user.value = null;
+            }
           });
         });
 
@@ -170,23 +191,21 @@
         const loadData = async () => {
           loading.value = true;
           try {
-            // 1. data.json からサークル一覧を取得
             const res = await fetch('data.json');
             const data = await res.json();
             circles.value = data.circles;
 
-            // 2. 編集用データを初期化
             const initialEditData = {};
             circles.value.forEach(c => {
-              initialEditData[c.circle_id] = { tagsInput: '', url: '' };
+              initialEditData[c.circle_id] = { tagsInput: '', membersInput: '', url: '' };
             });
 
-            // 3. Supabase から登録済みのタグ・URLを取得してマージ
             const { data: dbData, error } = await supabaseClient.from('circle_info').select('*');
             if (!error && dbData) {
               dbData.forEach(info => {
                 if (initialEditData[info.circle_id]) {
                   initialEditData[info.circle_id].tagsInput = (info.tags || []).join(', ');
+                  initialEditData[info.circle_id].membersInput = (info.members || []).join(', ');
                   initialEditData[info.circle_id].url = info.oshinagaki_url || '';
                 }
               });
@@ -212,26 +231,25 @@
 
         const saveCircle = async (circleId) => {
           const input = editData.value[circleId];
-          // カンマ区切りの文字列を配列に変換（空の要素は除外）
           const tagsArray = input.tagsInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+          const membersArray = input.membersInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
           
           try {
             const { error } = await supabaseClient.from('circle_info').upsert({
               circle_id: circleId,
               tags: tagsArray,
+              members: membersArray,
               oshinagaki_url: input.url.trim() || null,
               updated_at: new Date().toISOString()
             });
 
             if (error) {
-              // RLSエラーなど
               if (error.code === '42501') {
                 throw new Error('保存権限がありません。管理者としてログインしているか確認してください。');
               }
               throw error;
             }
 
-            // 保存成功エフェクト
             saveStatus.value[circleId] = 'saved';
             setTimeout(() => { saveStatus.value[circleId] = null; }, 2000);
 
