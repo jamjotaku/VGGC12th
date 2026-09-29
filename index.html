@@ -265,6 +265,17 @@
                   {{ filterBlock }} <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
                 </span>
               </div>
+              
+              <!-- ★ タグ絞り込みフィルター -->
+              <div class="mt-3 flex gap-2 overflow-x-auto pb-1 px-1" style="scrollbar-width: none;">
+                <button @click="filterTag = ''" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap transition" :class="!filterTag ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'">すべて</button>
+                <button v-for="m in availableTags.members" :key="'fm_'+m" @click="filterTag = m" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap border flex items-center gap-1 transition shadow-sm" :style="filterTag === m ? getMemberStyle(m) : {}" :class="filterTag !== m ? 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50' : 'opacity-90'">
+                   {{ getMemberMark(m) }} {{ m }}
+                </button>
+                <button v-for="t in availableTags.tags" :key="'ft_'+t" @click="filterTag = t" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap border transition shadow-sm" :class="filterTag === t ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'">
+                   {{ t }}
+                </button>
+              </div>
             </div>
             
             <!-- 検索タブのサークル一覧 (画像なし、バッジ中心のレイアウト) -->
@@ -344,9 +355,17 @@
                   </label>
                 </div>
                 <div class="flex items-center justify-end gap-2">
-                  <div class="text-sm font-bold bg-pink-50 text-pink-700 px-3 py-1.5 rounded-lg border border-pink-100 flex items-center">
-                    計: <span class="text-base ml-1">¥{{ totalPrice.toLocaleString() }}</span>
+                  <div class="flex flex-col items-end gap-0.5">
+                    <div class="text-[10px] font-bold text-gray-500">
+                      予定総額: ¥{{ totalPrice.toLocaleString() }}
+                    </div>
+                    <div class="text-sm font-bold bg-pink-50 text-pink-700 px-2.5 py-1 rounded-md border border-pink-100 flex items-center shadow-sm">
+                      購入済: <span class="text-base ml-1">¥{{ spentPrice.toLocaleString() }}</span>
+                    </div>
                   </div>
+                  <button @click="shareToTwitter" class="p-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-transform" title="X (Twitter) でシェア">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                  </button>
                   <button @click="exportToText" class="p-1.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 active:scale-95 transition-transform" title="テキストでコピー">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
                   </button>
@@ -504,7 +523,7 @@
     <!-- ★サークル詳細 / お品書き モーダル -->
     <transition name="modal">
       <div v-if="selectedCircle" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
           
           <!-- ヘッダー -->
           <div class="p-4 border-b bg-white flex justify-between items-start relative z-10 shadow-sm">
@@ -542,7 +561,14 @@
             </div>
 
             <!-- お品書き埋め込みエリア -->
-            <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px] flex items-center justify-center text-gray-400 flex-col shadow-inner w-full">
+            <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[300px] flex items-center justify-center text-gray-400 flex-col shadow-inner w-full relative">
+              
+              <!-- ★ 読み込み中のスケルトンUI -->
+              <div v-if="isTweetLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/80 backdrop-blur-sm rounded-xl z-10 transition-opacity duration-300">
+                <div class="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+                <p class="text-sm text-gray-500 font-bold animate-pulse">お品書きを読み込み中...</p>
+              </div>
+
               <!-- Xの埋め込みポストが表示されるコンテナ -->
               <div v-show="circleExtraInfo[selectedCircle.circle_id]?.oshinagaki_url" id="tweet-container" class="w-full flex justify-center"></div>
               
@@ -658,7 +684,9 @@
         const loading = ref(true);
         const searchQuery = ref('');
         const filterBlock = ref('');
+        const filterTag = ref('');
         const activeTab = ref('search');
+        const isTweetLoading = ref(false);
         
         const savedList = ref({});
         const freeMemoText = ref('');
@@ -694,6 +722,7 @@
 
         watch(selectedCircle, async (newVal) => {
           if (newVal && circleExtraInfo.value[newVal.circle_id]?.oshinagaki_url) {
+            isTweetLoading.value = true;
             const url = circleExtraInfo.value[newVal.circle_id].oshinagaki_url;
             
             // DOMの描画完了を待機
@@ -702,18 +731,24 @@
             if (container && window.twttr) {
               container.innerHTML = ''; // 以前のツイートをクリア
               
-              // URLからツイートIDを抽出 (例: https://twitter.com/user/status/123456789)
+              // URLからツイートIDを抽出
               const match = url.match(/status\/(\d+)/);
               if (match) {
                 // 公式ウィジェットAPIでツイートを動的に生成
                 window.twttr.widgets.createTweet(match[1], container, {
                   align: 'center',
-                  conversation: 'none'
+                  conversation: 'all', // スレッド（追加画像）を表示可能にする
+                  dnt: true
+                }).then(() => {
+                  isTweetLoading.value = false;
                 });
               } else {
-                container.innerHTML = `<a href="${url}" target="_blank" class="text-blue-500 underline">お品書きを見る (Xへ移動)</a>`;
+                isTweetLoading.value = false;
+                container.innerHTML = `<a href="${url}" target="_blank" class="text-blue-500 underline font-bold mt-4 block">お品書きを見る (Xへ移動)</a>`;
               }
             }
+          } else {
+            isTweetLoading.value = false;
           }
         });
         
@@ -921,6 +956,19 @@
           pinY.value = Math.max(0, Math.min(y, container.offsetHeight)) / mapScale.value;
         };
 
+        const shareToTwitter = () => {
+          let text = "🛒 ぶいごまVGGC12th 買い出しリスト\n\n";
+          text += `予算: ¥${totalPrice.value.toLocaleString()}\n`;
+          if (spentPrice.value > 0) text += `購入済: ¥${spentPrice.value.toLocaleString()}\n`;
+          text += `(全${savedCount.value}サークル中、${boughtCount.value}サークル達成)\n\n`;
+          text += "#VGGC12th\n";
+          if (listId.value && isPublic.value) {
+            text += `\n${shareUrl.value}`;
+          }
+          const encoded = encodeURIComponent(text);
+          window.open(`https://twitter.com/intent/tweet?text=${encoded}`, '_blank');
+        };
+
         const exportToText = () => {
           let text = "📝 買い物リスト (VGGC 12th)\n";
           text += `合計予定額: ¥${totalPrice.value.toLocaleString()}\n\n`;
@@ -942,6 +990,18 @@
              if (key.startsWith('__')) return;
              const price = parseInt(savedList.value[key].price);
              if (!isNaN(price)) total += price;
+          });
+          return total;
+        });
+
+        const spentPrice = computed(() => {
+          let total = 0;
+          Object.keys(savedList.value).forEach(key => {
+             if (key.startsWith('__')) return;
+             if (savedList.value[key].bought) {
+               const price = parseInt(savedList.value[key].price);
+               if (!isNaN(price)) total += price;
+             }
           });
           return total;
         });
@@ -976,6 +1036,16 @@
           return list;
         });
 
+        const availableTags = computed(() => {
+          const tags = new Set();
+          const members = new Set();
+          Object.values(circleExtraInfo.value).forEach(info => {
+            (info.tags || []).forEach(t => tags.add(t));
+            (info.members || []).forEach(m => members.add(m));
+          });
+          return { tags: Array.from(tags).sort(), members: Array.from(members).sort() };
+        });
+
         const filteredCircles = computed(() => {
           return circles.value.filter(circle => {
             const matchQuery = !searchQuery.value || 
@@ -983,7 +1053,13 @@
               (circle.penname && circle.penname.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
               (circle.circle_kana && circle.circle_kana.includes(searchQuery.value));
             const matchBlock = !filterBlock.value || circle.space_sym === filterBlock.value;
-            return matchQuery && matchBlock;
+            
+            const extra = circleExtraInfo.value[circle.circle_id] || {};
+            const matchTag = !filterTag.value || 
+              (extra.tags || []).includes(filterTag.value) || 
+              (extra.members || []).includes(filterTag.value);
+              
+            return matchQuery && matchBlock && matchTag;
           });
         });
 
@@ -1015,15 +1091,15 @@
         const copyShareUrl = () => { navigator.clipboard.writeText(shareUrl.value); copySuccess.value = true; setTimeout(() => copySuccess.value = false, 2000); };
 
         return {
-          circles, blocks, loading, searchQuery, filterBlock, filteredCircles,
+          circles, blocks, loading, searchQuery, filterBlock, filterTag, filteredCircles,
           activeTab, savedCount, sortedSavedCircles, freeMemoText, savedList, toggleSave, toggleBlock,
           user, isSaving, isOnline, isReadOnly, exitReadOnly,
           showAuthModal, authId, authPassword, authMode, authError, authMessage, handleAuth, signOut,
           showShareModal, isPublic, togglePublicStatus, shareUrl, copyShareUrl, copySuccess,
           showHelpModal,
           selectedCircle, openDetails, circleExtraInfo, // ★エクスポート追加
-          getMemberStyle, getMemberMark,
-          sortOrder, hideBought, priorityColors, totalPrice, exportToText,
+          getMemberStyle, getMemberMark, availableTags, isTweetLoading,
+          sortOrder, hideBought, priorityColors, totalPrice, spentPrice, exportToText, shareToTwitter,
           boughtCount, progressPercent,
           mapScale, pinX, pinY, startDrag, stopDrag, dragPin
         }
