@@ -16,6 +16,8 @@
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- X (Twitter) Widget JS -->
+  <script src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
   
   <style>
     body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
@@ -279,11 +281,14 @@
                 </button>
 
                 <div class="flex flex-col gap-3 pr-12">
-                  <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-2 flex-wrap">
                     <span class="inline-block px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded shadow-sm border border-blue-200">
                       {{ circle.space_sym }}-{{ circle.space_num }}
                     </span>
-                    <!-- 今後ここに Adminで追加したタグ が表示されます -->
+                    <!-- ★ DBから取得したタグバッジ -->
+                    <span v-for="tag in (circleExtraInfo[circle.circle_id]?.tags || [])" :key="tag" class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded border border-gray-200 shadow-sm">
+                      {{ tag }}
+                    </span>
                   </div>
                   <div>
                     <h3 class="font-bold text-lg leading-tight text-gray-900 mb-0.5">{{ circle.circle_name }}</h3>
@@ -362,15 +367,21 @@
                   </button>
 
                   <div class="p-4 flex flex-col gap-2 relative pr-8">
-                    <div class="flex items-center gap-2 mb-1">
+                    <div class="flex items-center gap-2 flex-wrap mb-1">
                       <span class="inline-block px-2 py-0.5 bg-pink-100 text-pink-800 text-xs font-bold rounded border border-pink-200">{{ circle.space_sym }}-{{ circle.space_num }}</span>
-                      <button @click="openDetails(circle)" class="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-gray-200 transition font-bold border border-gray-200">
-                        詳細を見る
-                      </button>
+                      <!-- ★ DBから取得したタグバッジ -->
+                      <span v-for="tag in (circleExtraInfo[circle.circle_id]?.tags || [])" :key="tag" class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded border border-gray-200 shadow-sm">
+                        {{ tag }}
+                      </span>
                     </div>
                     <h3 class="font-bold text-base text-gray-900 leading-tight">{{ circle.circle_name }}</h3>
+                    <div class="flex gap-2">
+                       <button @click="openDetails(circle)" class="mt-1 flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-gray-200 transition font-bold border border-gray-200">
+                         詳細 / お品書き
+                       </button>
+                    </div>
                     
-                    <div class="flex flex-wrap items-center gap-2 mt-1">
+                    <div class="flex flex-wrap items-center gap-2 mt-2">
                       <select v-model="savedList[circle.circle_id].priority" :disabled="isReadOnly" class="text-xs border border-gray-200 rounded px-1 py-1 bg-gray-50 focus:ring-1 focus:ring-pink-400 outline-none" :class="priorityColors[savedList[circle.circle_id].priority]">
                         <option value="">優先度: -</option>
                         <option value="S">S (絶対買う)</option>
@@ -479,7 +490,7 @@
       </div>
     </transition>
 
-    <!-- ★新規追加: サークル詳細 / お品書き モーダル -->
+    <!-- ★サークル詳細 / お品書き モーダル -->
     <transition name="modal">
       <div v-if="selectedCircle" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
@@ -507,15 +518,22 @@
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
                 @{{ selectedCircle.twitter_id }}
               </a>
-              <!-- ★第2・第3段階でここにAdminページから取得した「タグ」を表示します -->
+              
+              <!-- ★DBから取得したタグを表示 -->
+              <span v-for="tag in (circleExtraInfo[selectedCircle.circle_id]?.tags || [])" :key="tag" class="text-sm px-3 py-1.5 bg-white text-gray-700 rounded-full border border-gray-200 shadow-sm font-bold">{{ tag }}</span>
+              <span v-if="!(circleExtraInfo[selectedCircle.circle_id]?.tags?.length)" class="text-sm px-3 py-1.5 bg-gray-100 text-gray-400 rounded-full border border-dashed border-gray-300">タグ情報なし</span>
             </div>
 
             <!-- お品書き埋め込みエリア -->
-            <div class="bg-white border border-gray-200 rounded-xl p-6 min-h-[200px] flex items-center justify-center text-gray-400 flex-col gap-3 shadow-inner">
-              <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-              <div class="text-center">
-                <p class="text-sm font-bold text-gray-500 mb-1">お品書き（準備中）</p>
-                <p class="text-[10px] md:text-xs">※今後のアップデートで、ここに管理者ページから<br>登録された公式Xのポストが表示されます。</p>
+            <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px] flex items-center justify-center text-gray-400 flex-col shadow-inner w-full">
+              <!-- Xの埋め込みポストが表示されるコンテナ -->
+              <div v-show="circleExtraInfo[selectedCircle.circle_id]?.oshinagaki_url" id="tweet-container" class="w-full flex justify-center"></div>
+              
+              <!-- URLが未登録の場合の表示 -->
+              <div v-show="!circleExtraInfo[selectedCircle.circle_id]?.oshinagaki_url" class="text-center text-gray-400 py-6">
+                <svg class="w-10 h-10 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <p class="text-sm font-bold text-gray-500 mb-1">お品書き未登録</p>
+                <p class="text-[10px] md:text-xs">※公式Xのポストが登録されると表示されます</p>
               </div>
             </div>
 
@@ -646,11 +664,39 @@
         const sortOrder = ref('default'); 
         const hideBought = ref(false);
         
-        // ★新規追加: 詳細モーダル用のステート
+        // ★ Supabaseから取得した追加情報（タグ・お品書きURL）を保持するステート
+        const circleExtraInfo = ref({});
+        
+        // 詳細モーダルのステートと、X(Twitter)埋め込みの監視処理
         const selectedCircle = ref(null);
         const openDetails = (circle) => {
           selectedCircle.value = circle;
         };
+
+        watch(selectedCircle, async (newVal) => {
+          if (newVal && circleExtraInfo.value[newVal.circle_id]?.oshinagaki_url) {
+            const url = circleExtraInfo.value[newVal.circle_id].oshinagaki_url;
+            
+            // DOMの描画完了を待機
+            await Vue.nextTick();
+            const container = document.getElementById('tweet-container');
+            if (container && window.twttr) {
+              container.innerHTML = ''; // 以前のツイートをクリア
+              
+              // URLからツイートIDを抽出 (例: https://twitter.com/user/status/123456789)
+              const match = url.match(/status\/(\d+)/);
+              if (match) {
+                // 公式ウィジェットAPIでツイートを動的に生成
+                window.twttr.widgets.createTweet(match[1], container, {
+                  align: 'center',
+                  conversation: 'none'
+                });
+              } else {
+                container.innerHTML = `<a href="${url}" target="_blank" class="text-blue-500 underline">お品書きを見る (Xへ移動)</a>`;
+              }
+            }
+          }
+        });
         
         const mapScale = ref(1.0);
         const pinX = ref(100);
@@ -733,12 +779,36 @@
             if (currentUser && !isReadOnly.value && isOnline.value) await loadCloudList(currentUser.id);
           });
 
+          // データの並列読み込み (data.json & Supabase circle_info)
           try {
-            const res = await fetch('data.json');
-            const data = await res.json();
-            circles.value = data.circles;
-            blocks.value = data.sort_order;
-          } catch (error) { console.error(error); } finally { loading.value = false; }
+            const [localRes, supabaseRes] = await Promise.all([
+              fetch('data.json'),
+              supabaseClient.from('circle_info').select('circle_id, tags, oshinagaki_url')
+            ]);
+            
+            // 静的データのマッピング
+            if (localRes.ok) {
+              const data = await localRes.json();
+              circles.value = data.circles;
+              blocks.value = data.sort_order;
+            }
+            
+            // Supabaseからの追加情報のマッピング
+            if (!supabaseRes.error && supabaseRes.data) {
+              const infoMap = {};
+              supabaseRes.data.forEach(info => {
+                infoMap[info.circle_id] = {
+                  tags: info.tags || [],
+                  oshinagaki_url: info.oshinagaki_url || ''
+                };
+              });
+              circleExtraInfo.value = infoMap;
+            }
+          } catch (error) { 
+            console.error('Data loading error:', error); 
+          } finally { 
+            loading.value = false; 
+          }
         });
 
         const loadSharedList = async (id) => {
@@ -913,7 +983,7 @@
           showAuthModal, authId, authPassword, authMode, authError, authMessage, handleAuth, signOut,
           showShareModal, isPublic, togglePublicStatus, shareUrl, copyShareUrl, copySuccess,
           showHelpModal,
-          selectedCircle, openDetails, // ★追加: 詳細モーダル
+          selectedCircle, openDetails, circleExtraInfo, // ★エクスポート追加
           sortOrder, hideBought, priorityColors, totalPrice, exportToText,
           boughtCount, progressPercent,
           mapScale, pinX, pinY, startDrag, stopDrag, dragPin
