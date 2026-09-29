@@ -285,9 +285,9 @@
                     <span class="inline-block px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded shadow-sm border border-blue-200">
                       {{ circle.space_sym }}-{{ circle.space_num }}
                     </span>
-                    <!-- ★ DBから取得したメンバータグ（緑色・アイコン付き） -->
-                    <span v-for="member in (circleExtraInfo[circle.circle_id]?.members || [])" :key="'m_'+member" class="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded border border-green-200 shadow-sm flex items-center gap-0.5">
-                      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    <!-- ★ DBから取得したメンバータグ（辞書のカラーコードとファンマーク適用） -->
+                    <span v-for="member in (circleExtraInfo[circle.circle_id]?.members || [])" :key="'m_'+member" class="px-2 py-0.5 text-[10px] font-bold rounded border shadow-sm flex items-center gap-0.5" :style="getMemberStyle(member)">
+                      <span>{{ getMemberMark(member) }}</span>
                       {{ member }}
                     </span>
                     <!-- ★ DBから取得した頒布物タグ -->
@@ -376,8 +376,8 @@
                       <span class="inline-block px-2 py-0.5 bg-pink-100 text-pink-800 text-xs font-bold rounded border border-pink-200">{{ circle.space_sym }}-{{ circle.space_num }}</span>
                       
                       <!-- ★ メンバータグ -->
-                      <span v-for="member in (circleExtraInfo[circle.circle_id]?.members || [])" :key="'m_'+member" class="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded border border-green-200 shadow-sm flex items-center gap-0.5">
-                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                      <span v-for="member in (circleExtraInfo[circle.circle_id]?.members || [])" :key="'m_'+member" class="px-2 py-0.5 text-[10px] font-bold rounded border shadow-sm flex items-center gap-0.5" :style="getMemberStyle(member)">
+                        <span>{{ getMemberMark(member) }}</span>
                         {{ member }}
                       </span>
                       <!-- ★ 頒布物タグ -->
@@ -531,8 +531,8 @@
               </a>
               
               <!-- ★ DBから取得したメンバーを表示 -->
-              <span v-for="member in (circleExtraInfo[selectedCircle.circle_id]?.members || [])" :key="'m_'+member" class="text-sm px-3 py-1.5 bg-green-50 text-green-700 rounded-full border border-green-200 shadow-sm font-bold flex items-center gap-1">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              <span v-for="member in (circleExtraInfo[selectedCircle.circle_id]?.members || [])" :key="'m_'+member" class="text-sm px-3 py-1.5 rounded-full border shadow-sm font-bold flex items-center gap-1" :style="getMemberStyle(member)">
+                <span>{{ getMemberMark(member) }}</span>
                 {{ member }}
               </span>
 
@@ -643,6 +643,8 @@
 
   <script>
     const { createApp, ref, computed, onMounted, watch } = Vue;
+    const vspoDict = [{"name":"花芽すみれ","color":"#BECCFF","fanmarks":["👾","💤"]},{"name":"花芽なずな","color":"#FABEDC","fanmarks":["🍣"]},{"name":"小雀とと","color":"#FFF33F","fanmarks":["🔫","🐥"]},{"name":"一ノ瀬うるは","color":"#4182FA","fanmarks":["🌠"]},{"name":"胡桃のあ","color":"#B297D7","fanmarks":["🧸","♔"]},{"name":"兎咲ミミ","color":"#C7B2D6","fanmarks":["🐰","🍭"]},{"name":"空澄セナ","color":"#FFFFFF","fanmarks":["🗝","♠"]},{"name":"橘ひなの","color":"#FA96C8","fanmarks":["🍫","💘"]},{"name":"英リサ","color":"#D1DE79","fanmarks":["💐"]},{"name":"如月れん","color":"#BE2152","fanmarks":["⏰"]},{"name":"神成きゅぴ","color":"#FFD23C","fanmarks":["🌩"]},{"name":"八雲べに","color":"#85CAB3","fanmarks":["💄","💚"]},{"name":"藍沢エマ","color":"#B4F1F9","fanmarks":["🥞","💫"]},{"name":"紫宮るな","color":"#D6ADFF","fanmarks":["☪","🐾"]},{"name":"猫汰つな","color":"#FF3652","fanmarks":["🍒","✨"]},{"name":"白波らむね","color":"#8ECED9","fanmarks":["🐻","❄","🏖"]},{"name":"小森めと","color":"#FBA03F","fanmarks":["🪐"]},{"name":"夢野あかり","color":"#FF8684","fanmarks":["🍼"]},{"name":"夜乃くろむ","color":"#909EC8","fanmarks":["💀","⛓"]},{"name":"紡木こかげ","color":"#5195E1","fanmarks":["📘","💧"]},{"name":"千燈ゆうひ","color":"#ED784A","fanmarks":["🫠"]},{"name":"蝶屋はなび","color":"#EA5506","fanmarks":["🦋","🎆"]},{"name":"甘結もか","color":"#ECA0AA","fanmarks":["🕹","🔖"]},{"name":"銀城サイネ","color":"#58535E","fanmarks":["🎈"]},{"name":"龍巻ちせ","color":"#BEFF77","fanmarks":["🐉","🌪"]}];
+
     const STORAGE_KEY = 'vggc12th_saved_list';
 
     const supabaseUrl = 'https://lgcwzlzrovdcjaywvmdk.supabase.co';
@@ -715,6 +717,24 @@
           }
         });
         
+        const getMemberStyle = (name) => {
+          const found = vspoDict.find(d => d.name === name);
+          if (found) {
+            const hex = found.color;
+            if (hex === '#FFFFFF') return { backgroundColor: '#ffffff', borderColor: '#d1d5db', color: '#374151' };
+            return { backgroundColor: hex + '40', borderColor: hex, color: '#374151' };
+          }
+          return { backgroundColor: '#dcfce7', borderColor: '#bbf7d0', color: '#15803d' };
+        };
+
+        const getMemberMark = (name) => {
+          const found = vspoDict.find(d => d.name === name);
+          if (found && found.fanmarks.length > 0) {
+            return found.fanmarks[0];
+          }
+          return '👤';
+        };
+
         const mapScale = ref(1.0);
         const pinX = ref(100);
         const pinY = ref(100);
@@ -1002,6 +1022,7 @@
           showShareModal, isPublic, togglePublicStatus, shareUrl, copyShareUrl, copySuccess,
           showHelpModal,
           selectedCircle, openDetails, circleExtraInfo, // ★エクスポート追加
+          getMemberStyle, getMemberMark,
           sortOrder, hideBought, priorityColors, totalPrice, exportToText,
           boughtCount, progressPercent,
           mapScale, pinX, pinY, startDrag, stopDrag, dragPin
