@@ -87,7 +87,7 @@
                 <button @click="mapScale = Math.max(mapScale - 0.3, 0.4)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 hover:bg-gray-50 transition" title="縮小">－</button>
               </div>
               <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
-                <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
+                <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
                 <svg class="draggable-pin text-red-600" viewBox="0 0 24 24" fill="currentColor" :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }" @mousedown.prevent="startDrag" @touchstart.prevent="startDrag">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                 </svg>
@@ -147,7 +147,7 @@
                   <button @click="mapScale = Math.max(mapScale - 0.3, 0.4)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 transition" title="縮小">－</button>
                 </div>
                 <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
-                  <img src="map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
+                  <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
                   <svg class="draggable-pin text-red-600" viewBox="0 0 24 24" fill="currentColor" :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }" @mousedown.prevent="startDrag" @touchstart.prevent="startDrag">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                   </svg>
@@ -782,7 +782,7 @@ const vspoDict = [{"name":"花芽すみれ","color":"#BECCFF","fanmarks":["👾"
           // データの並列読み込み (data.json & Supabase circle_info)
           try {
             const [localRes, supabaseRes] = await Promise.all([
-              fetch('data.json'),
+              fetch('/data.json'),
               supabaseClient.from('circle_info').select('circle_id, tags, members, oshinagaki_url')
             ]);
             
