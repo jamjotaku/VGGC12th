@@ -662,9 +662,34 @@ const vspoDict = [{"name":"花芽すみれ","color":"#BECCFF","fanmarks":["👾"
         const showShareModal = ref(false);
         const showHelpModal = ref(false);
         const targetSpace = ref(null);
+        const mapCoords = ref({});
         const jumpToMap = (circle) => {
-          targetSpace.value = circle.space_sym + '-' + circle.space_num + ' (' + circle.circle_name + ')';
+          const spaceId = circle.space_sym + '-' + circle.space_num;
+          const blockId = circle.space_sym;
+          targetSpace.value = spaceId + ' (' + circle.circle_name + ')';
           activeTab.value = 'map';
+          
+          // 自動スクロールとピン移動
+          setTimeout(() => {
+            let targetPos = mapCoords.value[spaceId];
+            if (!targetPos && mapCoords.value[blockId]) {
+              targetPos = mapCoords.value[blockId]; // フォールバック (ブロック単位)
+            }
+            if (targetPos) {
+              pinX.value = targetPos.x;
+              pinY.value = targetPos.y;
+              
+              // コンテナのスクロール位置を調整
+              const containers = document.querySelectorAll('.map-inner');
+              containers.forEach(container => {
+                const scrollX = (targetPos.x * mapScale.value) - (container.clientWidth / 2);
+                const scrollY = (targetPos.y * mapScale.value) - (container.clientHeight / 2);
+                container.scrollLeft = Math.max(0, scrollX);
+                container.scrollTop = Math.max(0, scrollY);
+              });
+            }
+          }, 100);
+          
           window.scrollTo({ top: 0, behavior: 'smooth' });
         };
         const authId = ref('');
