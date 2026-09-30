@@ -82,6 +82,10 @@
             </div>
             <!-- PC用マップコンテナ -->
             <div class="map-container shadow-inner relative">
+              <div v-if="targetSpace" class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg font-bold text-sm z-30 flex items-center gap-2">
+                📍 {{ targetSpace }} を探す
+                <button @click="targetSpace = null" class="ml-2 bg-blue-700 rounded-full w-6 h-6 flex items-center justify-center hover:bg-blue-800 transition">×</button>
+              </div>
               <div class="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
                 <button @click="mapScale = Math.min(mapScale + 0.3, 2.5)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 hover:bg-gray-50 transition" title="拡大">＋</button>
                 <button @click="mapScale = Math.max(mapScale - 0.3, 0.4)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 hover:bg-gray-50 transition" title="縮小">－</button>
@@ -242,9 +246,15 @@
                     <p class="text-sm text-gray-500">代表: {{ circle.penname }}</p>
                   </div>
                   <div class="flex items-center gap-2 mt-1">
-                    <button @click="openDetails(circle)" class="flex items-center gap-1.5 text-xs bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition font-bold shadow-sm">
+                    <button v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url" @click="openDetails(circle)" class="flex items-center gap-1.5 text-xs bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition font-bold shadow-sm">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                      詳細 / お品書き
+                      お品書き
+                    </button>
+                    <button v-else disabled class="flex items-center gap-1.5 text-xs bg-gray-200 text-gray-500 px-3 py-1.5 rounded-lg font-bold shadow-sm cursor-not-allowed">
+                      お品書き未公開
+                    </button>
+                    <button @click="jumpToMap(circle)" class="flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition font-bold border border-blue-200 shadow-sm ml-auto">
+                      📍 マップ
                     </button>
                   </div>
                 </div>
@@ -346,8 +356,14 @@
                     </div>
                     <h3 class="font-bold text-base text-gray-900 leading-tight">{{ circle.circle_name }}</h3>
                     <div class="flex gap-2">
-                       <button @click="openDetails(circle)" class="mt-1 flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-gray-200 transition font-bold border border-gray-200">
-                         詳細 / お品書き
+                       <button v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url" @click="openDetails(circle)" class="mt-1 flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-gray-200 transition font-bold border border-gray-200">
+                         お品書き
+                       </button>
+                       <button v-else disabled class="mt-1 flex items-center gap-1 text-[10px] bg-gray-100 text-gray-400 px-2 py-1 rounded border border-gray-200 cursor-not-allowed">
+                         未公開
+                       </button>
+                       <button @click="jumpToMap(circle)" class="mt-1 ml-auto flex items-center gap-1 text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition font-bold border border-blue-200">
+                         📍 マップ
                        </button>
                     </div>
                     
@@ -645,6 +661,12 @@ const vspoDict = [{"name":"花芽すみれ","color":"#BECCFF","fanmarks":["👾"
         const showAuthModal = ref(false);
         const showShareModal = ref(false);
         const showHelpModal = ref(false);
+        const targetSpace = ref(null);
+        const jumpToMap = (circle) => {
+          targetSpace.value = circle.space_sym + '-' + circle.space_num + ' (' + circle.circle_name + ')';
+          activeTab.value = 'map';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
         const authId = ref('');
         const authPassword = ref('');
         const authMode = ref('login');
