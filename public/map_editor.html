@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Map Coordinate Editor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    #map-container {
+      position: relative;
+      display: inline-block;
+      cursor: crosshair;
+    }
+    .pin {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background-color: red;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-shadow: 0 0 0 2px white, 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .pin-label {
+      position: absolute;
+      background: white;
+      color: black;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 1px 4px;
+      border-radius: 4px;
+      border: 1px solid black;
+      transform: translate(-50%, -150%);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center">
+  <div class="bg-white p-4 rounded-xl shadow-lg w-full max-w-5xl mb-4">
+    <h1 class="text-xl font-bold mb-2">📍 スペース座標 マッピングツール</h1>
+    <p class="text-sm text-gray-600 mb-4">
+      マップ画像上の、目的の島（またはスペース）をクリックしてください。<br>
+      スペース番号（例: <code>A-25</code> や <code>A島</code>）を入力すると、その座標が記録されます。
+    </p>
+    
+    <div class="flex gap-4 items-center">
+      <button onclick="exportJSON()" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold">
+        JSONを出力 (ダウンロード)
+      </button>
+      <button onclick="clearAll()" class="bg-red-100 text-red-600 px-4 py-2 rounded hover:bg-red-200 font-bold">
+        すべてクリア
+      </button>
+      <div class="text-sm text-gray-500 ml-auto">
+        登録済み: <span id="count" class="font-bold text-black">0</span> ヶ所
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white p-2 rounded-xl shadow border border-gray-200 overflow-auto max-w-full">
+    <div id="map-container" onclick="handleMapClick(event)">
+      <!-- Vercel本番環境から相対パスで読み込む -->
+      <img src="/map.jpg" alt="Map" id="map-img" style="width: 900px; display: block;">
+    </div>
+  </div>
+
+  <script>
+    let coords = {};
+
+    window.onload = () => {
+      const saved = localStorage.getItem('vggc_map_coords');
+      if (saved) {
+        coords = JSON.parse(saved);
+        renderPins();
+      }
+    };
+
+    function handleMapClick(e) {
+      const container = document.getElementById('map-container');
+      const rect = container.getBoundingClientRect();
+      const x = Math.round(e.clientX - rect.left);
+      const y = Math.round(e.clientY - rect.top);
+
+      const spaceName = prompt('この位置のスペース番号を入力してください\\n例: A-25, または A など');
+      if (!spaceName) return; 
+
+      coords[spaceName] = { x, y };
+      localStorage.setItem('vggc_map_coords', JSON.stringify(coords));
+      
+      renderPins();
+    }
+
+    function renderPins() {
+      const container = document.getElementById('map-container');
+      const existingPins = container.querySelectorAll('.pin, .pin-label');
+      existingPins.forEach(p => p.remove());
+
+      let count = 0;
+      for (const [name, pos] of Object.entries(coords)) {
+        count++;
+        const dot = document.createElement('div');
+        dot.className = 'pin';
+        dot.style.left = pos.x + 'px';
+        dot.style.top = pos.y + 'px';
+        
+        const label = document.createElement('div');
+        label.className = 'pin-label';
+        label.style.left = pos.x + 'px';
+        label.style.top = pos.y + 'px';
+        label.innerText = name;
+
+        container.appendChild(dot);
+        container.appendChild(label);
+      }
+      document.getElementById('count').innerText = count;
+    }
+
+    function clearAll() {
+      if (confirm('すべてのピンを削除しますか？')) {
+        coords = {};
+        localStorage.removeItem('vggc_map_coords');
+        renderPins();
+      }
+    }
+
+    function exportJSON() {
+      if (Object.keys(coords).length === 0) {
+        alert('まだ一つも登録されていません。');
+        return;
+      }
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(coords, null, 2));
+      const link = document.createElement('a');
+      link.href = dataStr;
+      link.download = "map_coords.json";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      alert('ダウンロードした map_coords.json をチャットにアップロードしてください！');
+    }
+  </script>
+</body>
+</html>

@@ -23,16 +23,6 @@
       <h1 class="text-xl md:text-2xl font-bold">VGGC 12th 管理画面 (メンバー・タグ・お品書き設定)</h1>
       <button v-if="user" @click="signOut" class="text-sm bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded transition">ログアウト</button>
     </div>
-    <!-- タブ切り替え -->
-    <div v-if="user" class="flex bg-gray-200 border-b border-gray-300">
-      <button @click="activeAdminTab = 'circles'" :class="{'bg-white border-t-2 border-blue-500 font-bold text-blue-600': activeAdminTab === 'circles', 'text-gray-600 hover:bg-gray-300': activeAdminTab !== 'circles'}" class="px-6 py-3 transition">
-        サークル情報管理
-      </button>
-      <button @click="activeAdminTab = 'map'" :class="{'bg-white border-t-2 border-blue-500 font-bold text-blue-600': activeAdminTab === 'map', 'text-gray-600 hover:bg-gray-300': activeAdminTab !== 'map'}" class="px-6 py-3 transition">
-        マップ座標登録
-      </button>
-    </div>
-
 
     <!-- ログイン前 -->
     <div v-if="!user" class="p-8 max-w-md mx-auto my-10 bg-gray-50 rounded-xl border">
@@ -140,9 +130,6 @@
     createApp({
       setup() {
         const user = ref(null);
-        const activeAdminTab = ref('circles');
-        const mapCoordsData = ref({});
-        const mapContainerRef = ref(null);
         const authId = ref('admin'); 
         const authPassword = ref('');
         const authMode = ref('login');
@@ -272,51 +259,7 @@
           }
         };
 
-        
-        onMounted(() => {
-          const saved = localStorage.getItem('vggc_admin_map_coords');
-          if (saved) {
-            try { mapCoordsData.value = JSON.parse(saved); } catch(e) {}
-          }
-        });
-        
-        const handleMapClick = (e) => {
-          if (!mapContainerRef.value) return;
-          const rect = mapContainerRef.value.getBoundingClientRect();
-          const x = Math.round(e.clientX - rect.left);
-          const y = Math.round(e.clientY - rect.top);
-          
-          const spaceName = prompt('この位置のスペース番号を入力してください\n例: A-25, または A など');
-          if (!spaceName || !spaceName.trim()) return;
-          
-          mapCoordsData.value[spaceName.trim()] = { x, y };
-          localStorage.setItem('vggc_admin_map_coords', JSON.stringify(mapCoordsData.value));
-        };
-        
-        const clearMapCoords = () => {
-          if(confirm('すべてのピンを削除しますか？')) {
-            mapCoordsData.value = {};
-            localStorage.removeItem('vggc_admin_map_coords');
-          }
-        };
-        
-        const exportMapJSON = () => {
-          if (Object.keys(mapCoordsData.value).length === 0) {
-            alert('まだ一つも登録されていません。');
-            return;
-          }
-          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(mapCoordsData.value, null, 2));
-          const link = document.createElement('a');
-          link.href = dataStr;
-          link.download = "map_coords.json";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          alert('ダウンロードした map_coords.json をリポジトリに上書きコミットするか、AIに渡してください。');
-        };
-
         return {
-          activeAdminTab, mapCoordsData, mapContainerRef, handleMapClick, clearMapCoords, exportMapJSON,
           user, authId, authPassword, authMode, authError, handleAuth, signOut,
           loading, circles, editData, saveStatus, searchQuery, filteredCircles,
           saveCircle
