@@ -672,6 +672,10 @@ const vspoDict = [{"name":"花芽すみれ","color":"#BECCFF","fanmarks":["👾"
           // 自動スクロールとピン移動
           setTimeout(() => {
             let targetPos = mapCoords.value[spaceId];
+            if (!targetPos && circle.space_num.includes('-')) {
+              const baseSpace = circle.space_sym + '-' + circle.space_num.split('-')[0];
+              targetPos = mapCoords.value[baseSpace];
+            }
             if (!targetPos && mapCoords.value[blockId]) {
               targetPos = mapCoords.value[blockId]; // フォールバック (ブロック単位)
             }
