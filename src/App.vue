@@ -663,7 +663,8 @@ const vspoDict = [{"name":"花芽すみれ","color":"#BECCFF","fanmarks":["👾"
         const showShareModal = ref(false);
         const showHelpModal = ref(false);
         const targetSpace = ref(null);
-        const mapCoords = ref(mapCoordsData || {});
+        console.log('DEBUG mapCoordsData:', mapCoordsData);
+const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.default : (mapCoordsData || {}));
         const jumpToMap = (circle) => {
           const spaceId = circle.space_sym + '-' + circle.space_num;
           const blockId = circle.space_sym;
@@ -683,6 +684,10 @@ const vspoDict = [{"name":"花芽すみれ","color":"#BECCFF","fanmarks":["👾"
             if (targetPos) {
               pinX.value = targetPos.x;
               pinY.value = targetPos.y;
+            } else {
+              alert('エラー: 座標データが読み込めていません。キャッシュが古いか、データが存在しません (' + spaceId + ')');
+            }
+            if (targetPos) {
               
               // コンテナのスクロール位置を調整
               const containers = document.querySelectorAll('.map-inner');
