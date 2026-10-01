@@ -318,11 +318,20 @@
                 </div>
                 <div class="flex items-center justify-end gap-2">
                   <div class="flex flex-col items-end gap-0.5">
-                    <div class="text-[10px] font-bold text-gray-500">
-                      予定総額: ¥{{ totalPrice.toLocaleString() }}
+                    <div class="flex items-center gap-3">
+                      <div class="text-[10px] font-bold text-gray-500 cursor-pointer hover:text-blue-500 transition flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded shadow-sm border" @click="openBudgetModal" title="予算を設定する">
+                        <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        予算: <span :class="budgetAmount > 0 ? 'text-gray-700' : ''">{{ budgetAmount > 0 ? '¥' + budgetAmount.toLocaleString() : '未設定' }}</span>
+                      </div>
+                      <div class="text-[10px] font-bold text-gray-500">
+                        予定: ¥{{ totalPrice.toLocaleString() }}
+                      </div>
                     </div>
                     <div class="text-sm font-bold bg-pink-50 text-pink-700 px-2.5 py-1 rounded-md border border-pink-100 flex items-center shadow-sm">
                       購入済: <span class="text-base ml-1">¥{{ spentPrice.toLocaleString() }}</span>
+                      <span v-if="budgetAmount > 0" class="text-[11px] ml-2" :class="remainingBudget < 0 ? 'text-red-600 font-black' : 'text-pink-600 font-bold'">
+                        残: ¥{{ remainingBudget.toLocaleString() }}
+                      </span>
                     </div>
                   </div>
                   <button @click="shareToTwitter" class="p-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-transform" title="X (Twitter) でシェア">
