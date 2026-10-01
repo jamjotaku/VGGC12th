@@ -5,7 +5,7 @@
     <!-- ナビゲーションバー -->
     <nav class="bg-white shadow-sm border-b px-3 md:px-4 py-2 md:py-3 flex justify-between items-center z-20 flex-shrink-0">
       <div class="font-bold text-base md:text-lg flex items-center gap-2">
-        VGGC 12th (v2.0) 
+        VGGC 12th 
         <span v-if="isReadOnly" class="text-[10px] md:text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full font-bold">閲覧専用</span>
       </div>
       <div class="flex items-center gap-2 md:gap-3">
@@ -627,7 +627,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
-import mapCoordsData from '../public/map_coords.json';
+import mapCoordsData from './map_coords.json';
 import { createClient } from '@supabase/supabase-js';
 
 const vspoDict = [{"name":"花芽すみれ","color":"#BECCFF","fanmarks":["👾","💤"]},{"name":"花芽なずな","color":"#FABEDC","fanmarks":["🍣"]},{"name":"小雀とと","color":"#FFF33F","fanmarks":["🔫","🐥"]},{"name":"一ノ瀬うるは","color":"#4182FA","fanmarks":["🌠"]},{"name":"胡桃のあ","color":"#B297D7","fanmarks":["🧸","♔"]},{"name":"兎咲ミミ","color":"#C7B2D6","fanmarks":["🐰","🍭"]},{"name":"空澄セナ","color":"#FFFFFF","fanmarks":["🗝","♠"]},{"name":"橘ひなの","color":"#FA96C8","fanmarks":["🍫","💘"]},{"name":"英リサ","color":"#D1DE79","fanmarks":["💐"]},{"name":"如月れん","color":"#BE2152","fanmarks":["⏰"]},{"name":"神成きゅぴ","color":"#FFD23C","fanmarks":["🌩"]},{"name":"八雲べに","color":"#85CAB3","fanmarks":["💄","💚"]},{"name":"藍沢エマ","color":"#B4F1F9","fanmarks":["🥞","💫"]},{"name":"紫宮るな","color":"#D6ADFF","fanmarks":["☪","🐾"]},{"name":"猫汰つな","color":"#FF3652","fanmarks":["🍒","✨"]},{"name":"白波らむね","color":"#8ECED9","fanmarks":["🐻","❄","🏖"]},{"name":"小森めと","color":"#FBA03F","fanmarks":["🪐"]},{"name":"夢野あかり","color":"#FF8684","fanmarks":["🍼"]},{"name":"夜乃くろむ","color":"#909EC8","fanmarks":["💀","⛓"]},{"name":"紡木こかげ","color":"#5195E1","fanmarks":["📘","💧"]},{"name":"千燈ゆうひ","color":"#ED784A","fanmarks":["🫠"]},{"name":"蝶屋はなび","color":"#EA5506","fanmarks":["🦋","🎆"]},{"name":"甘結もか","color":"#ECA0AA","fanmarks":["🕹","🔖"]},{"name":"銀城サイネ","color":"#58535E","fanmarks":["🎈"]},{"name":"龍巻ちせ","color":"#BEFF77","fanmarks":["🐉","🌪"]},{"name":"オールキャラ","color":"#F59E0B","fanmarks":["🌈"]}];
@@ -1128,7 +1128,7 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
       transform: translateZ(0); 
     }
 
-    .map-image { 
+    .map-image {  
       width: 900px; 
       max-width: none; 
       display: block; 
@@ -1137,7 +1137,7 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
       pointer-events: none; 
       transform: translateZ(0);
       transition: width 0.2s ease-out;
-    }
+     max-width: none !important; }
     
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
