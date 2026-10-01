@@ -82,19 +82,14 @@
             </div>
             <!-- PC用マップコンテナ -->
             <div class="map-container shadow-inner relative">
-              <div v-if="targetSpace" class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg font-bold text-sm z-30 flex items-center gap-2">
-                📍 {{ targetSpace }} を探す
-                <button @click="targetSpace = null" class="ml-2 bg-blue-700 rounded-full w-6 h-6 flex items-center justify-center hover:bg-blue-800 transition">×</button>
-              </div>
+              
               <div class="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
                 <button @click="mapScale = Math.min(mapScale + 0.3, 2.5)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 hover:bg-gray-50 transition" title="拡大">＋</button>
                 <button @click="mapScale = Math.max(mapScale - 0.3, 0.4)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 hover:bg-gray-50 transition" title="縮小">－</button>
               </div>
               <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
                 <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
-                <svg class="draggable-pin text-red-600" viewBox="0 0 24 24" fill="currentColor" :style="{ left: (pinX / 900 * 100) + '%', top: (pinY / 456 * 100) + '%' }" @mousedown.prevent="startDrag" @touchstart.prevent="startDrag">
-                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                </svg>
+                
               </div>
             </div>
           </div>
@@ -152,9 +147,7 @@
                 </div>
                 <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
                   <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
-                  <svg class="draggable-pin text-red-600" viewBox="0 0 24 24" fill="currentColor" :style="{ left: (pinX / 900 * 100) + '%', top: (pinY / 456 * 100) + '%' }" @mousedown.prevent="startDrag" @touchstart.prevent="startDrag">
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                  </svg>
+                  
                 </div>
               </div>
             </div>
@@ -253,9 +246,7 @@
                     <button v-else disabled class="flex items-center gap-1.5 text-xs bg-gray-200 text-gray-500 px-3 py-1.5 rounded-lg font-bold shadow-sm cursor-not-allowed">
                       お品書き未公開
                     </button>
-                    <button @click="jumpToMap(circle)" class="flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition font-bold border border-blue-200 shadow-sm ml-auto">
-                      📍 マップ
-                    </button>
+                    
                   </div>
                 </div>
               </li>
@@ -362,9 +353,7 @@
                        <button v-else disabled class="mt-1 flex items-center gap-1 text-[10px] bg-gray-100 text-gray-400 px-2 py-1 rounded border border-gray-200 cursor-not-allowed">
                          未公開
                        </button>
-                       <button @click="jumpToMap(circle)" class="mt-1 ml-auto flex items-center gap-1 text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition font-bold border border-blue-200">
-                         📍 マップ
-                       </button>
+                       
                     </div>
                     
                     <div class="flex flex-wrap items-center gap-2 mt-2">
