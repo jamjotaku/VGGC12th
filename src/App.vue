@@ -218,7 +218,7 @@
               </div>
               
               <!-- ★ タグ絞り込みフィルター -->
-              <div class="mt-3 flex gap-2 overflow-x-auto pb-1 px-1" style="scrollbar-width: none;">
+              <div class="mt-3 flex gap-2 overflow-x-auto pb-2 px-1 custom-scrollbar">
                 <button @click="filterTag = ''" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap transition" :class="!filterTag ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'">すべて</button>
                 <button v-for="m in availableTags.members" :key="'fm_'+m" @click="filterTag = m" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap border flex items-center gap-1 transition shadow-sm" :style="filterTag === m ? getMemberStyle(m) : {}" :class="filterTag !== m ? 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50' : 'opacity-90'">
                    {{ getMemberMark(m) }} {{ m }}
@@ -1168,6 +1168,26 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
 </script>
 
 <style scoped>
+
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .custom-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f1f5f9;
+    }
+
 
     body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
     
