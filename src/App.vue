@@ -217,15 +217,26 @@
                 </span>
               </div>
               
-              <!-- ★ タグ絞り込みフィルター -->
-              <div class="mt-3 flex gap-2 overflow-x-auto pb-2 px-1 custom-scrollbar">
-                <button @click="filterTag = ''" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap transition" :class="!filterTag ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'">すべて</button>
-                <button v-for="m in availableTags.members" :key="'fm_'+m" @click="filterTag = m" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap border flex items-center gap-1 transition shadow-sm" :style="filterTag === m ? getMemberStyle(m) : {}" :class="filterTag !== m ? 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50' : 'opacity-90'">
-                   {{ getMemberMark(m) }} {{ m }}
-                </button>
-                <button v-for="t in availableTags.tags" :key="'ft_'+t" @click="filterTag = t" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap border transition shadow-sm" :class="filterTag === t ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'">
-                   {{ t }}
-                </button>
+              <!-- ★ 絞り込みフィルター (クロス検索対応) -->
+              <div class="mt-3 space-y-2 px-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-bold text-gray-500 w-12 shrink-0">メンバー</span>
+                  <div class="flex gap-2 overflow-x-auto pb-1.5 custom-scrollbar flex-1">
+                    <button @click="filterMember = ''" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap transition shadow-sm" :class="!filterMember ? 'bg-gray-800 text-white border-gray-800' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'">すべて</button>
+                    <button v-for="m in availableTags.members" :key="'fm_'+m" @click="filterMember = filterMember === m ? '' : m" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap border flex items-center gap-1 transition shadow-sm" :style="filterMember === m ? getMemberStyle(m) : {}" :class="filterMember !== m ? 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50' : 'opacity-100 ring-2 ring-offset-1 ring-gray-300'">
+                      {{ getMemberMark(m) }} {{ m }}
+                    </button>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-bold text-gray-500 w-12 shrink-0">タグ</span>
+                  <div class="flex gap-2 overflow-x-auto pb-1.5 custom-scrollbar flex-1">
+                    <button @click="filterItemTag = ''" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap transition shadow-sm" :class="!filterItemTag ? 'bg-gray-800 text-white border-gray-800' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'">すべて</button>
+                    <button v-for="t in availableTags.tags" :key="'ft_'+t" @click="filterItemTag = filterItemTag === t ? '' : t" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap border transition shadow-sm" :class="filterItemTag === t ? 'bg-blue-100 border-blue-300 text-blue-800 ring-2 ring-offset-1 ring-blue-200' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'">
+                      {{ t }}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -532,6 +543,14 @@
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
                 @{{ selectedCircle.twitter_id }}
               </a>
+              <a v-if="selectedCircle.pixiv_url" :href="selectedCircle.pixiv_url" target="_blank" class="flex items-center gap-1.5 text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition font-bold shadow-sm">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6H7v-2h2V7h2v2h2v2h-2v6z"/></svg>
+                Pixiv
+              </a>
+              <a v-if="selectedCircle.site_url" :href="selectedCircle.site_url" target="_blank" class="flex items-center gap-1.5 text-sm bg-indigo-500 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-600 transition font-bold shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                Webサイト
+              </a>
               
               <!-- ★ DBから取得したメンバーを表示 -->
               <span v-for="member in (circleExtraInfo[selectedCircle.circle_id]?.members || [])" :key="'m_'+member" class="text-sm px-3 py-1.5 rounded-full border shadow-sm font-bold flex items-center gap-1" :style="getMemberStyle(member)">
@@ -561,6 +580,32 @@
                 <svg class="w-10 h-10 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 <p class="text-sm font-bold text-gray-500 mb-1">お品書き未登録</p>
                 <p class="text-[10px] md:text-xs">※公式Xのポストが登録されると表示されます</p>
+              </div>
+            </div>
+
+          
+            <!-- ★ 関連サークル -->
+            <div v-if="relatedCircles.length > 0" class="mt-6 border-t border-gray-200 pt-5">
+              <h3 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                同じメンバーを扱っているサークル
+              </h3>
+              <div class="flex overflow-x-auto gap-3 pb-3 custom-scrollbar px-1">
+                <div v-for="rc in relatedCircles" :key="'rc_'+rc.circle_id" @click="openDetails(rc)" class="flex-shrink-0 w-44 bg-white border border-gray-200 rounded-xl p-3 shadow-sm cursor-pointer hover:border-pink-300 hover:shadow-md transition group">
+                  <div class="flex justify-between items-start mb-1">
+                    <span class="inline-block px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded border border-gray-200">
+                      {{ rc.space_sym }}-{{ rc.space_num }}
+                    </span>
+                    <span v-if="savedList[rc.circle_id]" class="text-[10px] font-bold text-pink-500 bg-pink-50 px-1 rounded">登録済</span>
+                  </div>
+                  <div class="font-bold text-sm text-gray-800 truncate group-hover:text-pink-600 transition">{{ rc.circle_name }}</div>
+                  <div class="flex flex-wrap gap-1 mt-2">
+                    <span v-for="m in (circleExtraInfo[rc.circle_id]?.members || []).slice(0,2)" :key="'rcm_'+m" class="text-[9px] px-1.5 py-0.5 rounded font-bold" :style="getMemberStyle(m)">
+                      {{ getMemberMark(m) }}{{ m }}
+                    </span>
+                    <span v-if="(circleExtraInfo[rc.circle_id]?.members || []).length > 2" class="text-[9px] text-gray-400 font-bold">+{{ (circleExtraInfo[rc.circle_id]?.members || []).length - 2 }}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -673,7 +718,8 @@ const vspoDict = [{"name":"花芽すみれ","color":"#BECCFF","fanmarks":["👾"
         const loading = ref(true);
         const searchQuery = ref('');
         const filterBlock = ref('');
-        const filterTag = ref('');
+        const filterMember = ref('');
+        const filterItemTag = ref('');
         const activeTab = ref('search');
         const isTweetLoading = ref(false);
         
@@ -786,6 +832,10 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           if (found) {
             const hex = found.color;
             if (hex === '#FFFFFF') return {
+          filterMember,
+          filterItemTag,
+          relatedCircles,
+
           showBudgetModal,
           tempBudgetInput,
           budgetAmount,
@@ -1120,6 +1170,17 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           return { tags: Array.from(tags).sort(), members: Array.from(members).sort() };
         });
 
+                const relatedCircles = computed(() => {
+          if (!selectedCircle.value) return [];
+          const currentMembers = circleExtraInfo.value[selectedCircle.value.circle_id]?.members || [];
+          if (currentMembers.length === 0) return [];
+          return circles.value.filter(c => {
+            if (c.circle_id === selectedCircle.value.circle_id) return false;
+            const members = circleExtraInfo.value[c.circle_id]?.members || [];
+            return currentMembers.some(m => members.includes(m));
+          }).slice(0, 10);
+        });
+
         const filteredCircles = computed(() => {
           return circles.value.filter(circle => {
             const matchQuery = !searchQuery.value || 
@@ -1129,11 +1190,10 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
             const matchBlock = !filterBlock.value || circle.space_sym === filterBlock.value;
             
             const extra = circleExtraInfo.value[circle.circle_id] || {};
-            const matchTag = !filterTag.value || 
-              (extra.tags || []).includes(filterTag.value) || 
-              (extra.members || []).includes(filterTag.value);
+            const matchMember = !filterMember.value || (extra.members || []).includes(filterMember.value);
+            const matchItemTag = !filterItemTag.value || (extra.tags || []).includes(filterItemTag.value);
               
-            return matchQuery && matchBlock && matchTag;
+            return matchQuery && matchBlock && matchMember && matchItemTag;
           });
         });
 
