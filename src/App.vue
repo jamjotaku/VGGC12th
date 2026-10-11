@@ -289,25 +289,26 @@
                     <h3 class="font-bold text-lg leading-tight text-gray-900 mb-0.5">{{ circle.circle_name }}</h3>
                     <p class="text-sm text-gray-500">代表: {{ circle.penname }}</p>
                   </div>
-                  <div class="flex items-center gap-2 mt-1">
-                    <button v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url" @click="openDetails(circle)" class="flex items-center gap-1.5 text-xs bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition font-bold shadow-sm">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                      お品書き
-                    </button>
-                    <span v-if="circleExtraInfo[circle.circle_id]?.items?.length" class="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
-                      <span>📦</span>
-                      <span>商品 {{ circleExtraInfo[circle.circle_id].items.length }}点</span>
-                    </span>
-                    <!-- 検索ワードに合致した商品名がある場合 -->
-                    <span v-if="searchQuery.trim() && getMatchedItemNames(circle.circle_id, searchQuery).length" class="text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
-                      <span>🎯</span>
-                      <span>「{{ getMatchedItemNames(circle.circle_id, searchQuery)[0] }}」</span>
-                      <span v-if="getMatchedItemNames(circle.circle_id, searchQuery).length > 1" class="text-[9px] text-pink-500 font-normal">+{{ getMatchedItemNames(circle.circle_id, searchQuery).length - 1 }}</span>
-                    </span>
-                    <button v-else disabled class="flex items-center gap-1.5 text-xs bg-gray-200 text-gray-500 px-3 py-1.5 rounded-lg font-bold shadow-sm cursor-not-allowed">
+                  <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    <template v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length">
+                      <button @click="openDetails(circle)" class="flex items-center gap-1.5 text-xs bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition font-bold shadow-sm active:scale-95">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        お品書き
+                      </button>
+                      <span v-if="circleExtraInfo[circle.circle_id]?.items?.length" class="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+                        <span>📦</span>
+                        <span>商品 {{ circleExtraInfo[circle.circle_id].items.length }}点</span>
+                      </span>
+                      <!-- 検索ワードに合致した商品名がある場合 -->
+                      <span v-if="searchQuery.trim() && getMatchedItemNames(circle.circle_id, searchQuery).length" class="text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+                        <span>🎯</span>
+                        <span>「{{ getMatchedItemNames(circle.circle_id, searchQuery)[0] }}」</span>
+                        <span v-if="getMatchedItemNames(circle.circle_id, searchQuery).length > 1" class="text-[9px] text-pink-500 font-normal">+{{ getMatchedItemNames(circle.circle_id, searchQuery).length - 1 }}</span>
+                      </span>
+                    </template>
+                    <button v-else disabled class="flex items-center gap-1.5 text-xs bg-gray-100 text-gray-400 px-3 py-1.5 rounded-lg font-bold border border-gray-200 cursor-not-allowed">
                       お品書き未公開
                     </button>
-                    
                   </div>
                 </div>
               </li>
@@ -429,13 +430,12 @@
                       </div>
                     </div>
                     <div class="flex gap-2">
-                       <button v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url" @click="openDetails(circle)" class="mt-1 flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-gray-200 transition font-bold border border-gray-200">
+                       <button v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length" @click="openDetails(circle)" class="mt-1 flex items-center gap-1 text-[10px] bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200 transition font-bold border border-gray-200">
                          お品書き
                        </button>
                        <button v-else disabled class="mt-1 flex items-center gap-1 text-[10px] bg-gray-100 text-gray-400 px-2 py-1 rounded border border-gray-200 cursor-not-allowed">
                          未公開
                        </button>
-                       
                     </div>
                     
                     <div class="flex flex-wrap items-center gap-2 mt-2">
