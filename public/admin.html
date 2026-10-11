@@ -15,17 +15,23 @@
     [v-cloak] { display: none; }
   </style>
 </head>
-<body class="bg-gray-100 p-4 md:p-8">
+<body class="bg-gray-100 p-2 md:p-6 text-gray-800">
   <div id="app" class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden" v-cloak>
     
     <!-- ヘッダー -->
-    <div class="bg-gray-800 text-white p-6 flex justify-between items-center">
-      <h1 class="text-xl md:text-2xl font-bold">VGGC 12th 管理画面 (メンバー・タグ・お品書き設定)</h1>
-      <button v-if="user" @click="signOut" class="text-sm bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded transition">ログアウト</button>
+    <div class="bg-gray-800 text-white p-4 md:p-6 flex justify-between items-center">
+      <div>
+        <h1 class="text-lg md:text-2xl font-bold flex items-center gap-2">
+          <span>VGGC 12th 管理画面</span>
+          <span class="text-xs font-normal bg-blue-600 px-2 py-0.5 rounded">お品書き商品対応版</span>
+        </h1>
+        <p class="text-xs text-gray-400 mt-1 hidden md:block">メンバー・タグ・お品書きURL・頒布物(商品)と価格の設定</p>
+      </div>
+      <button v-if="user" @click="signOut" class="text-xs md:text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1.5 md:px-4 md:py-2 rounded transition">ログアウト</button>
     </div>
 
     <!-- ログイン前 -->
-    <div v-if="!user" class="p-8 max-w-md mx-auto my-10 bg-gray-50 rounded-xl border">
+    <div v-if="!user" class="p-6 md:p-8 max-w-md mx-auto my-10 bg-gray-50 rounded-xl border">
       <h2 class="font-bold text-lg mb-4 text-center">管理者ログイン</h2>
       <div v-if="authError" class="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{{ authError }}</div>
       <form @submit.prevent="handleAuth" class="space-y-4">
@@ -45,67 +51,83 @@
     </div>
 
     <!-- ログイン後 (管理コンテンツ) -->
-    <div v-else class="p-6">
+    <div v-else class="p-3 md:p-6">
       <div v-if="loading" class="text-center py-10 text-gray-500 font-bold animate-pulse">
         データを読み込み中...
       </div>
       
       <div v-else>
         <!-- コントロールバー -->
-        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b pb-4">
-          <input type="text" v-model="searchQuery" placeholder="サークル名、スペース名で検索..." 
-                 class="w-full md:w-1/3 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-          <div class="text-sm text-gray-500 font-bold">
-            全 {{ filteredCircles.length }} サークル
+        <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-3 border-b pb-4">
+          <input type="text" v-model="searchQuery" placeholder="サークル名、配置(例: M-31)、ペンネームで検索..." 
+                 class="w-full md:w-1/2 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+          <div class="flex items-center gap-3 text-xs md:text-sm text-gray-500 font-bold w-full md:w-auto justify-between md:justify-end">
+            <span>該当: {{ filteredCircles.length }} / {{ circles.length }} サークル</span>
+            <span class="text-green-600 bg-green-50 px-2.5 py-1 rounded border border-green-200">
+              商品登録済: {{ circlesWithItemsCount }}件
+            </span>
           </div>
         </div>
 
         <!-- サークル一覧テーブル -->
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm text-left border border-gray-200">
-            <thead class="bg-gray-100 text-gray-700">
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="w-full text-xs md:text-sm text-left">
+            <thead class="bg-gray-100 text-gray-700 border-b">
               <tr>
-                <th class="p-3 border-b border-r w-24 whitespace-nowrap">配置</th>
-                <th class="p-3 border-b border-r w-48 whitespace-nowrap">サークル名</th>
-                <th class="p-3 border-b border-r min-w-[150px]">メンバー (カンマ区切り)</th>
-                <th class="p-3 border-b border-r min-w-[200px]">頒布物タグ (カンマ区切り)</th>
-                <th class="p-3 border-b border-r min-w-[250px]">お品書き(X) URL</th>
-                <th class="p-3 border-b text-center w-24 sticky right-0 bg-gray-100 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] z-10">操作</th>
+                <th class="p-2.5 md:p-3 border-r w-20 md:w-24 text-center whitespace-nowrap">配置</th>
+                <th class="p-2.5 md:p-3 border-r w-40 md:w-48 whitespace-nowrap">サークル名</th>
+                <th class="p-2.5 md:p-3 border-r min-w-[130px] whitespace-nowrap bg-amber-50/60">📦 お品書き商品</th>
+                <th class="p-2.5 md:p-3 border-r min-w-[140px]">メンバー</th>
+                <th class="p-2.5 md:p-3 border-r min-w-[150px]">頒布物タグ</th>
+                <th class="p-2.5 md:p-3 border-r min-w-[180px]">お品書き(X) URL</th>
+                <th class="p-2.5 md:p-3 text-center w-20 md:w-24 sticky right-0 bg-gray-100 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] z-10">操作</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="circle in filteredCircles" :key="circle.circle_id" class="border-b hover:bg-blue-50/30 transition-colors">
-                <td class="p-3 border-r font-bold text-gray-600 text-center whitespace-nowrap">
+                <td class="p-2.5 md:p-3 border-r font-bold text-gray-700 text-center whitespace-nowrap">
                   {{ circle.space_sym }}-{{ circle.space_num }}
                 </td>
-                <td class="p-3 border-r font-bold">
-                  {{ circle.circle_name }}
+                <td class="p-2.5 md:p-3 border-r font-bold">
+                  <div>{{ circle.circle_name }}</div>
                   <div class="text-[10px] text-gray-500 font-normal mt-0.5">代表: {{ circle.penname }}</div>
+                </td>
+
+                <!-- ★ お品書き商品管理ボタン -->
+                <td class="p-2.5 md:p-3 border-r bg-amber-50/20 whitespace-nowrap">
+                  <button @click="openItemsModal(circle)" 
+                          class="px-2.5 py-1.5 rounded text-xs font-bold transition flex items-center gap-1.5 border shadow-sm w-full justify-center"
+                          :class="(editData[circle.circle_id]?.items?.length > 0) 
+                            ? 'bg-amber-100 border-amber-300 text-amber-900 hover:bg-amber-200' 
+                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'">
+                    <span>📦</span>
+                    <span>{{ (editData[circle.circle_id]?.items?.length > 0) ? `商品: ${editData[circle.circle_id].items.length}件` : '＋ 商品登録' }}</span>
+                  </button>
                 </td>
                 
                 <!-- メンバータグ -->
-                <td class="p-3 border-r bg-green-50/20">
-                  <input type="text" v-model="editData[circle.circle_id].membersInput" placeholder="Aさん, Bさん" 
-                         class="w-full px-2 py-1.5 border border-green-200 rounded focus:ring-2 focus:ring-green-500 outline-none">
+                <td class="p-2.5 md:p-3 border-r bg-green-50/20">
+                  <input type="text" v-model="editData[circle.circle_id].membersInput" placeholder="花芽すみれ, 白波らむね" 
+                         class="w-full px-2 py-1.5 border border-green-200 rounded focus:ring-2 focus:ring-green-500 outline-none text-xs">
                 </td>
                 
                 <!-- 頒布物タグ -->
-                <td class="p-3 border-r">
+                <td class="p-2.5 md:p-3 border-r">
                   <input type="text" v-model="editData[circle.circle_id].tagsInput" placeholder="イラスト本, アクスタ" 
-                         class="w-full px-2 py-1.5 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                         class="w-full px-2 py-1.5 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-xs">
                 </td>
                 
                 <!-- お品書きURL -->
-                <td class="p-3 border-r">
+                <td class="p-2.5 md:p-3 border-r">
                   <input type="text" v-model="editData[circle.circle_id].url" placeholder="https://x.com/..." 
-                         class="w-full px-2 py-1.5 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                         class="w-full px-2 py-1.5 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-xs">
                 </td>
                 
-                <td class="p-3 text-center sticky right-0 bg-white/90 backdrop-blur-sm shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] z-10">
+                <td class="p-2.5 md:p-3 text-center sticky right-0 bg-white/95 backdrop-blur-sm shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] z-10">
                   <button @click="saveCircle(circle.circle_id)" 
-                          class="bg-blue-600 text-white px-4 py-1.5 rounded font-bold hover:bg-blue-700 active:scale-95 transition-transform flex items-center justify-center gap-1 w-full"
+                          class="bg-blue-600 text-white px-3 py-1.5 rounded font-bold hover:bg-blue-700 active:scale-95 transition-transform flex items-center justify-center gap-1 w-full text-xs"
                           :class="{'bg-green-600 hover:bg-green-700': saveStatus[circle.circle_id] === 'saved'}">
-                    <svg v-if="saveStatus[circle.circle_id] === 'saved'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                    <svg v-if="saveStatus[circle.circle_id] === 'saved'" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                     {{ saveStatus[circle.circle_id] === 'saved' ? '保存済' : '保存' }}
                   </button>
                 </td>
@@ -118,6 +140,131 @@
         </div>
       </div>
     </div>
+
+    <!-- ★ お品書き商品 登録・編集モーダル (スマホ・PC完全対応) -->
+    <div v-if="activeCircleForItems" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 md:p-6" @click.self="closeItemsModal">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        
+        <!-- モーダルヘッダー -->
+        <div class="p-4 md:p-5 border-b bg-gray-50 flex justify-between items-start">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-bold rounded border border-blue-200">
+                {{ activeCircleForItems.space_sym }}-{{ activeCircleForItems.space_num }}
+              </span>
+              <h2 class="font-bold text-base md:text-lg text-gray-900 leading-tight">
+                {{ activeCircleForItems.circle_name }}
+              </h2>
+            </div>
+            <p class="text-xs text-gray-500">代表: {{ activeCircleForItems.penname }}</p>
+          </div>
+          
+          <button @click="closeItemsModal" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+
+        <!-- お品書きURLへのリンク案内 -->
+        <div v-if="editData[activeCircleForItems.circle_id]?.url" class="px-4 py-2 bg-blue-50/70 border-b border-blue-100 flex items-center justify-between text-xs">
+          <span class="text-blue-800 font-medium truncate mr-2">お品書きポストを確認しながら入力できます</span>
+          <a :href="editData[activeCircleForItems.circle_id].url" target="_blank" class="bg-blue-600 text-white px-2.5 py-1 rounded font-bold hover:bg-blue-700 shrink-0 flex items-center gap-1 shadow-sm">
+            <span>Xで開く</span>
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+          </a>
+        </div>
+
+        <!-- タブ切り替え（リスト入力 vs 一括コピペ） -->
+        <div class="flex border-b text-xs font-bold bg-gray-50">
+          <button @click="itemInputMode = 'list'" 
+                  class="flex-1 py-2.5 text-center transition border-b-2"
+                  :class="itemInputMode === 'list' ? 'border-amber-500 text-amber-700 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'">
+            ✍️ 1件ずつ入力
+          </button>
+          <button @click="itemInputMode = 'bulk'" 
+                  class="flex-1 py-2.5 text-center transition border-b-2"
+                  :class="itemInputMode === 'bulk' ? 'border-amber-500 text-amber-700 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'">
+            📋 テキスト一括コピペ
+          </button>
+        </div>
+
+        <!-- モーダルコンテンツ (スクロールエリア) -->
+        <div class="p-4 md:p-6 overflow-y-auto flex-1 space-y-4">
+          
+          <!-- モード1: リスト入力 -->
+          <div v-if="itemInputMode === 'list'" class="space-y-2.5">
+            <div v-if="tempItems.length === 0" class="text-center py-8 text-gray-400 text-xs md:text-sm">
+              商品がまだ登録されていません。<br>下の「＋ 商品を追加」ボタンを押して登録してください。
+            </div>
+
+            <div v-for="(item, index) in tempItems" :key="index" class="flex items-center gap-2 bg-gray-50 p-2 md:p-2.5 rounded-xl border border-gray-200">
+              <span class="text-xs font-bold text-gray-400 w-5 text-center">{{ index + 1 }}</span>
+              
+              <!-- 商品名 -->
+              <input type="text" v-model="item.name" placeholder="商品名 (例: 新刊① ファーストブルーム)" 
+                     class="flex-1 px-3 py-1.5 text-xs md:text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-400 outline-none">
+              
+              <!-- 金額 -->
+              <div class="flex items-center bg-white border border-gray-300 rounded-lg overflow-hidden w-28 md:w-32 focus-within:ring-2 focus-within:ring-amber-400">
+                <span class="px-2 text-xs font-bold text-gray-400 bg-gray-100 py-1.5 border-r">¥</span>
+                <input type="number" v-model.number="item.price" placeholder="2000" min="0" step="50"
+                       class="w-full px-2 py-1.5 text-xs md:text-sm outline-none text-right font-mono font-bold">
+              </div>
+
+              <!-- 削除ボタン -->
+              <button @click="removeItemRow(index)" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="削除">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              </button>
+            </div>
+
+            <!-- 追加ボタン -->
+            <button @click="addItemRow" class="w-full py-2.5 border-2 border-dashed border-gray-300 hover:border-amber-500 rounded-xl text-xs md:text-sm font-bold text-gray-600 hover:text-amber-600 transition flex items-center justify-center gap-1.5 bg-gray-50/50 hover:bg-amber-50/30">
+              <span>＋ 商品を追加</span>
+            </button>
+          </div>
+
+          <!-- モード2: 一括コピペ入力 -->
+          <div v-else class="space-y-3">
+            <div class="bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-xl text-xs leading-relaxed">
+              💡 <strong>コピペで自動解析:</strong><br>
+              お品書きのテキストを貼り付けて「リストに変換」を押すと、商品名と価格を自動判別します！<br>
+              <code class="text-[11px] block mt-1 bg-white p-2 rounded border font-mono">
+                新刊① ファーストブルーム: 2000<br>
+                新刊② 花結び ¥1,500<br>
+                チェキ 500円
+              </code>
+            </div>
+
+            <textarea v-model="bulkText" rows="6" placeholder="商品名と価格を1行ずつ貼り付けてください..." 
+                      class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none text-xs md:text-sm font-mono"></textarea>
+
+            <button @click="parseAndApplyBulkText" class="w-full bg-amber-600 text-white font-bold py-2 rounded-xl hover:bg-amber-700 transition text-xs md:text-sm shadow-sm">
+              ✨ テキストを解析してリストに反映する
+            </button>
+          </div>
+
+        </div>
+
+        <!-- モーダルフッター -->
+        <div class="p-3 md:p-4 border-t bg-gray-50 flex items-center justify-between">
+          <div class="text-xs text-gray-500 font-bold">
+            合計 {{ tempItems.length }} 点
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <button @click="closeItemsModal" class="px-4 py-2 border border-gray-300 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-100 transition">
+              キャンセル
+            </button>
+            <button @click="saveItemsAndClose" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs md:text-sm transition shadow flex items-center gap-1.5"
+                    :disabled="isSavingItems">
+              <span v-if="isSavingItems" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span>商品リストを保存</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -141,10 +288,16 @@
         const saveStatus = ref({}); 
         const searchQuery = ref('');
 
+        // ★ 商品モーダル関連
+        const activeCircleForItems = ref(null);
+        const itemInputMode = ref('list'); // 'list' | 'bulk'
+        const tempItems = ref([]);
+        const bulkText = ref('');
+        const isSavingItems = ref(false);
+
         onMounted(async () => {
           const { data: { session } } = await supabaseClient.auth.getSession();
           
-          // 一般ユーザーとしてログインしている場合のログインバイパス対策
           if (session?.user && session.user.email !== 'admin@vggc.dummy.local') {
             await supabaseClient.auth.signOut();
             user.value = null;
@@ -155,7 +308,6 @@
           }
 
           supabaseClient.auth.onAuthStateChange((event, session) => {
-            // イベント発火時も念のためチェック
             if (session?.user && session.user.email === 'admin@vggc.dummy.local') {
               user.value = session.user;
               loadData();
@@ -197,7 +349,7 @@
 
             const initialEditData = {};
             circles.value.forEach(c => {
-              initialEditData[c.circle_id] = { tagsInput: '', membersInput: '', url: '' };
+              initialEditData[c.circle_id] = { tagsInput: '', membersInput: '', url: '', items: [] };
             });
 
             const { data: dbData, error } = await supabaseClient.from('circle_info').select('*');
@@ -207,6 +359,7 @@
                   initialEditData[info.circle_id].tagsInput = (info.tags || []).join(', ');
                   initialEditData[info.circle_id].membersInput = (info.members || []).join(', ');
                   initialEditData[info.circle_id].url = info.oshinagaki_url || '';
+                  initialEditData[info.circle_id].items = Array.isArray(info.items) ? info.items : [];
                 }
               });
             }
@@ -225,14 +378,130 @@
           return circles.value.filter(c => 
             (c.circle_name && c.circle_name.toLowerCase().includes(q)) ||
             (c.space_sym && c.space_sym.toLowerCase().includes(q)) ||
+            (c.space_num && c.space_num.toLowerCase().includes(q)) ||
+            (`${c.space_sym}-${c.space_num}`.toLowerCase().includes(q)) ||
             (c.penname && c.penname.toLowerCase().includes(q))
           );
         });
 
+        const circlesWithItemsCount = computed(() => {
+          return Object.values(editData.value).filter(d => d.items && d.items.length > 0).length;
+        });
+
+        // ★ 商品モーダルのオープン
+        const openItemsModal = (circle) => {
+          activeCircleForItems.value = circle;
+          itemInputMode.value = 'list';
+          bulkText.value = '';
+          const currentItems = editData.value[circle.circle_id]?.items || [];
+          tempItems.value = JSON.parse(JSON.stringify(currentItems));
+          if (tempItems.value.length === 0) {
+            tempItems.value.push({ name: '', price: 0 });
+          }
+        };
+
+        const closeItemsModal = () => {
+          activeCircleForItems.value = null;
+        };
+
+        const addItemRow = () => {
+          tempItems.value.push({ name: '', price: 0 });
+        };
+
+        const removeItemRow = (index) => {
+          tempItems.value.splice(index, 1);
+        };
+
+        // 一括コピペテキストの賢い解析
+        const parseAndApplyBulkText = () => {
+          if (!bulkText.value.trim()) return;
+          const lines = bulkText.value.split('\n');
+          const parsed = [];
+          
+          for (const rawLine of lines) {
+            const line = rawLine.trim();
+            if (!line) continue;
+            
+            // パターン1: "商品名: 2000" や "商品名: ¥2,000円"
+            let match = line.match(/^(.*?)(?:[:：\t]+)[¥￥]?\s*([0-9,]+)\s*円?$/);
+            if (match) {
+              const name = match[1].trim();
+              const price = parseInt(match[2].replace(/,/g, ''), 10);
+              if (name && !isNaN(price)) {
+                parsed.push({ name, price });
+                continue;
+              }
+            }
+            
+            // パターン2: "商品名 2000" や "商品名 ¥2,000" (空白区切り)
+            match = line.match(/^(.*?)\s+[¥￥]?\s*([0-9,]+)\s*円?$/);
+            if (match) {
+              const name = match[1].trim();
+              const price = parseInt(match[2].replace(/,/g, ''), 10);
+              if (name && !isNaN(price)) {
+                parsed.push({ name, price });
+                continue;
+              }
+            }
+
+            // 金額が見つからない場合
+            parsed.push({ name: line, price: 0 });
+          }
+
+          if (parsed.length > 0) {
+            tempItems.value = parsed;
+            itemInputMode.value = 'list';
+          }
+        };
+
+        // モーダルから商品リストを保存
+        const saveItemsAndClose = async () => {
+          if (!activeCircleForItems.value) return;
+          const circleId = activeCircleForItems.value.circle_id;
+          
+          // 空行を除外
+          const cleanItems = tempItems.value
+            .map(item => ({ name: (item.name || '').trim(), price: Number(item.price) || 0 }))
+            .filter(item => item.name.length > 0);
+
+          isSavingItems.value = true;
+          try {
+            const input = editData.value[circleId];
+            const tagsArray = input.tagsInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            const membersArray = input.membersInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+            const { error } = await supabaseClient.from('circle_info').upsert({
+              circle_id: circleId,
+              tags: tagsArray,
+              members: membersArray,
+              oshinagaki_url: input.url.trim() || null,
+              items: cleanItems,
+              updated_at: new Date().toISOString()
+            });
+
+            if (error) throw error;
+
+            // ローカルステートにも反映
+            editData.value[circleId].items = cleanItems;
+            closeItemsModal();
+
+            // 保存完了演出
+            saveStatus.value[circleId] = 'saved';
+            setTimeout(() => { saveStatus.value[circleId] = null; }, 2000);
+          } catch (err) {
+            console.error(err);
+            alert('保存エラー: ' + err.message);
+          } finally {
+            isSavingItems.value = false;
+          }
+        };
+
+        // テーブル側の「保存」ボタン
         const saveCircle = async (circleId) => {
           const input = editData.value[circleId];
           const tagsArray = input.tagsInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
           const membersArray = input.membersInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+          const currentItems = input.items || [];
           
           try {
             const { error } = await supabaseClient.from('circle_info').upsert({
@@ -240,6 +509,7 @@
               tags: tagsArray,
               members: membersArray,
               oshinagaki_url: input.url.trim() || null,
+              items: currentItems,
               updated_at: new Date().toISOString()
             });
 
@@ -262,7 +532,10 @@
         return {
           user, authId, authPassword, authMode, authError, handleAuth, signOut,
           loading, circles, editData, saveStatus, searchQuery, filteredCircles,
-          saveCircle
+          circlesWithItemsCount,
+          activeCircleForItems, itemInputMode, tempItems, bulkText, isSavingItems,
+          openItemsModal, closeItemsModal, addItemRow, removeItemRow,
+          parseAndApplyBulkText, saveItemsAndClose, saveCircle
         };
       }
     }).mount('#app');
