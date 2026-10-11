@@ -210,11 +210,21 @@
                   <svg class="w-5 h-5 bg-gray-100 rounded-full p-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
               </div>
-              <div v-if="filterBlock" class="mt-2 flex items-center gap-2 px-1">
-                <span class="text-xs font-bold text-gray-500">選択中のブロック:</span>
-                <span class="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1 cursor-pointer" @click="filterBlock = ''">
-                  {{ filterBlock }} <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
-                </span>
+              <div class="mt-2.5 flex items-center justify-between gap-2 px-1">
+                <div v-if="filterBlock" class="flex items-center gap-1.5">
+                  <span class="text-xs font-bold text-gray-500">ブロック:</span>
+                  <span class="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 cursor-pointer shadow-sm" @click="filterBlock = ''">
+                    {{ filterBlock }} <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </span>
+                </div>
+                <div v-else></div>
+
+                <!-- ★ お品書き公開済みのみ 絞り込みトグル -->
+                <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold transition select-none px-2.5 py-1 rounded-lg border shadow-sm shrink-0"
+                       :class="filterHasOshinagaki ? 'bg-amber-50 border-amber-300 text-amber-900 ring-2 ring-amber-300/60 shadow' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'">
+                  <input type="checkbox" v-model="filterHasOshinagaki" class="accent-amber-500 w-3.5 h-3.5">
+                  <span>📸 お品書きありのみ</span>
+                </label>
               </div>
               
               <!-- ★ 絞り込みフィルター (クロス検索対応) -->
@@ -858,6 +868,7 @@ const vspoDict = [{"name":"花芽すみれ","color":"#BECCFF","fanmarks":["👾"
         const filterBlock = ref('');
         const filterMember = ref('');
         const filterItemTag = ref('');
+        const filterHasOshinagaki = ref(false);
         const activeTab = ref('search');
         const isTweetLoading = ref(false);
         
@@ -1058,6 +1069,7 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           if (found) {
             const hex = found.color;
             if (hex === '#FFFFFF') return {
+          filterHasOshinagaki,
           getMatchedItemNames,
           mobileModalTab,
           getItemBadge,
@@ -1467,7 +1479,9 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
             const matchMember = !filterMember.value || (extra.members || []).includes(filterMember.value);
             const matchItemTag = !filterItemTag.value || (extra.tags || []).includes(filterItemTag.value);
               
-            return matchQuery && matchBlock && matchMember && matchItemTag;
+            const matchOshinagaki = !filterHasOshinagaki.value || Boolean(extra.oshinagaki_url) || ((extra.items || []).length > 0);
+              
+            return matchQuery && matchBlock && matchMember && matchItemTag && matchOshinagaki;
           });
         });
 
