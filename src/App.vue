@@ -284,6 +284,10 @@
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                       お品書き
                     </button>
+                    <span v-if="circleExtraInfo[circle.circle_id]?.items?.length" class="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+                      <span>📦</span>
+                      <span>商品 {{ circleExtraInfo[circle.circle_id].items.length }}点</span>
+                    </span>
                     <button v-else disabled class="flex items-center gap-1.5 text-xs bg-gray-200 text-gray-500 px-3 py-1.5 rounded-lg font-bold shadow-sm cursor-not-allowed">
                       お品書き未公開
                     </button>
@@ -396,6 +400,18 @@
                       </div>
                     </div>
                     <h3 class="font-bold text-base text-gray-900 leading-tight">{{ circle.circle_name }}</h3>
+                    <!-- ★ 選択中のお品書き商品バッジ一覧 -->
+                    <div v-if="savedList[circle.circle_id].selectedItems?.length" class="mt-2 space-y-1">
+                      <div class="text-[10px] font-bold text-amber-800 flex items-center gap-1">
+                        <span>📦 買うものリスト:</span>
+                      </div>
+                      <div class="flex flex-wrap gap-1">
+                        <span v-for="itName in savedList[circle.circle_id].selectedItems" :key="itName" 
+                              class="text-xs bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-md font-bold flex items-center gap-1 shadow-sm">
+                          <span class="text-amber-500 font-bold">✓</span>{{ itName }}
+                        </span>
+                      </div>
+                    </div>
                     <div class="flex gap-2">
                        <button v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url" @click="openDetails(circle)" class="mt-1 flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-gray-200 transition font-bold border border-gray-200">
                          お品書き
@@ -580,6 +596,55 @@
                 <svg class="w-10 h-10 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 <p class="text-sm font-bold text-gray-500 mb-1">お品書き未登録</p>
                 <p class="text-[10px] md:text-xs">※公式Xのポストが登録されると表示されます</p>
+              </div>
+            </div>
+
+            <!-- ★ お品書き商品メニュー (登録がある場合) -->
+            <div v-if="circleExtraInfo[selectedCircle.circle_id]?.items?.length" class="bg-white border border-amber-200 rounded-2xl p-3.5 md:p-4 shadow-sm">
+              <div class="flex justify-between items-center mb-3">
+                <div class="text-xs md:text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                  <span class="text-base">📋</span>
+                  <span>頒布物・商品メニュー</span>
+                  <span class="text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full font-bold">
+                    {{ circleExtraInfo[selectedCircle.circle_id].items.length }}点
+                  </span>
+                </div>
+                <span class="text-[10px] text-gray-400 font-medium">タップで買い物リストに追加</span>
+              </div>
+
+              <div class="space-y-2">
+                <div v-for="item in circleExtraInfo[selectedCircle.circle_id].items" :key="item.name"
+                     @click="toggleItemSelection(selectedCircle.circle_id, item)"
+                     class="p-2.5 md:p-3 rounded-xl border flex items-center justify-between cursor-pointer transition select-none"
+                     :class="isItemSelected(selectedCircle.circle_id, item) 
+                       ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-300/60 shadow-sm' 
+                       : 'bg-gray-50 border-gray-200 hover:bg-gray-100'">
+                  <div class="flex items-center gap-2.5 min-w-0 pr-2">
+                    <div class="w-4 h-4 rounded flex items-center justify-center shrink-0 border transition"
+                         :class="isItemSelected(selectedCircle.circle_id, item) ? 'bg-amber-500 border-amber-500 text-white' : 'border-gray-300 bg-white'">
+                      <svg v-if="isItemSelected(selectedCircle.circle_id, item)" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <span class="text-xs md:text-sm font-bold leading-snug"
+                          :class="isItemSelected(selectedCircle.circle_id, item) ? 'text-amber-950' : 'text-gray-800'">
+                      {{ item.name }}
+                    </span>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <span class="font-bold text-xs md:text-sm font-mono"
+                          :class="item.price > 0 ? (isItemSelected(selectedCircle.circle_id, item) ? 'text-amber-700' : 'text-gray-900') : 'text-green-600'">
+                      {{ item.price > 0 ? '¥' + item.price.toLocaleString() : '無料' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 選択中の合計金額プレビュー -->
+              <div v-if="getSelectedItemCount(selectedCircle.circle_id) > 0" 
+                   class="mt-3 pt-2.5 border-t border-dashed border-amber-200 flex justify-between items-center text-xs font-bold text-amber-900">
+                <span>選択中のお買い物 ({{ getSelectedItemCount(selectedCircle.circle_id) }}点):</span>
+                <span class="text-sm md:text-base text-amber-600 font-mono font-bold">
+                  ¥{{ getSelectedItemsTotal(selectedCircle.circle_id).toLocaleString() }}
+                </span>
               </div>
             </div>
 
@@ -791,6 +856,61 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
         
         // 詳細モーダルのステートと、X(Twitter)埋め込みの監視処理
         const selectedCircle = ref(null);
+        
+        // ★ お品書き商品選択のヘルパー
+        const isItemSelected = (circleId, item) => {
+          const saved = savedList.value[circleId];
+          if (!saved || !saved.selectedItems) return false;
+          return saved.selectedItems.includes(item.name);
+        };
+
+        const getSelectedItemCount = (circleId) => {
+          const saved = savedList.value[circleId];
+          return (saved?.selectedItems || []).length;
+        };
+
+        const getSelectedItemsTotal = (circleId) => {
+          const saved = savedList.value[circleId];
+          if (!saved || !saved.selectedItems) return 0;
+          const items = circleExtraInfo.value[circleId]?.items || [];
+          return items
+            .filter(it => saved.selectedItems.includes(it.name))
+            .reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+        };
+
+        const toggleItemSelection = (circleId, item) => {
+          if (isReadOnly.value) return;
+          
+          if (!savedList.value[circleId]) {
+            savedList.value[circleId] = {
+              memo: '',
+              bought: false,
+              price: '',
+              priority: '',
+              forWho: '',
+              selectedItems: []
+            };
+          } else if (!savedList.value[circleId].selectedItems) {
+            savedList.value[circleId].selectedItems = [];
+          }
+
+          const selectedList = savedList.value[circleId].selectedItems;
+          const idx = selectedList.indexOf(item.name);
+          if (idx > -1) {
+            selectedList.splice(idx, 1);
+          } else {
+            selectedList.push(item.name);
+          }
+
+          // 金額の自動再計算
+          const items = circleExtraInfo.value[circleId]?.items || [];
+          const total = items
+            .filter(it => selectedList.includes(it.name))
+            .reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+          
+          savedList.value[circleId].price = total > 0 ? total : '';
+        };
+
         const openDetails = (circle) => {
           selectedCircle.value = circle;
         };
@@ -832,6 +952,11 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           if (found) {
             const hex = found.color;
             if (hex === '#FFFFFF') return {
+          isItemSelected,
+          getSelectedItemCount,
+          getSelectedItemsTotal,
+          toggleItemSelection,
+
           filterMember,
           filterItemTag,
           relatedCircles,
@@ -940,7 +1065,7 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           try {
             const [localRes, supabaseRes] = await Promise.all([
               fetch('/data.json'),
-              supabaseClient.from('circle_info').select('circle_id, tags, members, oshinagaki_url')
+              supabaseClient.from('circle_info').select('circle_id, tags, members, oshinagaki_url, items')
             ]);
             
             // 静的データのマッピング
@@ -957,7 +1082,8 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
                 infoMap[info.circle_id] = {
                   tags: info.tags || [],
                   members: info.members || [],
-                  oshinagaki_url: info.oshinagaki_url || ''
+                  oshinagaki_url: info.oshinagaki_url || '',
+                  items: Array.isArray(info.items) ? info.items : []
                 };
               });
               circleExtraInfo.value = infoMap;
@@ -971,7 +1097,8 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
                   circleExtraInfo.value[payload.new.circle_id] = {
                     tags: payload.new.tags || [],
                     members: payload.new.members || [],
-                    oshinagaki_url: payload.new.oshinagaki_url || ''
+                    oshinagaki_url: payload.new.oshinagaki_url || '',
+                    items: Array.isArray(payload.new.items) ? payload.new.items : []
                   };
                 }
               })
@@ -1030,7 +1157,7 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           if (savedList.value[circleId]) {
             delete savedList.value[circleId];
           } else {
-            savedList.value[circleId] = { memo: '', bought: false, price: '', priority: '', forWho: '' };
+            savedList.value[circleId] = { memo: '', bought: false, price: '', priority: '', forWho: '', selectedItems: [] };
           }
         };
 
