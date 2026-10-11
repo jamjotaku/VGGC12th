@@ -203,7 +203,7 @@
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
-                <input type="text" v-model="searchQuery" placeholder="サークル名、ペンネームで検索..." 
+                <input type="text" v-model="searchQuery" placeholder="サークル名、商品名（チェキ、新刊など）、配置で検索..." 
                        class="w-full pl-10 pr-10 py-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 
                 <button v-if="searchQuery" @click="searchQuery = ''" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
@@ -287,6 +287,12 @@
                     <span v-if="circleExtraInfo[circle.circle_id]?.items?.length" class="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
                       <span>📦</span>
                       <span>商品 {{ circleExtraInfo[circle.circle_id].items.length }}点</span>
+                    </span>
+                    <!-- 検索ワードに合致した商品名がある場合 -->
+                    <span v-if="searchQuery.trim() && getMatchedItemNames(circle.circle_id, searchQuery).length" class="text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+                      <span>🎯</span>
+                      <span>「{{ getMatchedItemNames(circle.circle_id, searchQuery)[0] }}」</span>
+                      <span v-if="getMatchedItemNames(circle.circle_id, searchQuery).length > 1" class="text-[9px] text-pink-500 font-normal">+{{ getMatchedItemNames(circle.circle_id, searchQuery).length - 1 }}</span>
                     </span>
                     <button v-else disabled class="flex items-center gap-1.5 text-xs bg-gray-200 text-gray-500 px-3 py-1.5 rounded-lg font-bold shadow-sm cursor-not-allowed">
                       お品書き未公開
@@ -925,6 +931,17 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
         const selectedCircle = ref(null);
         
         
+        
+        // ★ 検索クエリに合致した商品名を取得
+        const getMatchedItemNames = (circleId, query) => {
+          const q = (query || '').trim().toLowerCase();
+          if (!q) return [];
+          const items = circleExtraInfo.value[circleId]?.items || [];
+          return items
+            .filter(it => it.name && it.name.toLowerCase().includes(q))
+            .map(it => it.name);
+        };
+
         // ★ モバイル用モーダルタブ ('items' | 'tweet')
         const mobileModalTab = ref('items');
 
@@ -1041,6 +1058,7 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           if (found) {
             const hex = found.color;
             if (hex === '#FFFFFF') return {
+          getMatchedItemNames,
           mobileModalTab,
           getItemBadge,
           isItemSelected,
@@ -1113,6 +1131,21 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
         };
 
         onMounted(async () => {
+          // ★ オフライン対策: キャッシュから即時データを復元 (SWR)
+          try {
+            const cachedData = localStorage.getItem('vggc12th_data_cache');
+            if (cachedData) {
+              const parsed = JSON.parse(cachedData);
+              if (parsed.circles && parsed.circles.length) circles.value = parsed.circles;
+              if (parsed.blocks && parsed.blocks.length) blocks.value = parsed.blocks;
+            }
+            const cachedExtra = localStorage.getItem('vggc12th_circle_info_cache');
+            if (cachedExtra) {
+              circleExtraInfo.value = JSON.parse(cachedExtra);
+            }
+          } catch (e) {
+            console.warn('Cache restore skipped:', e);
+          }
           window.addEventListener('online', () => {
             isOnline.value = true;
             if (user.value && !isReadOnly.value) saveToCloud(savedList.value);
@@ -1160,14 +1193,20 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
             ]);
             
             // 静的データのマッピング
-            if (localRes.ok) {
+            if (localRes && localRes.ok) {
               const data = await localRes.json();
               circles.value = data.circles;
               blocks.value = data.sort_order;
+              try {
+                localStorage.setItem('vggc12th_data_cache', JSON.stringify({
+                  circles: data.circles,
+                  blocks: data.sort_order
+                }));
+              } catch (e) {}
             }
             
             // Supabaseからの追加情報のマッピング
-            if (!supabaseRes.error && supabaseRes.data) {
+            if (supabaseRes && !supabaseRes.error && supabaseRes.data) {
               const infoMap = {};
               supabaseRes.data.forEach(info => {
                 infoMap[info.circle_id] = {
@@ -1178,6 +1217,9 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
                 };
               });
               circleExtraInfo.value = infoMap;
+              try {
+                localStorage.setItem('vggc12th_circle_info_cache', JSON.stringify(infoMap));
+              } catch (e) {}
             }
 
             // Supabase Realtime
@@ -1400,14 +1442,28 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
         });
 
         const filteredCircles = computed(() => {
+          const q = (searchQuery.value || '').trim().toLowerCase();
           return circles.value.filter(circle => {
-            const matchQuery = !searchQuery.value || 
-              (circle.circle_name && circle.circle_name.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
-              (circle.penname && circle.penname.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
-              (circle.circle_kana && circle.circle_kana.includes(searchQuery.value));
-            const matchBlock = !filterBlock.value || circle.space_sym === filterBlock.value;
-            
             const extra = circleExtraInfo.value[circle.circle_id] || {};
+            
+            // ★ 商品名での部分一致
+            const matchItemName = q && (extra.items || []).some(it => 
+              it.name && it.name.toLowerCase().includes(q)
+            );
+
+            // ★ スペース配置（例: "M-31", "M31"）での部分一致
+            const spaceFull = `${circle.space_sym || ''}-${circle.space_num || ''}`.toLowerCase();
+            const spaceCompact = `${circle.space_sym || ''}${circle.space_num || ''}`.toLowerCase();
+            const matchSpace = q && (spaceFull.includes(q) || spaceCompact.includes(q));
+
+            const matchQuery = !q || 
+              (circle.circle_name && circle.circle_name.toLowerCase().includes(q)) ||
+              (circle.penname && circle.penname.toLowerCase().includes(q)) ||
+              (circle.circle_kana && circle.circle_kana.includes(q)) ||
+              matchSpace ||
+              matchItemName;
+
+            const matchBlock = !filterBlock.value || circle.space_sym === filterBlock.value;
             const matchMember = !filterMember.value || (extra.members || []).includes(filterMember.value);
             const matchItemTag = !filterItemTag.value || (extra.tags || []).includes(filterItemTag.value);
               
