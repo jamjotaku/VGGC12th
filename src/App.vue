@@ -92,16 +92,42 @@
       ========================================== -->
       <div class="hidden md:flex w-5/12 lg:w-1/2 flex-col bg-white border-r shadow-sm overflow-y-auto relative">
         <div class="p-6 space-y-6">
-          <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
-            <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-3">
-              <h2 class="text-lg font-bold text-gray-800">イベント概要</h2>
-              <div class="text-sm text-gray-600 font-bold bg-white px-3 py-1 rounded-full shadow-sm">11/14(土) @ TRC第一展示場</div>
+          <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200/80 shadow-sm space-y-3">
+            <div class="flex justify-between items-center border-b border-gray-200 pb-2.5">
+              <h2 class="text-base font-bold text-gray-900 flex items-center gap-1.5">
+                <span>🗓️ イベント概要</span>
+              </h2>
+              <div class="text-xs text-gray-700 font-bold bg-white px-2.5 py-0.5 rounded-full border shadow-sm">11/14(土) TRC第一展示場</div>
             </div>
-            <ul class="text-sm space-y-3">
-              <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">9:45-</span><span class="text-gray-700">一般参加者受付開始</span></li>
-              <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">10:00-</span><span class="text-gray-700">サークル入場 (11:40迄) / 更衣室</span></li>
-              <li class="flex items-start"><span class="w-16 font-bold text-blue-600 shrink-0">12:00</span><span class="text-blue-700 font-bold">即売会開始</span></li>
-              <li class="flex items-start"><span class="w-16 font-bold text-red-500 shrink-0">15:30</span><span class="text-red-600 font-bold">即売会終了</span></li>
+
+            <!-- カウントダウンバナー -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-2.5 rounded-xl shadow text-center">
+              <div class="text-xs font-bold tracking-wide flex items-center justify-center gap-1.5">
+                <span>{{ eventCountdown.text }}</span>
+              </div>
+            </div>
+
+            <ul class="text-xs space-y-1.5 pt-1">
+                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold': isCurrentSchedule('9:45')}">
+                  <div class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">9:45-</span><span class="text-gray-700">一般参加者受付開始</span></div>
+                  <span v-if="isCurrentSchedule('9:45')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full animate-pulse">NOW</span>
+                </li>
+                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold': isCurrentSchedule('10:00')}">
+                  <div class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">10:00-</span><span class="text-gray-700">サークル入場 (11:40迄) / 更衣室</span></div>
+                  <span v-if="isCurrentSchedule('10:00')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full animate-pulse">NOW</span>
+                </li>
+                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold ring-2 ring-blue-400': isCurrentSchedule('12:00')}">
+                  <div class="flex items-start"><span class="w-16 font-bold text-blue-600 shrink-0">12:00</span><span class="text-blue-700 font-bold">即売会開始</span></div>
+                  <span v-if="isCurrentSchedule('12:00')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full animate-pulse">開催中🔥</span>
+                </li>
+                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-red-50 font-bold': isCurrentSchedule('15:30')}">
+                  <div class="flex items-start"><span class="w-16 font-bold text-red-500 shrink-0">15:30</span><span class="text-red-600 font-bold">即売会終了</span></div>
+                  <span v-if="isCurrentSchedule('15:30')" class="text-[10px] bg-red-600 text-white px-1.5 py-0.2 rounded-full">終了</span>
+                </li>
+                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold': isCurrentSchedule('15:45')}">
+                  <div class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">15:45-</span><span class="text-gray-700">アフターイベント</span></div>
+                  <span v-if="isCurrentSchedule('15:45')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full">NOW</span>
+                </li>
             </ul>
           </div>
 
@@ -151,17 +177,40 @@
                [スマホ専用] マップ タブ
           ========================================== -->
           <div v-show="activeTab === 'map'" class="md:hidden p-4 space-y-6 pb-24">
-            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-3">
-                <h2 class="text-lg font-bold text-gray-800">イベント概要</h2>
-                <div class="text-xs text-gray-600 font-bold bg-gray-100 px-2 py-1 rounded-md">11/14(土)</div>
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 space-y-3">
+              <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                <h2 class="text-base font-bold text-gray-900">🗓️ イベント概要</h2>
+                <div class="text-xs text-gray-600 font-bold bg-gray-100 px-2 py-0.5 rounded-full">11/14(土)</div>
               </div>
-              <ul class="text-sm space-y-3">
-                <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">9:45-</span><span class="text-gray-700">一般参加者受付開始</span></li>
-                <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">10:00-</span><span class="text-gray-700">サークル入場 (11:40迄)<br>更衣室利用開始</span></li>
-                <li class="flex items-start"><span class="w-16 font-bold text-blue-600 shrink-0">12:00</span><span class="text-blue-700 font-bold">即売会開始</span></li>
-                <li class="flex items-start"><span class="w-16 font-bold text-red-500 shrink-0">15:30</span><span class="text-red-600 font-bold">即売会終了</span></li>
-                <li class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">15:45-</span><span class="text-gray-700">アフターイベント</span></li>
+
+              <!-- カウントダウンバナー -->
+              <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-2.5 rounded-xl shadow text-center">
+                <div class="text-xs font-bold tracking-wide">
+                  {{ eventCountdown.text }}
+                </div>
+              </div>
+
+              <ul class="text-xs space-y-1.5 pt-1">
+                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold': isCurrentSchedule('9:45')}">
+                  <div class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">9:45-</span><span class="text-gray-700">一般参加者受付開始</span></div>
+                  <span v-if="isCurrentSchedule('9:45')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full animate-pulse">NOW</span>
+                </li>
+                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold': isCurrentSchedule('10:00')}">
+                  <div class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">10:00-</span><span class="text-gray-700">サークル入場 (11:40迄) / 更衣室</span></div>
+                  <span v-if="isCurrentSchedule('10:00')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full animate-pulse">NOW</span>
+                </li>
+                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold ring-2 ring-blue-400': isCurrentSchedule('12:00')}">
+                  <div class="flex items-start"><span class="w-16 font-bold text-blue-600 shrink-0">12:00</span><span class="text-blue-700 font-bold">即売会開始</span></div>
+                  <span v-if="isCurrentSchedule('12:00')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full animate-pulse">開催中🔥</span>
+                </li>
+                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-red-50 font-bold': isCurrentSchedule('15:30')}">
+                  <div class="flex items-start"><span class="w-16 font-bold text-red-500 shrink-0">15:30</span><span class="text-red-600 font-bold">即売会終了</span></div>
+                  <span v-if="isCurrentSchedule('15:30')" class="text-[10px] bg-red-600 text-white px-1.5 py-0.2 rounded-full">終了</span>
+                </li>
+                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold': isCurrentSchedule('15:45')}">
+                  <div class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">15:45-</span><span class="text-gray-700">アフターイベント</span></div>
+                  <span v-if="isCurrentSchedule('15:45')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full">NOW</span>
+                </li>
               </ul>
             </div>
             
@@ -471,19 +520,119 @@
           </div>
 
           <!-- =========================================
-               フリーメモ タブ
+               フリーメモ タブ (即売会準備ダッシュボード)
           ========================================== -->
-          <div v-show="activeTab === 'memo'" class="flex flex-col min-h-full pb-20 md:pb-6 p-4">
-            <div class="bg-white rounded-xl shadow-sm border border-green-100 p-4 h-full flex flex-col min-h-[300px]">
-              <div class="mb-3 flex items-center gap-2 border-b border-green-50 pb-2">
-                <div class="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+          <div v-show="activeTab === 'memo'" class="flex flex-col min-h-full pb-20 md:pb-6 p-3 md:p-6 space-y-4 md:space-y-6">
+            
+            <div class="flex flex-col md:grid md:grid-cols-12 md:gap-6 space-y-4 md:space-y-0">
+              
+              <!-- 左カラム: フリーメモ (md:col-span-6) -->
+              <div class="md:col-span-6 bg-white rounded-2xl shadow-sm border border-green-100 p-4 md:p-5 flex flex-col min-h-[260px] md:min-h-[460px]">
+                <div class="mb-3 flex items-center justify-between border-b border-green-50 pb-2.5">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 bg-green-100 text-green-700 rounded-lg flex items-center justify-center font-bold text-xs">
+                      ✍️
+                    </div>
+                    <h2 class="font-bold text-gray-800 text-sm md:text-base">フリーメモ</h2>
+                  </div>
+                  <span class="text-[10px] text-gray-400">自動保存されます</span>
                 </div>
-                <h2 class="font-bold text-gray-800 text-sm">フリーメモ</h2>
+                <textarea v-model="freeMemoText" :readonly="isReadOnly" placeholder="当日の待ち合わせ、手伝いの予定、気になることなどを自由にメモ..." 
+                          class="flex-1 w-full p-3 text-sm rounded-xl border border-gray-100 focus:ring-2 focus:ring-green-400 resize-none bg-green-50/20 leading-relaxed outline-none"></textarea>
               </div>
-              <textarea v-model="freeMemoText" :readonly="isReadOnly" placeholder="・14時に休憩" 
-                        class="flex-1 w-full p-3 text-sm rounded-lg border-0 focus:ring-2 focus:ring-green-400 resize-none bg-green-50/30"></textarea>
+
+              <!-- 右カラム: 両替計算 ＆ 持ち物チェックリスト (md:col-span-6) -->
+              <div class="md:col-span-6 space-y-4">
+                
+                <!-- ★ 🪙 両替・金種計算ナビ (買い物リストから自動逆算) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-amber-200 p-4 md:p-5 space-y-3">
+                  <div class="flex items-center justify-between border-b border-amber-100 pb-2">
+                    <div class="flex items-center gap-2">
+                      <div class="w-7 h-7 bg-amber-100 text-amber-800 rounded-lg flex items-center justify-center font-bold text-xs">
+                        🪙
+                      </div>
+                      <h2 class="font-bold text-gray-900 text-sm md:text-base">両替・金種目安</h2>
+                    </div>
+                    <span class="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full font-bold">
+                      合計: ¥{{ currencyBreakdown.totalAmount.toLocaleString() }}
+                    </span>
+                  </div>
+
+                  <p class="text-[11px] text-gray-500 leading-snug">
+                    買い物リストの登録金額から、お釣りなしでピッタリ払うための目安を自動逆算しています。
+                  </p>
+
+                  <div class="grid grid-cols-3 gap-2 pt-1">
+                    <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-2.5 text-center">
+                      <span class="text-[10px] text-gray-500 font-bold block mb-0.5">千円札</span>
+                      <span class="text-base md:text-xl font-bold font-mono text-gray-900">{{ currencyBreakdown.bills1000 }}</span>
+                      <span class="text-[10px] text-gray-500 font-normal"> 枚</span>
+                      <span class="text-[9px] text-gray-400 block mt-0.5 font-mono">¥{{ (currencyBreakdown.bills1000 * 1000).toLocaleString() }}</span>
+                    </div>
+
+                    <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-2.5 text-center">
+                      <span class="text-[10px] text-gray-500 font-bold block mb-0.5">500円玉</span>
+                      <span class="text-base md:text-xl font-bold font-mono text-gray-900">{{ currencyBreakdown.coins500 }}</span>
+                      <span class="text-[10px] text-gray-500 font-normal"> 枚</span>
+                      <span class="text-[9px] text-gray-400 block mt-0.5 font-mono">¥{{ (currencyBreakdown.coins500 * 500).toLocaleString() }}</span>
+                    </div>
+
+                    <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-2.5 text-center">
+                      <span class="text-[10px] text-gray-500 font-bold block mb-0.5">100円玉</span>
+                      <span class="text-base md:text-xl font-bold font-mono text-gray-900">{{ currencyBreakdown.coins100 }}</span>
+                      <span class="text-[10px] text-gray-500 font-normal"> 枚</span>
+                      <span class="text-[9px] text-gray-400 block mt-0.5 font-mono">¥{{ (currencyBreakdown.coins100 * 100).toLocaleString() }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ★ 🎒 即売会 持ち物チェックリスト -->
+                <div class="bg-white rounded-2xl shadow-sm border border-blue-100 p-4 md:p-5 space-y-3">
+                  <div class="flex items-center justify-between border-b border-blue-50 pb-2">
+                    <div class="flex items-center gap-2">
+                      <div class="w-7 h-7 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center font-bold text-xs">
+                        🎒
+                      </div>
+                      <h2 class="font-bold text-gray-900 text-sm md:text-base">持ち物チェック</h2>
+                    </div>
+                    <span class="text-[10px] text-blue-700 font-bold">
+                      {{ checklist.filter(i => i.done).length }} / {{ checklist.length }} 完了
+                    </span>
+                  </div>
+
+                  <!-- チェックリスト一覧 -->
+                  <div class="space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                    <div v-for="(item, idx) in checklist" :key="idx"
+                         @click="toggleCheckItem(idx)"
+                         class="flex items-center justify-between p-2 rounded-xl border transition cursor-pointer select-none text-xs"
+                         :class="item.done ? 'bg-gray-50 text-gray-400 border-gray-200 line-through' : 'bg-blue-50/30 text-gray-800 border-blue-100 hover:bg-blue-50/60'">
+                      <div class="flex items-center gap-2 min-w-0 pr-2">
+                        <div class="w-4 h-4 rounded flex items-center justify-center shrink-0 border transition"
+                             :class="item.done ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 bg-white'">
+                          <svg v-if="item.done" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <span class="truncate font-medium">{{ item.text }}</span>
+                      </div>
+                      <button @click.stop="removeCheckItem(idx)" class="text-gray-300 hover:text-red-500 p-0.5 rounded transition" title="削除">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 持ち物追加入力 -->
+                  <div class="flex gap-2 pt-1">
+                    <input type="text" v-model="newCheckItemText" @keyup.enter="addCheckItem" placeholder="持ち物を追加 (例: ペン、羽織る上着)"
+                           class="flex-1 px-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none">
+                    <button @click="addCheckItem" class="bg-blue-600 text-white px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-blue-700 transition shrink-0 shadow-sm">
+                      ＋追加
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
             </div>
+
           </div>
 
         </div>
@@ -972,6 +1121,157 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           return null;
         };
 
+        
+        // ★ イベント日時 (2026/11/14)
+        const eventDateStr = '2026-11-14';
+        const currentTime = ref(new Date());
+
+        // 1分ごとに時刻更新
+        setInterval(() => {
+          currentTime.value = new Date();
+        }, 60000);
+
+        // カウントダウン情報
+        const eventCountdown = computed(() => {
+          const now = currentTime.value;
+          const targetStart = new Date('2026-11-14T12:00:00+09:00');
+          const targetEnd = new Date('2026-11-14T15:30:00+09:00');
+          const targetDayStart = new Date('2026-11-14T00:00:00+09:00');
+
+          const diffStart = targetStart - now;
+          const diffEnd = targetEnd - now;
+
+          // 終了後
+          if (diffEnd <= 0) {
+            return { status: 'ended', text: '本日の即売会は終了しました。お疲れ様でした！', badge: '終了' };
+          }
+          // 即売会開催中 (12:00 - 15:30)
+          if (diffStart <= 0 && diffEnd > 0) {
+            const h = Math.floor(diffEnd / (1000 * 60 * 60));
+            const m = Math.floor((diffEnd % (1000 * 60 * 60)) / (1000 * 60));
+            return { status: 'running', text: `🔥 即売会開催中！ 終了まで あと${h}時間${m}分`, badge: '開催中' };
+          }
+          // 当日 朝〜開会前
+          if (now >= targetDayStart && diffStart > 0) {
+            const h = Math.floor(diffStart / (1000 * 60 * 60));
+            const m = Math.floor((diffStart % (1000 * 60 * 60)) / (1000 * 60));
+            return { status: 'today_before', text: `✨ 開会(12:00)まで あと${h}時間${m}分！`, badge: '本日開催' };
+          }
+          // イベント前 (日数カウントダウン)
+          const days = Math.ceil(diffStart / (1000 * 60 * 60 * 24));
+          return { status: 'countdown', text: `🎉 VGGC 12th まで あと ${days}日`, badge: `あと${days}日` };
+        });
+
+        // 現在のアクティブなスケジュール項目判定
+        const isCurrentSchedule = (timeKey) => {
+          const now = currentTime.value;
+          const targetDay = new Date('2026-11-14T00:00:00+09:00');
+          const nextDay = new Date('2026-11-15T00:00:00+09:00');
+          if (now < targetDay || now >= nextDay) return false;
+
+          const hm = now.getHours() * 60 + now.getMinutes();
+          if (timeKey === '9:45' && hm >= 9*60+45 && hm < 10*60) return true;
+          if (timeKey === '10:00' && hm >= 10*60 && hm < 12*60) return true;
+          if (timeKey === '12:00' && hm >= 12*60 && hm < 15*60+30) return true;
+          if (timeKey === '15:30' && hm >= 15*60+30 && hm < 15*60+45) return true;
+          if (timeKey === '15:45' && hm >= 15*60+45 && hm < 17*60) return true;
+          return false;
+        };
+
+        // ★ 両替・金種計算 (買い物リストから自動逆算)
+        const currencyBreakdown = computed(() => {
+          let bills1000 = 0; // 千円札
+          let coins500 = 0;  // 500円玉
+          let coins100 = 0;  // 100円玉
+          let totalAmount = 0;
+
+          Object.entries(savedList.value).forEach(([key, item]) => {
+            if (key.startsWith('__')) return;
+            const price = Number(item.price) || 0;
+            if (price <= 0) return;
+
+            totalAmount += price;
+
+            // 各サークルの支払いごとにお釣りが出ない内訳を算出
+            let rem = price;
+            const b1000 = Math.floor(rem / 1000);
+            bills1000 += b1000;
+            rem %= 1000;
+
+            const c500 = Math.floor(rem / 500);
+            coins500 += c500;
+            rem %= 500;
+
+            const c100 = Math.floor(rem / 100);
+            coins100 += c100;
+          });
+
+          return {
+            totalAmount,
+            bills1000,
+            coins500,
+            coins100
+          };
+        });
+
+        // ★ 即売会 持ち物チェックリスト
+        const defaultChecklist = [
+          { text: '小銭入れ（1万円札を崩したか？）', done: false },
+          { text: '大きめのトートバッグ・エコバッグ', done: false },
+          { text: 'クリアファイル / 硬質ケース（折れ防止）', done: false },
+          { text: '身分証明書・入場チケット', done: false },
+          { text: 'モバイルバッテリー・充電ケーブル', done: false },
+          { text: '飲み物・軽食・塩分タブレット', done: false }
+        ];
+
+        const checklist = ref([]);
+        const newCheckItemText = ref('');
+
+        // キャッシュ復元
+        try {
+          const storedList = localStorage.getItem('vggc12th_checklist');
+          if (storedList) {
+            checklist.value = JSON.parse(storedList);
+          } else {
+            checklist.value = defaultChecklist;
+          }
+        } catch (e) {
+          checklist.value = defaultChecklist;
+        }
+
+        const saveChecklist = () => {
+          try {
+            localStorage.setItem('vggc12th_checklist', JSON.stringify(checklist.value));
+          } catch (e) {}
+        };
+
+        const toggleCheckItem = (idx) => {
+          checklist.value[idx].done = !checklist.value[idx].done;
+          saveChecklist();
+        };
+
+        const addCheckItem = () => {
+          const val = newCheckItemText.value.trim();
+          if (!val) return;
+          checklist.value.push({ text: val, done: false });
+          newCheckItemText.value = '';
+          saveChecklist();
+        };
+
+        const removeCheckItem = (idx) => {
+          checklist.value.splice(idx, 1);
+          saveChecklist();
+        };
+
+        // ★ ログアウト確認付きハンドラ
+        const handleSafeSignOut = async () => {
+          if (confirm('ログアウトしてもよろしいですか？\n※会場など電波が弱い環境では再ログインに時間がかかる場合があります。')) {
+            await supabaseClient.auth.signOut();
+            user.value = null;
+            location.reload();
+          }
+        };
+
         // ★ お品書き商品選択のヘルパー
         const isItemSelected = (circleId, item) => {
           const saved = savedList.value[circleId];
@@ -1069,6 +1369,15 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           if (found) {
             const hex = found.color;
             if (hex === '#FFFFFF') return {
+          eventCountdown,
+          isCurrentSchedule,
+          currencyBreakdown,
+          checklist,
+          newCheckItemText,
+          toggleCheckItem,
+          addCheckItem,
+          removeCheckItem,
+          handleSafeSignOut,
           filterHasOshinagaki,
           getMatchedItemNames,
           mobileModalTab,
