@@ -998,15 +998,13 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import mapCoordsData from './map_coords.json';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseClient } from './supabase';
+import { STORAGE_KEY, vspoDict, priorityColors } from './constants';
+import { getItemBadge } from './utils/badges';
+import { calculateCurrencyBreakdown } from './utils/currency';
+import { getEventCountdown, checkScheduleActive } from './utils/countdown';
+import { getMemberStyle, getMemberMark } from './utils/memberStyle';
 
-const vspoDict = [{"name":"花芽すみれ","color":"#BECCFF","fanmarks":["👾","💤"]},{"name":"花芽なずな","color":"#FABEDC","fanmarks":["🍣"]},{"name":"小雀とと","color":"#FFF33F","fanmarks":["🔫","🐥"]},{"name":"一ノ瀬うるは","color":"#4182FA","fanmarks":["🌠"]},{"name":"胡桃のあ","color":"#B297D7","fanmarks":["🧸","♔"]},{"name":"兎咲ミミ","color":"#C7B2D6","fanmarks":["🐰","🍭"]},{"name":"空澄セナ","color":"#FFFFFF","fanmarks":["🗝","♠"]},{"name":"橘ひなの","color":"#FA96C8","fanmarks":["🍫","💘"]},{"name":"英リサ","color":"#D1DE79","fanmarks":["💐"]},{"name":"如月れん","color":"#BE2152","fanmarks":["⏰"]},{"name":"神成きゅぴ","color":"#FFD23C","fanmarks":["🌩"]},{"name":"八雲べに","color":"#85CAB3","fanmarks":["💄","💚"]},{"name":"藍沢エマ","color":"#B4F1F9","fanmarks":["🥞","💫"]},{"name":"紫宮るな","color":"#D6ADFF","fanmarks":["☪","🐾"]},{"name":"猫汰つな","color":"#FF3652","fanmarks":["🍒","✨"]},{"name":"白波らむね","color":"#8ECED9","fanmarks":["🐻","❄️","🏖️"]},{"name":"小森めと","color":"#FBA03F","fanmarks":["🪐"]},{"name":"夢野あかり","color":"#FF8684","fanmarks":["🍼"]},{"name":"夜乃くろむ","color":"#909EC8","fanmarks":["💀","⛓"]},{"name":"紡木こかげ","color":"#5195E1","fanmarks":["📘","💧"]},{"name":"千燈ゆうひ","color":"#ED784A","fanmarks":["🫠"]},{"name":"蝶屋はなび","color":"#EA5506","fanmarks":["🦋","🎆"]},{"name":"甘結もか","color":"#ECA0AA","fanmarks":["🕹","🔖"]},{"name":"銀城サイネ","color":"#58535E","fanmarks":["🎈"]},{"name":"龍巻ちせ","color":"#BEFF77","fanmarks":["🐉","🌪"]},{"name":"オールキャラ","color":"#F59E0B","fanmarks":["🌈"]}];
-
-    const STORAGE_KEY = 'vggc12th_saved_list';
-
-    const supabaseUrl = 'https://lgcwzlzrovdcjaywvmdk.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnY3d6bHpyb3ZkY2pheXd2bWRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMjA1NzksImV4cCI6MjEwNDY5NjU3OX0.-axEWTfGBNrtt2POQn7VgkCSCgQH2v3Wn2SIQSgvKYo';
-    const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     
 
@@ -1105,114 +1103,17 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
         // ★ モバイル用モーダルタブ ('items' | 'tweet')
         const mobileModalTab = ref('items');
 
-        // ★ 商品名からの自動バッジ判定
-        const getItemBadge = (name) => {
-          if (!name) return null;
-          // 特典・ノベルティを最優先で判定
-          if (name.includes('特典') || name.includes('ノベルティ') || name.includes('プレゼント')) {
-            return { label: '特典', bg: 'bg-green-50 text-green-700 border-green-200' };
-          }
-          if (name.includes('セット')) return { label: 'セット', bg: 'bg-purple-50 text-purple-700 border-purple-200' };
-          if (name.includes('新刊')) return { label: '新刊', bg: 'bg-red-50 text-red-700 border-red-200' };
-          if (name.includes('既刊')) return { label: '既刊', bg: 'bg-blue-50 text-blue-700 border-blue-200' };
-          if (name.includes('チェキ') || name.includes('アクスタ') || name.includes('アクリル') || name.includes('グッズ') || name.includes('色紙') || name.includes('キーホルダー')) {
-            return { label: 'グッズ', bg: 'bg-amber-50 text-amber-800 border-amber-200' };
-          }
-          return null;
-        };
-
-        
-        // ★ イベント日時 (2026/11/14)
-        const eventDateStr = '2026-11-14';
+        // ★ イベント日時 & カウントダウン
         const currentTime = ref(new Date());
-
-        // 1分ごとに時刻更新
         setInterval(() => {
           currentTime.value = new Date();
         }, 60000);
 
-        // カウントダウン情報
-        const eventCountdown = computed(() => {
-          const now = currentTime.value;
-          const targetStart = new Date('2026-11-14T12:00:00+09:00');
-          const targetEnd = new Date('2026-11-14T15:30:00+09:00');
-          const targetDayStart = new Date('2026-11-14T00:00:00+09:00');
-
-          const diffStart = targetStart - now;
-          const diffEnd = targetEnd - now;
-
-          // 終了後
-          if (diffEnd <= 0) {
-            return { status: 'ended', text: '本日の即売会は終了しました。お疲れ様でした！', badge: '終了' };
-          }
-          // 即売会開催中 (12:00 - 15:30)
-          if (diffStart <= 0 && diffEnd > 0) {
-            const h = Math.floor(diffEnd / (1000 * 60 * 60));
-            const m = Math.floor((diffEnd % (1000 * 60 * 60)) / (1000 * 60));
-            return { status: 'running', text: `🔥 即売会開催中！ 終了まで あと${h}時間${m}分`, badge: '開催中' };
-          }
-          // 当日 朝〜開会前
-          if (now >= targetDayStart && diffStart > 0) {
-            const h = Math.floor(diffStart / (1000 * 60 * 60));
-            const m = Math.floor((diffStart % (1000 * 60 * 60)) / (1000 * 60));
-            return { status: 'today_before', text: `✨ 開会(12:00)まで あと${h}時間${m}分！`, badge: '本日開催' };
-          }
-          // イベント前 (日数カウントダウン)
-          const days = Math.ceil(diffStart / (1000 * 60 * 60 * 24));
-          return { status: 'countdown', text: `🎉 VGGC 12th まで あと ${days}日`, badge: `あと${days}日` };
-        });
-
-        // 現在のアクティブなスケジュール項目判定
-        const isCurrentSchedule = (timeKey) => {
-          const now = currentTime.value;
-          const targetDay = new Date('2026-11-14T00:00:00+09:00');
-          const nextDay = new Date('2026-11-15T00:00:00+09:00');
-          if (now < targetDay || now >= nextDay) return false;
-
-          const hm = now.getHours() * 60 + now.getMinutes();
-          if (timeKey === '9:45' && hm >= 9*60+45 && hm < 10*60) return true;
-          if (timeKey === '10:00' && hm >= 10*60 && hm < 12*60) return true;
-          if (timeKey === '12:00' && hm >= 12*60 && hm < 15*60+30) return true;
-          if (timeKey === '15:30' && hm >= 15*60+30 && hm < 15*60+45) return true;
-          if (timeKey === '15:45' && hm >= 15*60+45 && hm < 17*60) return true;
-          return false;
-        };
+        const eventCountdown = computed(() => getEventCountdown(currentTime.value));
+        const isCurrentSchedule = (timeKey) => checkScheduleActive(timeKey, currentTime.value);
 
         // ★ 両替・金種計算 (買い物リストから自動逆算)
-        const currencyBreakdown = computed(() => {
-          let bills1000 = 0; // 千円札
-          let coins500 = 0;  // 500円玉
-          let coins100 = 0;  // 100円玉
-          let totalAmount = 0;
-
-          Object.entries(savedList.value).forEach(([key, item]) => {
-            if (key.startsWith('__')) return;
-            const price = Number(item.price) || 0;
-            if (price <= 0) return;
-
-            totalAmount += price;
-
-            // 各サークルの支払いごとにお釣りが出ない内訳を算出
-            let rem = price;
-            const b1000 = Math.floor(rem / 1000);
-            bills1000 += b1000;
-            rem %= 1000;
-
-            const c500 = Math.floor(rem / 500);
-            coins500 += c500;
-            rem %= 500;
-
-            const c100 = Math.floor(rem / 100);
-            coins100 += c100;
-          });
-
-          return {
-            totalAmount,
-            bills1000,
-            coins500,
-            coins100
-          };
-        });
+        const currencyBreakdown = computed(() => calculateCurrencyBreakdown(savedList.value));
 
         // ★ 即売会 持ち物チェックリスト
         const defaultChecklist = [
@@ -1364,63 +1265,10 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           }
         });
         
-        const getMemberStyle = (name) => {
-          const found = vspoDict.find(d => d.name === name);
-          if (found) {
-            const hex = found.color;
-            if (hex === '#FFFFFF') return {
-          eventCountdown,
-          isCurrentSchedule,
-          currencyBreakdown,
-          checklist,
-          newCheckItemText,
-          toggleCheckItem,
-          addCheckItem,
-          removeCheckItem,
-          handleSafeSignOut,
-          filterHasOshinagaki,
-          getMatchedItemNames,
-          mobileModalTab,
-          getItemBadge,
-          isItemSelected,
-          getSelectedItemCount,
-          getSelectedItemsTotal,
-          toggleItemSelection,
-
-          filterMember,
-          filterItemTag,
-          relatedCircles,
-
-          showBudgetModal,
-          tempBudgetInput,
-          budgetAmount,
-          remainingBudget,
-          openBudgetModal,
-          saveBudget, backgroundColor: '#ffffff', borderColor: '#d1d5db', color: '#374151' };
-            return { backgroundColor: hex + '40', borderColor: hex, color: '#374151' };
-          }
-          return { backgroundColor: '#dcfce7', borderColor: '#bbf7d0', color: '#15803d' };
-        };
-
-        const getMemberMark = (name) => {
-          const found = vspoDict.find(d => d.name === name);
-          if (found && found.fanmarks.length > 0) {
-            return found.fanmarks.join('');
-          }
-          return '👤';
-        };
-
         const mapScale = ref(1.0);
         const pinX = ref(100);
         const pinY = ref(100);
         let isDraggingPin = false;
-
-        const priorityColors = {
-          'S': 'text-red-700 font-bold bg-red-100',
-          'A': 'text-orange-700 font-bold bg-orange-100',
-          'B': 'text-blue-700 font-bold bg-blue-100',
-          '': 'text-gray-500'
-        };
 
         const shareUrl = computed(() => {
           if (!listId.value) return '';
