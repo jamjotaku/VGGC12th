@@ -528,37 +528,7 @@
     </div>
 
     <!-- 初回・ヘルプモーダル -->
-    <transition name="modal">
-      <div v-if="showHelpModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-          <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-            <h2 class="font-bold text-lg text-gray-800">ℹ️ このアプリについて</h2>
-            <button @click="showHelpModal = false" class="p-2 text-gray-400 hover:bg-gray-200 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
-          </div>
-          <div class="p-5 overflow-y-auto space-y-5 text-sm text-gray-700">
-            <div>
-              <h3 class="font-bold text-blue-600 mb-2 border-b-2 border-blue-100 inline-block">🚀 使い方</h3>
-              <ul class="space-y-2 list-disc list-inside">
-                <li><span class="font-bold">サークル検索:</span> 気になるサークルを探してリストに追加！</li>
-                <li><span class="font-bold">お品書き確認:</span> 「詳細」ボタンから公式Xのお品書きをチェック。</li>
-                <li><span class="font-bold">クラウド同期:</span> 任意のIDでログインすれば、他の端末とも同期可能。</li>
-              </ul>
-            </div>
-            <div class="bg-red-50 p-3 rounded-lg border border-red-100">
-              <h3 class="font-bold text-red-600 mb-1 flex items-center gap-1">⚠️ 免責事項（非公式ツールです）</h3>
-              <p class="text-xs text-red-700 leading-relaxed">
-                当アプリは有志が作成した<strong>非公式ツール</strong>です。<br>
-                クリエイターの皆様の権利を尊重し、<strong>サークルカット等の画像データを独自のサーバーに保存・AI学習等へ利用することは一切ありません。</strong> お品書き等は全てX(Twitter)公式の機能を利用して埋め込んで表示しています。<br><br>
-                イベント公式様や、データ元のサイト様へのお問い合わせは固くお断りいたします。
-              </p>
-            </div>
-          </div>
-          <div class="p-4 border-t bg-gray-50">
-            <button @click="showHelpModal = false" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition">確認してはじめる！</button>
-          </div>
-        </div>
-      </div>
-    </transition>
+    <HelpModal :show="showHelpModal" @close="showHelpModal = false" />
 
     <!-- ★サークル詳細 / お品書き モーダル (PC2カラム ＆ スマホタブ切り替え対応) -->
     <CircleDetailModal 
@@ -583,43 +553,10 @@
     />
 
     <!-- ログイン/登録モーダル -->
-    <transition name="modal">
-      <div v-if="showAuthModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
-          <button @click="showAuthModal = false" class="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-          <div class="text-center mb-6"><h2 class="text-xl font-bold">ログイン / 登録</h2></div>
-          <div v-if="authError" class="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{{ authError }}</div>
-          <div v-if="authMessage" class="bg-blue-50 text-blue-600 p-3 rounded-lg mb-4 text-sm">{{ authMessage }}</div>
-          <form @submit.prevent="handleAuth" class="space-y-4">
-            <input type="text" v-model="authId" placeholder="ユーザーID（半角英数字）" required class="w-full px-4 py-3 bg-gray-50 border rounded-xl">
-            <input type="password" v-model="authPassword" minlength="6" placeholder="パスワード（6文字以上）" required class="w-full px-4 py-3 bg-gray-50 border rounded-xl">
-            <div class="flex gap-3 pt-4">
-              <button type="submit" @click="authMode = 'login'" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold">ログイン</button>
-              <button type="submit" @click="authMode = 'register'" class="flex-1 bg-white border border-gray-200 text-gray-700 py-3 rounded-xl font-bold">新規登録</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </transition>
+    <AuthModal :show="showAuthModal" :is-online="isOnline" @close="showAuthModal = false" />
 
     <!-- 共有モーダル -->
-    <transition name="modal">
-      <div v-if="showShareModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
-          <button @click="showShareModal = false" class="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-          <h2 class="text-xl font-bold text-center mb-6">リストを共有する</h2>
-          <div class="flex justify-between p-4 bg-gray-50 rounded-xl border mb-4">
-            <span class="font-bold text-sm">公開設定</span>
-            <input type="checkbox" v-model="isPublic" @change="togglePublicStatus" class="w-6 h-6 accent-blue-600">
-          </div>
-          <div v-if="isPublic" class="flex gap-2">
-            <input type="text" readonly :value="shareUrl" class="flex-1 bg-gray-100 px-3 py-3 rounded-lg text-xs">
-            <button @click="copyShareUrl" class="bg-gray-800 text-white px-4 py-3 rounded-lg text-sm font-bold">コピー</button>
-          </div>
-          <p v-if="copySuccess" class="text-xs text-green-600 text-center mt-2 font-bold">コピーしました！</p>
-        </div>
-      </div>
-    </transition>
+    <ShareModal :show="showShareModal" :is-public="isPublic" :share-url="shareUrl" @close="showShareModal = false" @toggle-public="onTogglePublic" />
 
   
 </div>
@@ -637,6 +574,9 @@ import { getMemberStyle, getMemberMark } from './utils/memberStyle';
 import BudgetModal from './components/BudgetModal.vue';
 import MemoDashboard from './components/MemoDashboard.vue';
 import CircleDetailModal from './components/CircleDetailModal.vue';
+import HelpModal from './components/HelpModal.vue';
+import AuthModal from './components/AuthModal.vue';
+import ShareModal from './components/ShareModal.vue';
 
 
     
@@ -705,13 +645,6 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           
           window.scrollTo({ top: 0, behavior: 'smooth' });
         };
-        const authId = ref('');
-        const authPassword = ref('');
-        const authMode = ref('login');
-        const authError = ref('');
-        const authMessage = ref('');
-        const copySuccess = ref(false);
-
         const sortOrder = ref('default'); 
         const hideBought = ref(false);
         
@@ -1198,32 +1131,14 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           });
         });
 
-        const togglePublicStatus = async () => { if(user.value) await supabaseClient.from('shopping_lists').update({ is_public: isPublic.value }).eq('user_id', user.value.id); };
-        const handleAuth = async () => {
-          if (!isOnline.value) {
-            authError.value = 'オフライン状態ではログイン・登録できません。通信環境を確認してください。';
-            return;
-          }
-          authError.value = ''; authMessage.value = '';
-          const dummyEmail = authId.value + '@vggc.dummy.local';
-          try {
-            if (authMode.value === 'register') {
-              const { error } = await supabaseClient.auth.signUp({ email: dummyEmail, password: authPassword.value });
-              if (error) throw error;
-              authMessage.value = '登録成功！ログインします...';
-              setTimeout(() => { if (user.value) showAuthModal.value = false; }, 1000);
-            } else {
-              const { error } = await supabaseClient.auth.signInWithPassword({ email: dummyEmail, password: authPassword.value });
-              if (error) throw error;
-              showAuthModal.value = false;
-            }
-          } catch (err) {
-            authError.value = err.message === 'Invalid login credentials' ? 'IDまたはパスワードが間違っています。' : err.message;
+        const onTogglePublic = async (newVal) => {
+          isPublic.value = newVal;
+          if (user.value) {
+            await supabaseClient.from('shopping_lists').update({ is_public: newVal }).eq('user_id', user.value.id);
           }
         };
         const signOut = async () => { await supabaseClient.auth.signOut(); savedList.value = {}; listId.value = null; isPublic.value = false; freeMemoText.value = ''; };
         const exitReadOnly = () => { const url = new URL(window.location.href); url.searchParams.delete('list'); window.location.href = url.toString(); };
-        const copyShareUrl = () => { navigator.clipboard.writeText(shareUrl.value); copySuccess.value = true; setTimeout(() => copySuccess.value = false, 2000); };
 
         
 </script>
