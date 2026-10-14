@@ -49,38 +49,8 @@
               <svg class="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
               <span class="text-xs underline hidden md:block">ログアウト</span>
             </button>
-          
-    <!-- 予算設定モーダル -->
-    <div v-if="showBudgetModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" @click.self="showBudgetModal = false">
-      <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-          <h2 class="font-bold text-gray-800 flex items-center gap-2">
-            <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            予算を設定
-          </h2>
-          <button @click="showBudgetModal = false" class="text-gray-400 hover:text-gray-600 p-1">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
-        </div>
-        <div class="p-5 flex-1 overflow-y-auto">
-          <p class="text-sm text-gray-600 mb-4">イベント全体の購入予算を設定すると、残金が自動で計算されます。</p>
-          <div class="mb-4">
-            <label class="block text-xs font-bold text-gray-700 mb-1">予算額 (円)</label>
-            <div class="relative">
-              <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-bold">¥</span>
-              <input type="number" v-model="tempBudgetInput" class="w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-bold text-lg" placeholder="10000" @keyup.enter="saveBudget">
-            </div>
           </div>
-        </div>
-        <div class="p-4 border-t bg-gray-50 flex gap-2 justify-end shrink-0">
-          <button @click="showBudgetModal = false" class="px-4 py-2 rounded-lg font-bold text-gray-600 hover:bg-gray-200 transition">キャンセル</button>
-          <button @click="saveBudget" class="px-4 py-2 rounded-lg font-bold bg-blue-600 text-white hover:bg-blue-700 transition">保存する</button>
-        </div>
-      </div>
-    </div>
-
-</div>
-</template>
+        </template>
       </div>
     </nav>
 
@@ -522,118 +492,12 @@
           <!-- =========================================
                フリーメモ タブ (即売会準備ダッシュボード)
           ========================================== -->
-          <div v-show="activeTab === 'memo'" class="flex flex-col min-h-full pb-20 md:pb-6 p-3 md:p-6 space-y-4 md:space-y-6">
-            
-            <div class="flex flex-col md:grid md:grid-cols-12 md:gap-6 space-y-4 md:space-y-0">
-              
-              <!-- 左カラム: フリーメモ (md:col-span-6) -->
-              <div class="md:col-span-6 bg-white rounded-2xl shadow-sm border border-green-100 p-4 md:p-5 flex flex-col min-h-[260px] md:min-h-[460px]">
-                <div class="mb-3 flex items-center justify-between border-b border-green-50 pb-2.5">
-                  <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 bg-green-100 text-green-700 rounded-lg flex items-center justify-center font-bold text-xs">
-                      ✍️
-                    </div>
-                    <h2 class="font-bold text-gray-800 text-sm md:text-base">フリーメモ</h2>
-                  </div>
-                  <span class="text-[10px] text-gray-400">自動保存されます</span>
-                </div>
-                <textarea v-model="freeMemoText" :readonly="isReadOnly" placeholder="当日の待ち合わせ、手伝いの予定、気になることなどを自由にメモ..." 
-                          class="flex-1 w-full p-3 text-sm rounded-xl border border-gray-100 focus:ring-2 focus:ring-green-400 resize-none bg-green-50/20 leading-relaxed outline-none"></textarea>
-              </div>
-
-              <!-- 右カラム: 両替計算 ＆ 持ち物チェックリスト (md:col-span-6) -->
-              <div class="md:col-span-6 space-y-4">
-                
-                <!-- ★ 🪙 両替・金種計算ナビ (買い物リストから自動逆算) -->
-                <div class="bg-white rounded-2xl shadow-sm border border-amber-200 p-4 md:p-5 space-y-3">
-                  <div class="flex items-center justify-between border-b border-amber-100 pb-2">
-                    <div class="flex items-center gap-2">
-                      <div class="w-7 h-7 bg-amber-100 text-amber-800 rounded-lg flex items-center justify-center font-bold text-xs">
-                        🪙
-                      </div>
-                      <h2 class="font-bold text-gray-900 text-sm md:text-base">両替・金種目安</h2>
-                    </div>
-                    <span class="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full font-bold">
-                      合計: ¥{{ currencyBreakdown.totalAmount.toLocaleString() }}
-                    </span>
-                  </div>
-
-                  <p class="text-[11px] text-gray-500 leading-snug">
-                    買い物リストの登録金額から、お釣りなしでピッタリ払うための目安を自動逆算しています。
-                  </p>
-
-                  <div class="grid grid-cols-3 gap-2 pt-1">
-                    <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-2.5 text-center">
-                      <span class="text-[10px] text-gray-500 font-bold block mb-0.5">千円札</span>
-                      <span class="text-base md:text-xl font-bold font-mono text-gray-900">{{ currencyBreakdown.bills1000 }}</span>
-                      <span class="text-[10px] text-gray-500 font-normal"> 枚</span>
-                      <span class="text-[9px] text-gray-400 block mt-0.5 font-mono">¥{{ (currencyBreakdown.bills1000 * 1000).toLocaleString() }}</span>
-                    </div>
-
-                    <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-2.5 text-center">
-                      <span class="text-[10px] text-gray-500 font-bold block mb-0.5">500円玉</span>
-                      <span class="text-base md:text-xl font-bold font-mono text-gray-900">{{ currencyBreakdown.coins500 }}</span>
-                      <span class="text-[10px] text-gray-500 font-normal"> 枚</span>
-                      <span class="text-[9px] text-gray-400 block mt-0.5 font-mono">¥{{ (currencyBreakdown.coins500 * 500).toLocaleString() }}</span>
-                    </div>
-
-                    <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-2.5 text-center">
-                      <span class="text-[10px] text-gray-500 font-bold block mb-0.5">100円玉</span>
-                      <span class="text-base md:text-xl font-bold font-mono text-gray-900">{{ currencyBreakdown.coins100 }}</span>
-                      <span class="text-[10px] text-gray-500 font-normal"> 枚</span>
-                      <span class="text-[9px] text-gray-400 block mt-0.5 font-mono">¥{{ (currencyBreakdown.coins100 * 100).toLocaleString() }}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- ★ 🎒 即売会 持ち物チェックリスト -->
-                <div class="bg-white rounded-2xl shadow-sm border border-blue-100 p-4 md:p-5 space-y-3">
-                  <div class="flex items-center justify-between border-b border-blue-50 pb-2">
-                    <div class="flex items-center gap-2">
-                      <div class="w-7 h-7 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center font-bold text-xs">
-                        🎒
-                      </div>
-                      <h2 class="font-bold text-gray-900 text-sm md:text-base">持ち物チェック</h2>
-                    </div>
-                    <span class="text-[10px] text-blue-700 font-bold">
-                      {{ checklist.filter(i => i.done).length }} / {{ checklist.length }} 完了
-                    </span>
-                  </div>
-
-                  <!-- チェックリスト一覧 -->
-                  <div class="space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
-                    <div v-for="(item, idx) in checklist" :key="idx"
-                         @click="toggleCheckItem(idx)"
-                         class="flex items-center justify-between p-2 rounded-xl border transition cursor-pointer select-none text-xs"
-                         :class="item.done ? 'bg-gray-50 text-gray-400 border-gray-200 line-through' : 'bg-blue-50/30 text-gray-800 border-blue-100 hover:bg-blue-50/60'">
-                      <div class="flex items-center gap-2 min-w-0 pr-2">
-                        <div class="w-4 h-4 rounded flex items-center justify-center shrink-0 border transition"
-                             :class="item.done ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 bg-white'">
-                          <svg v-if="item.done" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                        </div>
-                        <span class="truncate font-medium">{{ item.text }}</span>
-                      </div>
-                      <button @click.stop="removeCheckItem(idx)" class="text-gray-300 hover:text-red-500 p-0.5 rounded transition" title="削除">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- 持ち物追加入力 -->
-                  <div class="flex gap-2 pt-1">
-                    <input type="text" v-model="newCheckItemText" @keyup.enter="addCheckItem" placeholder="持ち物を追加 (例: ペン、羽織る上着)"
-                           class="flex-1 px-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none">
-                    <button @click="addCheckItem" class="bg-blue-600 text-white px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-blue-700 transition shrink-0 shadow-sm">
-                      ＋追加
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
+          <MemoDashboard 
+            v-show="activeTab === 'memo'" 
+            v-model:freeMemoText="freeMemoText" 
+            :is-read-only="isReadOnly" 
+            :currency-breakdown="currencyBreakdown" 
+          />
 
         </div>
       </div>
@@ -697,260 +561,26 @@
     </transition>
 
     <!-- ★サークル詳細 / お品書き モーダル (PC2カラム ＆ スマホタブ切り替え対応) -->
-    <transition name="modal">
-      <div v-if="selectedCircle" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 md:p-6" @click.self="selectedCircle = null">
-        <div class="bg-white rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-2xl md:max-w-4xl lg:max-w-5xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
-          
-          <!-- ヘッダー -->
-          <div class="p-3.5 md:p-5 border-b bg-white flex justify-between items-start relative z-10 shadow-sm">
-            <div>
-              <div class="flex items-center gap-2 mb-1">
-                <span class="inline-block px-2.5 py-0.5 bg-blue-100 text-blue-800 text-xs font-bold rounded border border-blue-200 shadow-sm">
-                  {{ selectedCircle.space_sym }}-{{ selectedCircle.space_num }}
-                </span>
-                <span v-if="circleExtraInfo[selectedCircle.circle_id]?.items?.length" class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
-                  お品書き登録済 ({{ circleExtraInfo[selectedCircle.circle_id].items.length }}品)
-                </span>
-              </div>
-              <h2 class="font-bold text-lg md:text-2xl text-gray-900 leading-tight">{{ selectedCircle.circle_name }}</h2>
-              <p class="text-xs md:text-sm text-gray-500 mt-0.5">代表: {{ selectedCircle.penname }}</p>
-            </div>
-            <button @click="selectedCircle = null" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition flex-shrink-0">
-              <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-          </div>
+    <CircleDetailModal 
+      :circle="selectedCircle" 
+      :circle-extra-info="circleExtraInfo" 
+      :saved-list="savedList" 
+      :is-read-only="isReadOnly" 
+      :related-circles="relatedCircles" 
+      :is-tweet-loading="isTweetLoading" 
+      @close="selectedCircle = null" 
+      @toggle-save="toggleSave" 
+      @toggle-item="toggleItemSelection" 
+      @open-circle="openDetails" 
+    />
 
-          <!-- スマホ用タブ切り替え（商品登録がある場合のみ表示） -->
-          <div v-if="circleExtraInfo[selectedCircle.circle_id]?.items?.length" class="flex border-b text-xs font-bold bg-gray-50 md:hidden">
-            <button @click="mobileModalTab = 'items'" 
-                    class="flex-1 py-2.5 text-center transition border-b-2 flex items-center justify-center gap-1.5"
-                    :class="mobileModalTab === 'items' ? 'border-amber-500 text-amber-800 bg-white font-bold' : 'border-transparent text-gray-500 hover:text-gray-700'">
-              <span>📋 頒布物メニュー</span>
-              <span class="bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded-full text-[10px]">{{ circleExtraInfo[selectedCircle.circle_id].items.length }}</span>
-            </button>
-            <button @click="mobileModalTab = 'tweet'" 
-                    class="flex-1 py-2.5 text-center transition border-b-2 flex items-center justify-center gap-1.5"
-                    :class="mobileModalTab === 'tweet' ? 'border-amber-500 text-amber-800 bg-white font-bold' : 'border-transparent text-gray-500 hover:text-gray-700'">
-              <span>📸 お品書き画像 (X)</span>
-            </button>
-          </div>
-          
-          <!-- コンテンツ（スクロール領域：PCは2カラムグリッド） -->
-          <div class="p-3.5 md:p-6 overflow-y-auto flex-1 bg-gray-50/70 space-y-5">
-            
-            <div class="flex flex-col md:grid md:grid-cols-12 md:gap-6">
-              
-              <!-- 左カラム: お品書きポスト埋め込み -->
-              <div class="md:col-span-6 lg:col-span-7 space-y-3"
-                   :class="{'hidden md:block': circleExtraInfo[selectedCircle.circle_id]?.items?.length && mobileModalTab !== 'tweet'}">
-                
-                <div class="flex justify-between items-center px-1">
-                  <span class="text-xs font-bold text-gray-500 flex items-center gap-1">
-                    <svg class="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                    公式X お品書きポスト
-                  </span>
-                  <a v-if="circleExtraInfo[selectedCircle.circle_id]?.oshinagaki_url" 
-                     :href="circleExtraInfo[selectedCircle.circle_id].oshinagaki_url" target="_blank" 
-                     class="text-[11px] text-blue-600 hover:underline flex items-center gap-0.5">
-                    <span>Xで直接開く</span>
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                  </a>
-                </div>
-
-                <!-- お品書き埋め込みコンテナ -->
-                <div class="bg-white border border-gray-200 rounded-2xl p-3 md:p-4 min-h-[320px] flex items-center justify-center text-gray-400 flex-col shadow-inner w-full relative">
-                  <!-- スケルトンUI -->
-                  <div v-if="isTweetLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/80 backdrop-blur-sm rounded-2xl z-10 transition-opacity duration-300">
-                    <div class="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mb-3"></div>
-                    <p class="text-xs text-gray-500 font-bold animate-pulse">お品書きを読み込み中...</p>
-                  </div>
-
-                  <!-- Xの埋め込みポストが表示されるコンテナ -->
-                  <div v-show="circleExtraInfo[selectedCircle.circle_id]?.oshinagaki_url" id="tweet-container" class="w-full flex justify-center"></div>
-                  
-                  <!-- URL未登録時 -->
-                  <div v-show="!circleExtraInfo[selectedCircle.circle_id]?.oshinagaki_url" class="text-center text-gray-400 py-10">
-                    <svg class="w-10 h-10 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    <p class="text-xs font-bold text-gray-500 mb-0.5">お品書き未登録</p>
-                    <p class="text-[10px]">※公式Xのポストが登録されると表示されます</p>
-                  </div>
-                </div>
-
-              </div>
-
-              <!-- 右カラム: メンバー・リンク ＆ 頒布物メニュー -->
-              <div class="md:col-span-6 lg:col-span-5 space-y-4"
-                   :class="{'hidden md:block': circleExtraInfo[selectedCircle.circle_id]?.items?.length && mobileModalTab !== 'items'}">
-                
-                <!-- 外部リンク＆メンバータグ -->
-                <div class="space-y-2">
-                  <div class="flex flex-wrap gap-1.5">
-                    <a v-if="selectedCircle.twitter_id" :href="`https://twitter.com/${selectedCircle.twitter_id}`" target="_blank" class="flex items-center gap-1 text-xs bg-gray-800 text-white px-2.5 py-1 rounded-lg hover:bg-gray-700 transition font-bold shadow-sm">
-                      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                      @{{ selectedCircle.twitter_id }}
-                    </a>
-                    <a v-if="selectedCircle.pixiv_url" :href="selectedCircle.pixiv_url" target="_blank" class="flex items-center gap-1 text-xs bg-blue-600 text-white px-2.5 py-1 rounded-lg hover:bg-blue-700 transition font-bold shadow-sm">
-                      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6H7v-2h2V7h2v2h2v2h-2v6z"/></svg>
-                      Pixiv
-                    </a>
-                    <a v-if="selectedCircle.site_url" :href="selectedCircle.site_url" target="_blank" class="flex items-center gap-1 text-xs bg-indigo-500 text-white px-2.5 py-1 rounded-lg hover:bg-indigo-600 transition font-bold shadow-sm">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
-                      Web
-                    </a>
-                  </div>
-
-                  <!-- メンバーバッジ -->
-                  <div class="flex flex-wrap gap-1">
-                    <span v-for="member in (circleExtraInfo[selectedCircle.circle_id]?.members || [])" :key="'m_'+member" class="text-xs px-2.5 py-1 rounded-full border shadow-sm font-bold flex items-center gap-1" :style="getMemberStyle(member)">
-                      <span>{{ getMemberMark(member) }}</span>
-                      {{ member }}
-                    </span>
-                    <span v-for="tag in (circleExtraInfo[selectedCircle.circle_id]?.tags || [])" :key="tag" class="text-xs px-2.5 py-1 bg-white text-gray-700 rounded-full border border-gray-200 shadow-sm font-bold">{{ tag }}</span>
-                  </div>
-                </div>
-
-                <!-- ★ お品書き商品メニュー (登録がある場合) -->
-                <div v-if="circleExtraInfo[selectedCircle.circle_id]?.items?.length" class="bg-white border border-amber-200 rounded-2xl p-3.5 md:p-4 shadow-sm">
-                  <div class="flex justify-between items-center mb-3">
-                    <div class="text-xs md:text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                      <span class="text-base">📋</span>
-                      <span>頒布物・商品メニュー</span>
-                      <span class="text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full font-bold">
-                        {{ circleExtraInfo[selectedCircle.circle_id].items.length }}品
-                      </span>
-                    </div>
-                    <span class="text-[10px] text-gray-400">タップして注文</span>
-                  </div>
-
-                  <div class="space-y-2">
-                    <div v-for="item in circleExtraInfo[selectedCircle.circle_id].items" :key="item.name"
-                         @click="toggleItemSelection(selectedCircle.circle_id, item)"
-                         class="p-2.5 md:p-3 rounded-xl border flex items-center justify-between cursor-pointer transition select-none group"
-                         :class="isItemSelected(selectedCircle.circle_id, item) 
-                           ? 'bg-amber-50/90 border-amber-300 ring-2 ring-amber-300/70 shadow-sm' 
-                           : 'bg-gray-50/70 border-gray-200 hover:bg-gray-100 hover:border-gray-300'">
-                      
-                      <div class="flex items-center gap-2.5 min-w-0 pr-2">
-                        <!-- チェックボックス -->
-                        <div class="w-4 h-4 rounded flex items-center justify-center shrink-0 border transition"
-                             :class="isItemSelected(selectedCircle.circle_id, item) ? 'bg-amber-500 border-amber-500 text-white' : 'border-gray-300 bg-white group-hover:border-amber-400'">
-                          <svg v-if="isItemSelected(selectedCircle.circle_id, item)" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                        </div>
-
-                        <!-- 種類バッジ (新刊・既刊・特典など) -->
-                        <span v-if="getItemBadge(item.name)" 
-                              class="text-[10px] px-1.5 py-0.5 rounded font-bold border shrink-0" 
-                              :class="getItemBadge(item.name).bg">
-                          {{ getItemBadge(item.name).label }}
-                        </span>
-
-                        <!-- 商品名 -->
-                        <span class="text-xs md:text-sm font-bold leading-snug truncate"
-                              :class="isItemSelected(selectedCircle.circle_id, item) ? 'text-amber-950' : 'text-gray-800'">
-                          {{ item.name }}
-                        </span>
-                      </div>
-
-                      <!-- 価格 -->
-                      <div class="text-right shrink-0">
-                        <span class="font-bold text-xs md:text-sm font-mono"
-                              :class="item.price > 0 ? (isItemSelected(selectedCircle.circle_id, item) ? 'text-amber-700' : 'text-gray-900') : 'text-green-600'">
-                          {{ item.price > 0 ? '¥' + item.price.toLocaleString() : '無料' }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- 選択中の合計金額プレビュー -->
-                  <div v-if="getSelectedItemCount(selectedCircle.circle_id) > 0" 
-                       class="mt-3 pt-2.5 border-t border-dashed border-amber-200 flex justify-between items-center text-xs font-bold text-amber-900">
-                    <span>選択中のお買い物 ({{ getSelectedItemCount(selectedCircle.circle_id) }}点):</span>
-                    <span class="text-sm md:text-base text-amber-600 font-mono font-bold">
-                      ¥{{ getSelectedItemsTotal(selectedCircle.circle_id).toLocaleString() }}
-                    </span>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-            <!-- ★ 関連サークル (下部に配置) -->
-            <div v-if="relatedCircles.length > 0" class="mt-6 border-t border-gray-200 pt-5">
-              <h3 class="text-xs md:text-sm font-bold text-gray-700 mb-2.5 flex items-center gap-1.5">
-                <svg class="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                同じメンバーを扱っているサークル
-              </h3>
-              <div class="flex overflow-x-auto gap-2.5 pb-2 custom-scrollbar px-1">
-                <div v-for="rc in relatedCircles" :key="'rc_'+rc.circle_id" @click="openDetails(rc)" class="flex-shrink-0 w-40 md:w-44 bg-white border border-gray-200 rounded-xl p-2.5 shadow-sm cursor-pointer hover:border-pink-300 hover:shadow-md transition group">
-                  <div class="flex justify-between items-start mb-1">
-                    <span class="inline-block px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[9px] font-bold rounded border border-gray-200">
-                      {{ rc.space_sym }}-{{ rc.space_num }}
-                    </span>
-                    <span v-if="savedList[rc.circle_id]" class="text-[9px] font-bold text-pink-500 bg-pink-50 px-1 rounded">登録済</span>
-                  </div>
-                  <div class="font-bold text-xs text-gray-800 truncate group-hover:text-pink-600 transition">{{ rc.circle_name }}</div>
-                  <div class="flex flex-wrap gap-1 mt-1.5">
-                    <span v-for="m in (circleExtraInfo[rc.circle_id]?.members || []).slice(0,2)" :key="'rcm_'+m" class="text-[9px] px-1 py-0.5 rounded font-bold" :style="getMemberStyle(m)">
-                      {{ getMemberMark(m) }}{{ m }}
-                    </span>
-                    <span v-if="(circleExtraInfo[rc.circle_id]?.members || []).length > 2" class="text-[9px] text-gray-400 font-bold">+{{ (circleExtraInfo[rc.circle_id]?.members || []).length - 2 }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-          
-          <!-- アクションエリア（最下部固定：リスト操作） -->
-          <div class="p-3 md:p-4 border-t bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] relative z-10">
-            <!-- リストに追加されていない場合 -->
-            <button v-if="!savedList[selectedCircle.circle_id] && !isReadOnly" @click="toggleSave(selectedCircle.circle_id)" 
-                    class="w-full bg-pink-500 text-white font-bold py-3 md:py-3.5 rounded-xl hover:bg-pink-600 active:scale-95 transition shadow flex items-center justify-center gap-2 text-base md:text-lg">
-              <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-              <span>買い物リストに追加</span>
-              <span v-if="getSelectedItemsTotal(selectedCircle.circle_id) > 0" class="ml-1 bg-white/20 px-2 py-0.5 rounded-full text-xs md:text-sm font-mono">
-                ¥{{ getSelectedItemsTotal(selectedCircle.circle_id).toLocaleString() }}
-              </span>
-            </button>
-            
-            <!-- リストに追加されている場合 -->
-            <div v-else-if="savedList[selectedCircle.circle_id]" class="space-y-2.5">
-              <div class="flex justify-between items-center">
-                <span class="text-xs md:text-sm font-bold text-pink-600 flex items-center gap-1">
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" fill="none"/></svg>
-                  <span>買い物リスト登録済み</span>
-                  <span v-if="savedList[selectedCircle.circle_id].price" class="text-xs bg-pink-50 px-2 py-0.5 rounded-full text-pink-700 font-mono ml-1">
-                    ¥{{ Number(savedList[selectedCircle.circle_id].price).toLocaleString() }}
-                  </span>
-                </span>
-                <button v-if="!isReadOnly" @click="toggleSave(selectedCircle.circle_id)" class="text-xs text-gray-400 hover:text-red-500 underline">リストから削除</button>
-              </div>
-              
-              <div class="flex flex-wrap items-center gap-2">
-                <select v-model="savedList[selectedCircle.circle_id].priority" :disabled="isReadOnly" class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:ring-1 focus:ring-pink-400 outline-none" :class="priorityColors[savedList[selectedCircle.circle_id].priority]">
-                  <option value="">優先度: -</option>
-                  <option value="S">S (絶対買う)</option>
-                  <option value="A">A (買いたい)</option>
-                  <option value="B">B (見に行く)</option>
-                </select>
-                <div class="flex items-center text-xs border border-gray-200 rounded-lg bg-gray-50 overflow-hidden">
-                  <span class="px-2 text-gray-500 font-bold">¥</span>
-                  <input type="number" v-model.number="savedList[selectedCircle.circle_id].price" :readonly="isReadOnly" placeholder="金額" class="w-20 py-1.5 px-1 bg-transparent outline-none focus:bg-white text-right font-mono font-bold">
-                </div>
-                <input type="text" v-model="savedList[selectedCircle.circle_id].forWho" :readonly="isReadOnly" placeholder="誰用？(例: 自分)" class="flex-1 min-w-[90px] text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-gray-50 outline-none focus:bg-white focus:ring-1 focus:ring-pink-400">
-              </div>
-              <textarea v-model="savedList[selectedCircle.circle_id].memo" :readonly="isReadOnly" placeholder="メモを入力...（例: 新刊セット、アクスタ）" 
-                        class="w-full px-3 py-1.5 text-xs md:text-sm rounded-lg border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-12 bg-gray-50 focus:bg-white"></textarea>
-            </div>
-            
-            <div v-else class="text-center text-xs text-gray-500 py-1">
-              ※閲覧専用モードのため編集できません
-            </div>
-          </div>
-        </div>
-      </div>
-    </transition>
+    <!-- ★予算設定モーダル -->
+    <BudgetModal 
+      :show="showBudgetModal" 
+      :initial-budget="savedList['__BUDGET__'] || ''" 
+      @close="showBudgetModal = false" 
+      @save="saveBudget" 
+    />
 
     <!-- ログイン/登録モーダル -->
     <transition name="modal">
@@ -1000,10 +630,13 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import mapCoordsData from './map_coords.json';
 import { supabaseClient } from './supabase';
 import { STORAGE_KEY, vspoDict, priorityColors } from './constants';
-import { getItemBadge } from './utils/badges';
 import { calculateCurrencyBreakdown } from './utils/currency';
 import { getEventCountdown, checkScheduleActive } from './utils/countdown';
 import { getMemberStyle, getMemberMark } from './utils/memberStyle';
+
+import BudgetModal from './components/BudgetModal.vue';
+import MemoDashboard from './components/MemoDashboard.vue';
+import CircleDetailModal from './components/CircleDetailModal.vue';
 
 
     
@@ -1100,9 +733,6 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
             .map(it => it.name);
         };
 
-        // ★ モバイル用モーダルタブ ('items' | 'tweet')
-        const mobileModalTab = ref('items');
-
         // ★ イベント日時 & カウントダウン
         const currentTime = ref(new Date());
         setInterval(() => {
@@ -1115,55 +745,6 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
         // ★ 両替・金種計算 (買い物リストから自動逆算)
         const currencyBreakdown = computed(() => calculateCurrencyBreakdown(savedList.value));
 
-        // ★ 即売会 持ち物チェックリスト
-        const defaultChecklist = [
-          { text: '小銭入れ（1万円札を崩したか？）', done: false },
-          { text: '大きめのトートバッグ・エコバッグ', done: false },
-          { text: 'クリアファイル / 硬質ケース（折れ防止）', done: false },
-          { text: '身分証明書・入場チケット', done: false },
-          { text: 'モバイルバッテリー・充電ケーブル', done: false },
-          { text: '飲み物・軽食・塩分タブレット', done: false }
-        ];
-
-        const checklist = ref([]);
-        const newCheckItemText = ref('');
-
-        // キャッシュ復元
-        try {
-          const storedList = localStorage.getItem('vggc12th_checklist');
-          if (storedList) {
-            checklist.value = JSON.parse(storedList);
-          } else {
-            checklist.value = defaultChecklist;
-          }
-        } catch (e) {
-          checklist.value = defaultChecklist;
-        }
-
-        const saveChecklist = () => {
-          try {
-            localStorage.setItem('vggc12th_checklist', JSON.stringify(checklist.value));
-          } catch (e) {}
-        };
-
-        const toggleCheckItem = (idx) => {
-          checklist.value[idx].done = !checklist.value[idx].done;
-          saveChecklist();
-        };
-
-        const addCheckItem = () => {
-          const val = newCheckItemText.value.trim();
-          if (!val) return;
-          checklist.value.push({ text: val, done: false });
-          newCheckItemText.value = '';
-          saveChecklist();
-        };
-
-        const removeCheckItem = (idx) => {
-          checklist.value.splice(idx, 1);
-          saveChecklist();
-        };
-
         // ★ ログアウト確認付きハンドラ
         const handleSafeSignOut = async () => {
           if (confirm('ログアウトしてもよろしいですか？\n※会場など電波が弱い環境では再ログインに時間がかかる場合があります。')) {
@@ -1171,27 +752,6 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
             user.value = null;
             location.reload();
           }
-        };
-
-        // ★ お品書き商品選択のヘルパー
-        const isItemSelected = (circleId, item) => {
-          const saved = savedList.value[circleId];
-          if (!saved || !saved.selectedItems) return false;
-          return saved.selectedItems.includes(item.name);
-        };
-
-        const getSelectedItemCount = (circleId) => {
-          const saved = savedList.value[circleId];
-          return (saved?.selectedItems || []).length;
-        };
-
-        const getSelectedItemsTotal = (circleId) => {
-          const saved = savedList.value[circleId];
-          if (!saved || !saved.selectedItems) return 0;
-          const items = circleExtraInfo.value[circleId]?.items || [];
-          return items
-            .filter(it => saved.selectedItems.includes(it.name))
-            .reduce((sum, it) => sum + (Number(it.price) || 0), 0);
         };
 
         const toggleItemSelection = (circleId, item) => {
@@ -1229,8 +789,6 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
 
         const openDetails = (circle) => {
           selectedCircle.value = circle;
-          const hasItems = circleExtraInfo.value[circle.circle_id]?.items?.length > 0;
-          mobileModalTab.value = hasItems ? 'items' : 'tweet';
         };
 
         watch(selectedCircle, async (newVal) => {
@@ -1514,7 +1072,6 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
 
         
         const showBudgetModal = ref(false);
-        const tempBudgetInput = ref('');
 
         const budgetAmount = computed(() => {
           return savedList.value['__BUDGET__'] ? parseInt(savedList.value['__BUDGET__']) || 0 : 0;
@@ -1526,13 +1083,12 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
 
         const openBudgetModal = () => {
           if (isReadOnly.value) return;
-          tempBudgetInput.value = budgetAmount.value > 0 ? String(budgetAmount.value) : '';
           showBudgetModal.value = true;
         };
 
-        const saveBudget = () => {
+        const saveBudget = (amount) => {
           if (isReadOnly.value) return;
-          const parsed = parseInt(tempBudgetInput.value);
+          const parsed = parseInt(amount);
           savedList.value['__BUDGET__'] = isNaN(parsed) ? 0 : parsed;
           showBudgetModal.value = false;
         };
