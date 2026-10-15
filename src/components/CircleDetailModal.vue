@@ -336,7 +336,7 @@ import { ref, computed, watch } from 'vue';
 import { getItemBadge } from '../utils/badges';
 import { getMemberStyle, getMemberMark } from '../utils/memberStyle';
 import { priorityColors } from '../constants';
-import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl, cleanTwitterHandle, parseTwitterHandles } from '../utils/xSearch';
+import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl, cleanTwitterHandle, parseTwitterHandles, getCircleAuthorTwitterIds, getCircleStaffTwitterIds } from '../utils/xSearch';
 
 const props = defineProps({
   circle: {
@@ -380,16 +380,12 @@ const extra = computed(() => {
 
 // サークル主X (合同サークルの複数人にも対応)
 const authorTwitterList = computed(() => {
-  const ids = [
-    ...parseTwitterHandles(props.circle?.twitter_id),
-    ...parseTwitterHandles(extra.value?.twitter_id)
-  ];
-  return Array.from(new Set(ids));
+  return getCircleAuthorTwitterIds(props.circle, extra.value);
 });
 
 // 売り子X (複数人対応)
 const staffTwitterList = computed(() => {
-  return parseTwitterHandles(extra.value?.staff_twitter);
+  return getCircleStaffTwitterIds(extra.value);
 });
 
 // モーダルが開かれたらタブを初期化

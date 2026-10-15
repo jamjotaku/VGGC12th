@@ -240,6 +240,28 @@
                     <h3 class="font-bold text-lg leading-tight text-gray-900 mb-0.5">{{ circle.circle_name }}</h3>
                     <p class="text-sm text-gray-500">代表: {{ circle.penname }}</p>
                   </div>
+
+                  <!-- ★ サークル主 ＆ 売り子 Xリンク -->
+                  <div v-if="getCircleAuthorTwitterIds(circle, circleExtraInfo[circle.circle_id]).length || getCircleStaffTwitterIds(circleExtraInfo[circle.circle_id]).length" 
+                       class="flex flex-wrap items-center gap-1.5 -mt-1">
+                    <!-- サークル主 X (合同サークル含む) -->
+                    <a v-for="authorId in getCircleAuthorTwitterIds(circle, circleExtraInfo[circle.circle_id])" :key="'srch_au_'+circle.circle_id+'_'+authorId"
+                       :href="`https://x.com/${authorId}`" target="_blank" @click.stop
+                       class="inline-flex items-center gap-1 text-[11px] bg-gray-900 hover:bg-gray-800 text-white px-2 py-0.5 rounded-md font-bold transition shadow-sm active:scale-95"
+                       :title="'サークル主 @' + authorId + ' のXを開く'">
+                      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                      <span>@{{ authorId }}</span>
+                    </a>
+
+                    <!-- 売り子 X (複数人対応) -->
+                    <a v-for="staffId in getCircleStaffTwitterIds(circleExtraInfo[circle.circle_id])" :key="'srch_st_'+circle.circle_id+'_'+staffId"
+                       :href="`https://x.com/${staffId}`" target="_blank" @click.stop
+                       class="inline-flex items-center gap-1 text-[11px] bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md font-bold transition shadow-sm active:scale-95"
+                       :title="'売り子 @' + staffId + ' のXを開く'">
+                      <span>🤝</span>
+                      <span>@{{ staffId }}</span>
+                    </a>
+                  </div>
                   <div class="flex items-center gap-2 mt-1 flex-wrap">
                     <template v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length">
                       <button @click="openDetails(circle)" class="flex items-center gap-1.5 text-xs bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition font-bold shadow-sm active:scale-95">
@@ -404,7 +426,32 @@
                         </span>
                       </div>
                     </div>
-                    <h3 class="font-bold text-base text-gray-900 leading-tight">{{ circle.circle_name }}</h3>
+                    <div>
+                      <h3 class="font-bold text-base text-gray-900 leading-tight">{{ circle.circle_name }}</h3>
+                      <p v-if="circle.penname" class="text-xs text-gray-500 mt-0.5">代表: {{ circle.penname }}</p>
+                    </div>
+
+                    <!-- ★ サークル主 ＆ 売り子 Xリンク -->
+                    <div v-if="getCircleAuthorTwitterIds(circle, circleExtraInfo[circle.circle_id]).length || getCircleStaffTwitterIds(circleExtraInfo[circle.circle_id]).length" 
+                         class="flex flex-wrap items-center gap-1.5 -mt-0.5">
+                      <!-- サークル主 X (合同サークル含む) -->
+                      <a v-for="authorId in getCircleAuthorTwitterIds(circle, circleExtraInfo[circle.circle_id])" :key="'lst_au_'+circle.circle_id+'_'+authorId"
+                         :href="`https://x.com/${authorId}`" target="_blank" @click.stop
+                         class="inline-flex items-center gap-1 text-[11px] bg-gray-900 hover:bg-gray-800 text-white px-2 py-0.5 rounded-md font-bold transition shadow-sm active:scale-95"
+                         :title="'サークル主 @' + authorId + ' のXを開く'">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                        <span>@{{ authorId }}</span>
+                      </a>
+
+                      <!-- 売り子 X (複数人対応) -->
+                      <a v-for="staffId in getCircleStaffTwitterIds(circleExtraInfo[circle.circle_id])" :key="'lst_st_'+circle.circle_id+'_'+staffId"
+                         :href="`https://x.com/${staffId}`" target="_blank" @click.stop
+                         class="inline-flex items-center gap-1 text-[11px] bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md font-bold transition shadow-sm active:scale-95"
+                         :title="'売り子 @' + staffId + ' のXを開く'">
+                        <span>🤝</span>
+                        <span>@{{ staffId }}</span>
+                      </a>
+                    </div>
                     <!-- ★ 選択中のお品書き商品バッジ一覧 -->
                     <div v-if="savedList[circle.circle_id].selectedItems?.length" class="mt-2 space-y-1">
                       <div class="text-[10px] font-bold text-amber-800 flex items-center gap-1">
@@ -576,7 +623,7 @@ import { STORAGE_KEY, vspoDict, priorityColors } from './constants';
 import { calculateCurrencyBreakdown } from './utils/currency';
 import { getEventCountdown, checkScheduleActive } from './utils/countdown';
 import { getMemberStyle, getMemberMark } from './utils/memberStyle';
-import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl, getEventLiveSearchUrl } from './utils/xSearch';
+import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl, getEventLiveSearchUrl, getCircleAuthorTwitterIds, getCircleStaffTwitterIds } from './utils/xSearch';
 
 import BudgetModal from './components/BudgetModal.vue';
 import MemoDashboard from './components/MemoDashboard.vue';

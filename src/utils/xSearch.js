@@ -28,6 +28,26 @@ export const parseTwitterHandles = (handlesStr) => {
 export const parseStaffTwitterIds = parseTwitterHandles;
 
 /**
+ * サークル主 (合同サークル含む複数人) の Twitter ID 配列を取得
+ */
+export const getCircleAuthorTwitterIds = (circle, extraInfo = null) => {
+  if (!circle) return [];
+  const ids = [
+    ...parseTwitterHandles(circle.twitter_id),
+    ...parseTwitterHandles(extraInfo?.twitter_id)
+  ];
+  return Array.from(new Set(ids));
+};
+
+/**
+ * 売り子 (複数人) の Twitter ID 配列を取得
+ */
+export const getCircleStaffTwitterIds = (extraInfo = null) => {
+  if (!extraInfo) return [];
+  return parseTwitterHandles(extraInfo.staff_twitter);
+};
+
+/**
  * サークル主 (合同サークル主含む) ＆ 売り子による最新公式アナウンス・完売・在庫告知を検索するURLを生成
  * @param {Object} circle サークル情報 (twitter_id, circle_name, space_sym, space_num 等)
  * @param {Object} extraInfo Supabaseの追加情報 (twitter_id, staff_twitter 等)
@@ -38,13 +58,10 @@ export const getCircleOfficialSearchUrl = (circle, extraInfo = null) => {
   const keywords = '(完売 OR 終了 OR 列 OR 在庫 OR 頒布 OR なくなり OR 残り OR お品書き OR 完売報告 OR 設営完了)';
 
   // 1. サークル主IDの取得 (合同サークルの複数IDもすべてパース)
-  const authorIds = [
-    ...parseTwitterHandles(circle.twitter_id),
-    ...parseTwitterHandles(extraInfo?.twitter_id)
-  ];
+  const authorIds = getCircleAuthorTwitterIds(circle, extraInfo);
 
   // 2. 売り子IDの取得
-  const staffIds = parseTwitterHandles(extraInfo?.staff_twitter);
+  const staffIds = getCircleStaffTwitterIds(extraInfo);
 
   // 全公式IDリスト (サークル主 + 合同サークル主 + 売り子)
   const allOfficialIds = Array.from(new Set([...authorIds, ...staffIds].filter(Boolean)));
