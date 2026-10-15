@@ -13,6 +13,7 @@ export const calculateCurrencyBreakdown = (savedList) => {
 
   Object.entries(savedList).forEach(([key, item]) => {
     if (key.startsWith('__')) return;
+    if (item.soldout) return; // 完売・スキップしたサークルは両替計算から除外
     const price = Number(item.price) || 0;
     if (price <= 0) return;
 

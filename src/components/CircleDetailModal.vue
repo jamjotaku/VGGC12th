@@ -246,8 +246,33 @@
                 <span v-if="savedList[circle.circle_id].price" class="text-xs bg-pink-50 px-2 py-0.5 rounded-full text-pink-700 font-mono ml-1">
                   ¥{{ Number(savedList[circle.circle_id].price).toLocaleString() }}
                 </span>
+                <span v-if="savedList[circle.circle_id].soldout" class="text-xs bg-rose-100 text-rose-800 border border-rose-300 px-2 py-0.5 rounded-full font-bold ml-1">
+                  💔 完売マーク中
+                </span>
+                <span v-else-if="savedList[circle.circle_id].bought" class="text-xs bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full font-bold ml-1">
+                  ✓ 購入済
+                </span>
               </span>
               <button v-if="!isReadOnly" @click="$emit('toggleSave', circle.circle_id)" class="text-xs text-gray-400 hover:text-red-500 underline">リストから削除</button>
+            </div>
+
+            <!-- クイックステータスボタン (購入済み / 完売) -->
+            <div v-if="!isReadOnly" class="grid grid-cols-12 gap-2">
+              <button @click="$emit('toggleBought', circle.circle_id)"
+                      class="col-span-8 py-2 px-3 rounded-lg font-bold text-xs md:text-sm transition flex items-center justify-center gap-1.5 border"
+                      :class="savedList[circle.circle_id].bought 
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-300/50' 
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-emerald-50 hover:text-emerald-700'">
+                <span>{{ savedList[circle.circle_id].bought ? '✓ 購入済（タップで戻す）' : '🛒 購入済みにする' }}</span>
+              </button>
+              <button @click="$emit('toggleSoldout', circle.circle_id)"
+                      class="col-span-4 py-2 px-2 rounded-lg font-bold text-xs md:text-sm transition flex items-center justify-center gap-1 border"
+                      :class="savedList[circle.circle_id].soldout 
+                        ? 'bg-rose-100 text-rose-800 border-rose-300 ring-2 ring-rose-300/50' 
+                        : 'bg-white text-gray-600 border-gray-300 hover:bg-rose-50 hover:text-rose-700'">
+                <span>💔</span>
+                <span>{{ savedList[circle.circle_id].soldout ? '完売中' : '完売マーク' }}</span>
+              </button>
             </div>
             
             <div class="flex flex-wrap items-center gap-2">
@@ -313,7 +338,7 @@ const props = defineProps({
   }
 });
 
-defineEmits(['close', 'toggleSave', 'toggleItem', 'openCircle']);
+defineEmits(['close', 'toggleSave', 'toggleBought', 'toggleSoldout', 'toggleItem', 'openCircle']);
 
 const mobileModalTab = ref('items');
 

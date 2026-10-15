@@ -275,7 +275,12 @@
               <div v-if="savedCount > 0" class="mb-3">
                 <div class="flex justify-between items-end mb-1 px-1">
                   <span class="text-xs font-bold text-gray-600">お買い物 達成度</span>
-                  <span class="text-xs font-bold text-blue-600">{{ boughtCount }} / {{ savedCount }} <span class="text-gray-400 text-[10px]">サークル</span> ({{ progressPercent }}%)</span>
+                  <div class="text-xs font-bold flex items-center gap-1.5">
+                    <span class="text-blue-600">{{ boughtCount }} / {{ activeTargetCount }} <span class="text-gray-400 text-[10px]">サークル</span> ({{ progressPercent }}%)</span>
+                    <span v-if="soldoutCount > 0" class="text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded text-[10px] font-bold">
+                      💔 完売 {{ soldoutCount }}
+                    </span>
+                  </div>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
                   <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out" :style="{ width: progressPercent + '%' }"></div>
@@ -301,13 +306,17 @@
                 </div>
                 <div class="flex items-center justify-end gap-2">
                   <div class="flex flex-col items-end gap-0.5">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
                       <div class="text-[10px] font-bold text-gray-500 cursor-pointer hover:text-blue-500 transition flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded shadow-sm border" @click="openBudgetModal" title="予算を設定する">
                         <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         予算: <span :class="budgetAmount > 0 ? 'text-gray-700' : ''">{{ budgetAmount > 0 ? '¥' + budgetAmount.toLocaleString() : '未設定' }}</span>
                       </div>
                       <div class="text-[10px] font-bold text-gray-500">
                         予定: ¥{{ totalPrice.toLocaleString() }}
+                      </div>
+                      <!-- ★ 完売による浮き予算バッジ -->
+                      <div v-if="soldoutSavings > 0" class="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded shadow-sm flex items-center gap-0.5" title="完売・スキップにより浮いた金額">
+                        <span>💔 浮き: +¥{{ soldoutSavings.toLocaleString() }}</span>
                       </div>
                     </div>
                     <div class="text-sm font-bold bg-pink-50 text-pink-700 px-2.5 py-1 rounded-md border border-pink-100 flex items-center shadow-sm">
@@ -338,7 +347,7 @@
               </div>
               
               <ul class="space-y-3">
-                <li v-for="circle in sortedSavedCircles" :key="circle.circle_id" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition-opacity duration-300" :class="{'opacity-50': savedList[circle.circle_id].bought}">
+                <li v-for="circle in sortedSavedCircles" :key="circle.circle_id" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition-all duration-300" :class="{'opacity-50 bg-gray-50/80': savedList[circle.circle_id].bought, 'opacity-60 bg-gray-100/90 border-dashed border-gray-300': savedList[circle.circle_id].soldout}">
                   
                   <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" class="absolute top-3 right-3 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors z-10">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -346,10 +355,16 @@
 
                   <div class="p-4 flex flex-col gap-2 relative pr-8">
                     <div class="flex flex-col gap-1.5 mb-1">
-                      <!-- サークル番号 -->
-                      <div class="flex">
-                        <span class="inline-block px-2 py-0.5 bg-pink-100 text-pink-800 text-xs font-bold rounded border border-pink-200">
+                      <!-- サークル番号と状態バッジ -->
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="inline-block px-2 py-0.5 bg-pink-100 text-pink-800 text-xs font-bold rounded border border-pink-200 shadow-sm">
                           {{ circle.space_sym }}-{{ circle.space_num }}
+                        </span>
+                        <span v-if="savedList[circle.circle_id].soldout" class="inline-block px-2 py-0.5 bg-rose-100 text-rose-800 text-xs font-bold rounded border border-rose-300 shadow-sm animate-pulse">
+                          💔 完売・スキップ
+                        </span>
+                        <span v-else-if="savedList[circle.circle_id].bought" class="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded border border-emerald-300 shadow-sm">
+                          ✓ 購入済
                         </span>
                       </div>
                       
@@ -408,13 +423,29 @@
                     <textarea v-model="savedList[circle.circle_id].memo" :readonly="isReadOnly" placeholder="メモを入力...（例: 新刊セット、アクスタ）" 
                               class="w-full px-3 py-2 text-sm rounded-lg border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-12 bg-white placeholder-pink-300"></textarea>
                     
-                    <button v-if="!isReadOnly" @click="savedList[circle.circle_id].bought = !savedList[circle.circle_id].bought"
-                            class="w-full py-2.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 border"
-                            :class="savedList[circle.circle_id].bought ? 'bg-gray-100 text-gray-500 border-gray-200 shadow-inner' : 'bg-pink-500 text-white border-pink-600 shadow hover:bg-pink-600 active:scale-95'">
-                      <svg v-if="savedList[circle.circle_id].bought" class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                      <svg v-else class="w-5 h-5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                      {{ savedList[circle.circle_id].bought ? '購入済み（タップで未購入に戻す）' : '🛒 購入済みにする' }}
-                    </button>
+                    <!-- アクションボタン: 購入済み & 完売 -->
+                    <div v-if="!isReadOnly" class="grid grid-cols-12 gap-2">
+                      <!-- 購入済みトグル (8カラム) -->
+                      <button @click="toggleBought(circle.circle_id)"
+                              class="col-span-8 py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 border select-none"
+                              :class="savedList[circle.circle_id].bought 
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-300/50 shadow-inner' 
+                                : 'bg-pink-500 text-white border-pink-600 shadow hover:bg-pink-600 active:scale-95'">
+                        <svg v-if="savedList[circle.circle_id].bought" class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        <svg v-else class="w-4 h-4 opacity-90 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        <span class="truncate">{{ savedList[circle.circle_id].bought ? '✓ 購入済 (戻す)' : '🛒 購入済みにする' }}</span>
+                      </button>
+
+                      <!-- 完売・スキップトグル (4カラム) -->
+                      <button @click="toggleSoldout(circle.circle_id)"
+                              class="col-span-4 py-2.5 px-2 rounded-lg font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1 border select-none"
+                              :class="savedList[circle.circle_id].soldout 
+                                ? 'bg-rose-100 text-rose-800 border-rose-300 ring-2 ring-rose-300/50 shadow-inner' 
+                                : 'bg-white text-gray-600 border-gray-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 active:scale-95 shadow-sm'">
+                        <span>💔</span>
+                        <span class="truncate">{{ savedList[circle.circle_id].soldout ? '完売中' : '完売' }}</span>
+                      </button>
+                    </div>
                   </div>
                 </li>
               </ul>
@@ -449,7 +480,7 @@
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
         <span class="text-[10px] font-bold">リスト</span>
         <span v-if="savedCount > 0" class="absolute top-1 right-2 bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
-          <span v-if="hideBought">{{ savedCount - boughtCount }}</span>
+          <span v-if="hideBought">{{ Math.max(0, activeTargetCount - boughtCount) }}</span>
           <span v-else>{{ savedCount }}</span>
         </span>
       </button>
@@ -473,6 +504,8 @@
       :is-online="isOnline"
       @close="selectedCircle = null" 
       @toggle-save="toggleSave" 
+      @toggle-bought="toggleBought"
+      @toggle-soldout="toggleSoldout"
       @toggle-item="toggleItemSelection" 
       @open-circle="openDetails" 
     />
@@ -884,7 +917,23 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           if (savedList.value[circleId]) {
             delete savedList.value[circleId];
           } else {
-            savedList.value[circleId] = { memo: '', bought: false, price: '', priority: '', forWho: '', selectedItems: [] };
+            savedList.value[circleId] = { memo: '', bought: false, soldout: false, price: '', priority: '', forWho: '', selectedItems: [] };
+          }
+        };
+
+        const toggleBought = (circleId) => {
+          if (isReadOnly.value || !savedList.value[circleId]) return;
+          savedList.value[circleId].bought = !savedList.value[circleId].bought;
+          if (savedList.value[circleId].bought) {
+            savedList.value[circleId].soldout = false;
+          }
+        };
+
+        const toggleSoldout = (circleId) => {
+          if (isReadOnly.value || !savedList.value[circleId]) return;
+          savedList.value[circleId].soldout = !savedList.value[circleId].soldout;
+          if (savedList.value[circleId].soldout) {
+            savedList.value[circleId].bought = false;
           }
         };
 
@@ -913,7 +962,8 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           let text = "🛒 ぶいごまVGGC12th 買い出しリスト\n\n";
           text += `予算: ¥${totalPrice.value.toLocaleString()}\n`;
           if (spentPrice.value > 0) text += `購入済: ¥${spentPrice.value.toLocaleString()}\n`;
-          text += `(全${savedCount.value}サークル中、${boughtCount.value}サークル達成)\n\n`;
+          if (soldoutSavings.value > 0) text += `完売浮き: ¥${soldoutSavings.value.toLocaleString()}\n`;
+          text += `(全${savedCount.value}サークル中、${boughtCount.value}サークル購入済${soldoutCount.value > 0 ? ` / 完売: ${soldoutCount.value}` : ''})\n\n`;
           text += "#VGGC12th\n";
           if (listId.value && isPublic.value) {
             text += `\n${shareUrl.value}`;
@@ -924,10 +974,16 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
 
         const exportToText = () => {
           let text = "📝 買い物リスト (VGGC 12th)\n";
-          text += `合計予定額: ¥${totalPrice.value.toLocaleString()}\n\n`;
+          text += `合計予定額: ¥${totalPrice.value.toLocaleString()}`;
+          if (soldoutSavings.value > 0) {
+            text += ` (完売浮き: ¥${soldoutSavings.value.toLocaleString()})`;
+          }
+          text += "\n\n";
           sortedSavedCircles.value.forEach(c => {
             const data = savedList.value[c.circle_id];
-            const status = data.bought ? '[済]' : '[未]';
+            let status = '[未]';
+            if (data.soldout) status = '[完売]';
+            else if (data.bought) status = '[済]';
             const prio = data.priority ? `(${data.priority})` : '';
             const price = data.price ? ` ¥${data.price}` : '';
             const who = data.forWho ? ` @${data.forWho}` : '';
@@ -960,12 +1016,27 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           showBudgetModal.value = false;
         };
 
+        // ★ 購入予定総額（完売・スキップしたサークルは自動除外され、浮いた予算を再計算）
         const totalPrice = computed(() => {
           let total = 0;
           Object.keys(savedList.value).forEach(key => {
              if (key.startsWith('__')) return;
+             if (savedList.value[key].soldout) return; // 完売分は予定総額から除外
              const price = parseInt(savedList.value[key].price);
              if (!isNaN(price)) total += price;
+          });
+          return total;
+        });
+
+        // ★ 完売・スキップによって浮いた予算額
+        const soldoutSavings = computed(() => {
+          let total = 0;
+          Object.keys(savedList.value).forEach(key => {
+             if (key.startsWith('__')) return;
+             if (savedList.value[key].soldout) {
+               const price = parseInt(savedList.value[key].price);
+               if (!isNaN(price)) total += price;
+             }
           });
           return total;
         });
@@ -984,17 +1055,28 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
 
         const savedCount = computed(() => Object.keys(savedList.value).filter(k => !k.startsWith('__')).length);
         
+        const soldoutCount = computed(() => {
+          return Object.keys(savedList.value).filter(k => !k.startsWith('__') && savedList.value[k].soldout).length;
+        });
+
         const boughtCount = computed(() => {
           return Object.keys(savedList.value).filter(k => !k.startsWith('__') && savedList.value[k].bought).length;
         });
+
+        const activeTargetCount = computed(() => {
+          return Math.max(0, savedCount.value - soldoutCount.value);
+        });
+
         const progressPercent = computed(() => {
-          if (savedCount.value === 0) return 0;
-          return Math.round((boughtCount.value / savedCount.value) * 100);
+          if (activeTargetCount.value === 0) return 0;
+          return Math.min(100, Math.round((boughtCount.value / activeTargetCount.value) * 100));
         });
         
         const sortedSavedCircles = computed(() => {
           let list = circles.value.filter(c => savedList.value[c.circle_id]);
-          if (hideBought.value) list = list.filter(c => !savedList.value[c.circle_id].bought);
+          if (hideBought.value) {
+            list = list.filter(c => !savedList.value[c.circle_id].bought && !savedList.value[c.circle_id].soldout);
+          }
           if (sortOrder.value === 'space') {
             list.sort((a, b) => {
               if (a.space_sym !== b.space_sym) return a.space_sym.localeCompare(b.space_sym);
@@ -1009,6 +1091,17 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
               return 0; 
             });
           }
+
+          // ★ 完売・スキップ（soldout）および購入済み（bought）を最下部に退避
+          // 順序: 0 = 未完了(最優先で上に来る), 1 = 購入済み, 2 = 完売・スキップ
+          list.sort((a, b) => {
+            const aData = savedList.value[a.circle_id] || {};
+            const bData = savedList.value[b.circle_id] || {};
+            const aStatus = aData.soldout ? 2 : (aData.bought ? 1 : 0);
+            const bStatus = bData.soldout ? 2 : (bData.bought ? 1 : 0);
+            return aStatus - bStatus;
+          });
+
           return list;
         });
 
