@@ -36,6 +36,14 @@ export const vspoDict = [
   { name: '甘結もか', color: '#ECA0AA', fanmarks: ['🕹', '🔖'] },
   { name: '銀城サイネ', color: '#58535E', fanmarks: ['🎈'] },
   { name: '龍巻ちせ', color: '#BEFF77', fanmarks: ['🐉', '🌪'] },
+  // ぶいすぽEN
+  { name: '青月レミア', color: '#398FB2', fanmarks: ['🔋', '🔭'], aliases: ['Remia Aotsuki', 'Remia'] },
+  { name: '黒刃アリヤ', color: '#000000', fanmarks: ['♦️', '🔪'], aliases: ['Arya Kuroha', 'Arya'] },
+  { name: '地崎ジラ', color: '#606D3D', fanmarks: ['⛰️'], aliases: ['Jira Jisaki', 'Jira'] },
+  { name: '美暮ナリン', color: '#F3A6EF', fanmarks: ['🌃', '🌷'], aliases: ['Narin Mikure', 'Narin'] },
+  { name: 'ソラリリコ', color: '#9373D7', fanmarks: ['👩‍🚀', '💜'], aliases: ['Riko Solari', 'Riko'] },
+  { name: '涼上エリス', color: '#90B2F8', fanmarks: ['🎣', '☁️'], aliases: ['Ellis Ryuzaki', 'Ellis'] },
+  { name: '梅園ジュノ', color: '#923173', fanmarks: ['😈', '🍬'], aliases: ['Juno Umezono', 'Juno'] },
   { name: 'オールキャラ', color: '#F59E0B', fanmarks: ['🌈'] }
 ];
 

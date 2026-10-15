@@ -436,14 +436,14 @@
                         <span>🎀</span>
                         <span>扱うメンバー (カンマ区切り):</span>
                       </label>
-                      <span class="text-[10px] text-slate-400">例: 花芽すみれ, 一ノ瀬うるは</span>
+                      <span class="text-[10px] text-slate-400">例: 花芽すみれ, 青月レミア</span>
                     </div>
                     <input type="text" 
                            v-model="editData[circle.circle_id].membersInput" 
                            @input="markDirty(circle.circle_id)"
                            @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
                            @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
-                           placeholder="花芽すみれ, 一ノ瀬うるは, 八雲べに" 
+                           placeholder="花芽すみれ, 一ノ瀬うるは, 青月レミア" 
                            class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 text-xs">
                   </div>
 
