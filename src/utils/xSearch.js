@@ -14,37 +14,139 @@ export const cleanTwitterHandle = (id) => {
 };
 
 /**
+ * 1つのアカウントトークンをパース
+ * サポート形式:
+ * - "たなか:tanaka_id", "たなか：tanaka_id"
+ * - "たなか(@tanaka_id)", "たなか（@tanaka_id）"
+ * - "@tanaka_id", "tanaka_id"
+ * @param {string} token 
+ * @returns {{ name: string | null, handle: string } | null}
+ */
+export const parseSingleTwitterAccount = (token) => {
+  if (!token) return null;
+  const s = String(token).trim();
+  if (!s) return null;
+
+  // 1. "名前:ID" または "名前：ID" (コロン区切り)
+  const colonMatch = s.match(/^([^:：]+)[:：]\s*@?([A-Za-z0-9_]+)$/);
+  if (colonMatch) {
+    const name = colonMatch[1].trim();
+    const handle = colonMatch[2].trim();
+    if (handle) return { name: name || null, handle };
+  }
+
+  // 2. "名前(@ID)" または "名前（@ID）" (カッコ区切り)
+  const parenMatch = s.match(/^([^(@（]+)\s*[(（]@?([A-Za-z0-9_]+)[)）]$/);
+  if (parenMatch) {
+    const name = parenMatch[1].trim();
+    const handle = parenMatch[2].trim();
+    if (handle) return { name: name || null, handle };
+  }
+
+  // 3. "ID" のみ (先頭の@は除去)
+  const handle = cleanTwitterHandle(s);
+  if (handle) {
+    return { name: null, handle };
+  }
+
+  return null;
+};
+
+/**
+ * カンマ・読点・改行（または空白）区切りの文字列からアカウント配列 ({ name, handle }) を抽出
+ * @param {string} rawStr 
+ * @returns {Array<{ name: string | null, handle: string }>}
+ */
+export const parseTwitterAccounts = (rawStr) => {
+  if (!rawStr) return [];
+  const s = String(rawStr).trim();
+  if (!s) return [];
+
+  // カンマ、読点、改行があればそれらで分割。なければ空白で分割。
+  let tokens = [];
+  if (/[,、\n]/.test(s)) {
+    tokens = s.split(/[,、\n]+/);
+  } else {
+    tokens = s.split(/\s+/);
+  }
+
+  const results = [];
+  const seenHandles = new Set();
+
+  for (const rawToken of tokens) {
+    const parsed = parseSingleTwitterAccount(rawToken);
+    if (parsed && parsed.handle && !seenHandles.has(parsed.handle.toLowerCase())) {
+      seenHandles.add(parsed.handle.toLowerCase());
+      results.push(parsed);
+    }
+  }
+
+  return results;
+};
+
+/**
  * カンマや空白・読点区切りのX ID文字列を配列に分解 (合同サークルや複数売り子に対応)
+ * 名前:ID 形式が含まれていても安全に純粋なハンドル名配列を返す
  */
 export const parseTwitterHandles = (handlesStr) => {
-  if (!handlesStr) return [];
-  return String(handlesStr)
-    .split(/[,、\s]+/)
-    .map(s => cleanTwitterHandle(s))
-    .filter(s => s.length > 0);
+  return parseTwitterAccounts(handlesStr).map(acc => acc.handle);
 };
 
 // 後方互換性のためのエイリアス
 export const parseStaffTwitterIds = parseTwitterHandles;
 
 /**
- * サークル主 (合同サークル含む複数人) の Twitter ID 配列を取得
+ * サークル主 (合同サークル含む複数人) のアカウント情報配列を取得
+ * 名前が明示されていない場合、1人目のサークル主には代表ペンネーム (circle.penname) をデフォルト適用！
+ * @param {Object} circle サークル情報
+ * @param {Object} extraInfo Supabaseの追加情報
+ * @returns {Array<{ name: string | null, handle: string }>}
  */
-export const getCircleAuthorTwitterIds = (circle, extraInfo = null) => {
+export const getCircleAuthorAccounts = (circle, extraInfo = null) => {
   if (!circle) return [];
-  const ids = [
-    ...parseTwitterHandles(circle.twitter_id),
-    ...parseTwitterHandles(extraInfo?.twitter_id)
-  ];
-  return Array.from(new Set(ids));
+  const rawAuthors = [
+    circle.twitter_id,
+    extraInfo?.twitter_id
+  ].filter(Boolean).join(', ');
+
+  const accounts = parseTwitterAccounts(rawAuthors);
+  if (accounts.length === 0) return [];
+
+  // サークル代表者のペンネーム (例: "花丸かかし")
+  const defaultPenname = circle.penname ? String(circle.penname).trim() : null;
+
+  return accounts.map((acc, index) => {
+    // 明示的な名前指定がない場合、1人目のサークル主には代表ペンネームを充当
+    const displayName = acc.name || (index === 0 ? defaultPenname : null);
+    return {
+      name: displayName,
+      handle: acc.handle
+    };
+  });
 };
 
 /**
- * 売り子 (複数人) の Twitter ID 配列を取得
+ * 売り子 (複数人) のアカウント情報配列を取得
+ * @param {Object} extraInfo 
+ * @returns {Array<{ name: string | null, handle: string }>}
+ */
+export const getCircleStaffAccounts = (extraInfo = null) => {
+  if (!extraInfo) return [];
+  return parseTwitterAccounts(extraInfo.staff_twitter);
+};
+
+/**
+ * サークル主 (合同サークル含む複数人) の Twitter ID 配列を取得 (公式速報検索用)
+ */
+export const getCircleAuthorTwitterIds = (circle, extraInfo = null) => {
+  return getCircleAuthorAccounts(circle, extraInfo).map(a => a.handle);
+};
+
+/**
+ * 売り子 (複数人) の Twitter ID 配列を取得 (公式速報検索用)
  */
 export const getCircleStaffTwitterIds = (extraInfo = null) => {
-  if (!extraInfo) return [];
-  return parseTwitterHandles(extraInfo.staff_twitter);
+  return getCircleStaffAccounts(extraInfo).map(a => a.handle);
 };
 
 /**

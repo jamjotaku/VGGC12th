@@ -256,7 +256,7 @@
               <!-- 左ブロック (6カラム): X アカウント情報 (サークル主 & 売り子) -->
               <div class="md:col-span-6 space-y-2.5 bg-blue-50/30 p-2.5 rounded-xl border border-blue-100">
                 
-                <!-- サークル主 X ID (合同サークルの複数人にも対応) -->
+                <!-- サークル主 X ID (合同サークルの複数人にも対応、名前:ID対応) -->
                 <div>
                   <div class="flex justify-between items-center mb-1 flex-wrap gap-1">
                     <label class="font-bold text-slate-700 flex items-center gap-1">
@@ -264,10 +264,11 @@
                       <span>サークル主 X ID (合同・複数可):</span>
                     </label>
                     <div class="flex items-center gap-1.5 flex-wrap">
-                      <a v-for="id in parseHandles(editData[circle.circle_id]?.twitterId)" :key="'au_link_'+id"
-                         :href="'https://x.com/' + id" target="_blank"
-                         class="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5 font-bold bg-blue-100/50 px-1.5 py-0.2 rounded">
-                        <span>@{{ id }}</span>
+                      <a v-for="acc in parseAccounts(editData[circle.circle_id]?.twitterId, circle.penname)" :key="'au_link_'+acc.handle"
+                         :href="'https://x.com/' + acc.handle" target="_blank"
+                         class="text-[10px] text-blue-700 hover:underline flex items-center gap-0.5 font-bold bg-blue-100/60 px-1.5 py-0.2 rounded"
+                         :title="acc.name ? `${acc.name} (@${acc.handle})` : `@${acc.handle}`">
+                        <span>{{ acc.name ? `${acc.name} (@${acc.handle})` : `@${acc.handle}` }}</span>
                         <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                       </a>
                     </div>
@@ -277,11 +278,11 @@
                          @input="markDirty(circle.circle_id)"
                          @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
                          @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
-                         placeholder="@author1, @author2 (合同サークルは複数可)" 
+                         placeholder="例: 花丸かかし:K_Kakasi_, 共同主:id2 (名前:ID対応)" 
                          class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 font-mono text-xs">
                 </div>
 
-                <!-- 売り子 X ID (複数可) -->
+                <!-- 売り子 X ID (複数可、名前:ID対応) -->
                 <div>
                   <div class="flex justify-between items-center mb-1 flex-wrap gap-1">
                     <label class="font-bold text-slate-700 flex items-center gap-1">
@@ -289,10 +290,11 @@
                       <span>売り子 X ID (カンマ区切りで複数可):</span>
                     </label>
                     <div class="flex items-center gap-1.5 flex-wrap">
-                      <a v-for="id in parseHandles(editData[circle.circle_id]?.staffTwitter)" :key="'st_link_'+id"
-                         :href="'https://x.com/' + id" target="_blank"
-                         class="text-[10px] text-purple-700 hover:underline flex items-center gap-0.5 font-bold bg-purple-100/60 px-1.5 py-0.2 rounded">
-                        <span>@{{ id }}</span>
+                      <a v-for="acc in parseAccounts(editData[circle.circle_id]?.staffTwitter)" :key="'st_link_'+acc.handle"
+                         :href="'https://x.com/' + acc.handle" target="_blank"
+                         class="text-[10px] text-purple-700 hover:underline flex items-center gap-0.5 font-bold bg-purple-100/60 px-1.5 py-0.2 rounded"
+                         :title="acc.name ? `${acc.name} (@${acc.handle})` : `@${acc.handle}`">
+                        <span>🤝 {{ acc.name ? `${acc.name} (@${acc.handle})` : `@${acc.handle}` }}</span>
                         <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                       </a>
                     </div>
@@ -302,7 +304,7 @@
                          @input="markDirty(circle.circle_id)"
                          @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
                          @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
-                         placeholder="@staff_a, @staff_b" 
+                         placeholder="例: たなか:tanaka_staff, さとう:sato_staff (名前:ID対応)" 
                          class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-400 font-mono text-xs">
                 </div>
 
@@ -558,12 +560,59 @@
           return String(id).trim().replace(/^@+/, '');
         };
 
-        const parseHandles = (str) => {
+        const parseSingleAccount = (token) => {
+          if (!token) return null;
+          const s = String(token).trim();
+          if (!s) return null;
+
+          const colonMatch = s.match(/^([^:：]+)[:：]\s*@?([A-Za-z0-9_]+)$/);
+          if (colonMatch) {
+            const name = colonMatch[1].trim();
+            const handle = colonMatch[2].trim();
+            if (handle) return { name: name || null, handle };
+          }
+
+          const parenMatch = s.match(/^([^(@（]+)\s*[(（]@?([A-Za-z0-9_]+)[)）]$/);
+          if (parenMatch) {
+            const name = parenMatch[1].trim();
+            const handle = parenMatch[2].trim();
+            if (handle) return { name: name || null, handle };
+          }
+
+          const handle = cleanTwitterId(s);
+          if (handle) return { name: null, handle };
+          return null;
+        };
+
+        const parseAccounts = (str, defaultFirstName = null) => {
           if (!str) return [];
-          return String(str)
-            .split(/[,、\s]+/)
-            .map(s => cleanTwitterId(s))
-            .filter(Boolean);
+          const s = String(str).trim();
+          if (!s) return [];
+
+          let tokens = [];
+          if (/[,、\n]/.test(s)) {
+            tokens = s.split(/[,、\n]+/);
+          } else {
+            tokens = s.split(/\s+/);
+          }
+
+          const results = [];
+          const seen = new Set();
+          tokens.forEach((t, idx) => {
+            const acc = parseSingleAccount(t);
+            if (acc && acc.handle && !seen.has(acc.handle.toLowerCase())) {
+              seen.add(acc.handle.toLowerCase());
+              if (!acc.name && idx === 0 && defaultFirstName) {
+                acc.name = defaultFirstName;
+              }
+              results.push(acc);
+            }
+          });
+          return results;
+        };
+
+        const parseHandles = (str) => {
+          return parseAccounts(str).map(a => a.handle);
         };
 
         const markDirty = (circleId) => {

@@ -108,20 +108,20 @@
               <!-- 外部リンク＆メンバータグ -->
               <div class="space-y-2">
                 <div class="flex flex-wrap gap-1.5">
-                  <!-- サークル主 X (合同サークル等で複数人の場合も全員表示) -->
-                  <a v-for="authorId in authorTwitterList" :key="'au_'+authorId" :href="`https://x.com/${authorId}`" target="_blank" 
+                  <!-- サークル主 X (合同サークル等で複数人の場合も全員表示、表示名優先) -->
+                  <a v-for="acc in authorAccounts" :key="'au_'+acc.handle" :href="`https://x.com/${acc.handle}`" target="_blank" 
                      class="flex items-center gap-1 text-xs bg-gray-800 text-white px-2.5 py-1 rounded-lg hover:bg-gray-700 transition font-bold shadow-sm"
-                     title="サークル主のXアカウント">
+                     :title="acc.name ? `サークル主: ${acc.name} (@${acc.handle})` : `サークル主: @${acc.handle}`">
                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                    <span>@{{ authorId }}</span>
+                    <span>{{ acc.name || ('@' + acc.handle) }}</span>
                   </a>
 
-                  <!-- 売り子 X (登録がある場合) -->
-                  <a v-for="staffId in staffTwitterList" :key="'st_'+staffId" :href="`https://x.com/${staffId}`" target="_blank" 
+                  <!-- 売り子 X (登録がある場合、表示名優先) -->
+                  <a v-for="acc in staffAccounts" :key="'st_'+acc.handle" :href="`https://x.com/${acc.handle}`" target="_blank" 
                      class="flex items-center gap-1 text-xs bg-purple-50 text-purple-800 border border-purple-200 px-2.5 py-1 rounded-lg hover:bg-purple-100 transition font-bold shadow-sm"
-                     title="売り子さんのXアカウント">
+                     :title="acc.name ? `売り子: ${acc.name} (@${acc.handle})` : `売り子: @${acc.handle}`">
                     <span>🤝</span>
-                    <span>@{{ staffId }}</span>
+                    <span>{{ acc.name || ('@' + acc.handle) }}</span>
                   </a>
 
                   <a v-if="circle.pixiv_url" :href="circle.pixiv_url" target="_blank" class="flex items-center gap-1 text-xs bg-blue-600 text-white px-2.5 py-1 rounded-lg hover:bg-blue-700 transition font-bold shadow-sm">
@@ -336,7 +336,7 @@ import { ref, computed, watch } from 'vue';
 import { getItemBadge } from '../utils/badges';
 import { getMemberStyle, getMemberMark } from '../utils/memberStyle';
 import { priorityColors } from '../constants';
-import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl, cleanTwitterHandle, parseTwitterHandles, getCircleAuthorTwitterIds, getCircleStaffTwitterIds } from '../utils/xSearch';
+import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl, cleanTwitterHandle, parseTwitterHandles, getCircleAuthorTwitterIds, getCircleStaffTwitterIds, getCircleAuthorAccounts, getCircleStaffAccounts } from '../utils/xSearch';
 
 const props = defineProps({
   circle: {
@@ -378,14 +378,14 @@ const extra = computed(() => {
   return props.circleExtraInfo[props.circle.circle_id] || null;
 });
 
-// サークル主X (合同サークルの複数人にも対応)
-const authorTwitterList = computed(() => {
-  return getCircleAuthorTwitterIds(props.circle, extra.value);
+// サークル主X (合同サークルの複数人にも対応、表示名優先)
+const authorAccounts = computed(() => {
+  return getCircleAuthorAccounts(props.circle, extra.value);
 });
 
-// 売り子X (複数人対応)
-const staffTwitterList = computed(() => {
-  return getCircleStaffTwitterIds(extra.value);
+// 売り子X (複数人対応、表示名優先)
+const staffAccounts = computed(() => {
+  return getCircleStaffAccounts(extra.value);
 });
 
 // モーダルが開かれたらタブを初期化
