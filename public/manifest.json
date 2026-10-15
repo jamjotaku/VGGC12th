@@ -1,21 +1,24 @@
 {
-  "name": "VGGC 12th サークルリスト",
-  "short_name": "VGGC 12",
-  "description": "VGGC 12thの会場マップとサークルチェックリスト",
-  "start_url": "./",
+  "name": "VGGC 12th サークルリスト＆買い物支援ツール",
+  "short_name": "VGGC 12th",
+  "description": "当日の買い回りをスマホでサクサク快適に！リアルタイムお品書き反映・予算計算機能つき（完全オフライン対応）",
+  "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#f9fafb",
   "theme_color": "#2563eb",
   "icons": [
     {
-      "src": "https://via.placeholder.com/192x192.png?text=VGGC",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
-      "src": "https://via.placeholder.com/512x512.png?text=VGGC",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "/ogp.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

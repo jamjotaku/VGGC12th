@@ -7,6 +7,11 @@
       <div class="font-bold text-base md:text-lg flex items-center gap-2">
         VGGC 12th 
         <span v-if="isReadOnly" class="text-[10px] md:text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full font-bold">閲覧専用</span>
+        <!-- 全員に見えるオフライン/圏外インジケーター -->
+        <span v-if="!isOnline" class="text-[10px] md:text-xs bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm" title="圏外（保存済みデータで動作中）">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+          <span>圏外(保存済)</span>
+        </span>
       </div>
       <div class="flex items-center gap-2 md:gap-3">
         <!-- ヘルプボタン -->
@@ -538,6 +543,7 @@
       :is-read-only="isReadOnly" 
       :related-circles="relatedCircles" 
       :is-tweet-loading="isTweetLoading" 
+      :is-online="isOnline"
       @close="selectedCircle = null" 
       @toggle-save="toggleSave" 
       @toggle-item="toggleItemSelection" 

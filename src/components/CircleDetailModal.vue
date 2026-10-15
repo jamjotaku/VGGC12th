@@ -61,21 +61,42 @@
 
               <!-- お品書き埋め込みコンテナ -->
               <div class="bg-white border border-gray-200 rounded-2xl p-3 md:p-4 min-h-[320px] flex items-center justify-center text-gray-400 flex-col shadow-inner w-full relative">
-                <!-- スケルトンUI -->
-                <div v-if="isTweetLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/80 backdrop-blur-sm rounded-2xl z-10 transition-opacity duration-300">
-                  <div class="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mb-3"></div>
-                  <p class="text-xs text-gray-500 font-bold animate-pulse">お品書きを読み込み中...</p>
+                <!-- オフライン案内（圏外時） -->
+                <div v-if="!isOnline" class="p-6 text-center space-y-3">
+                  <div class="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto text-xl shadow-sm">
+                    📡
+                  </div>
+                  <div>
+                    <h4 class="font-bold text-gray-800 text-sm mb-1">現在オフライン（圏外）です</h4>
+                    <p class="text-xs text-gray-500 leading-relaxed">
+                      公式Xのポスト画像は電波回復後に表示されます。<br>
+                      <strong class="text-amber-800" v-if="extra?.items?.length">登録済みの頒布物メニューはオフラインでもご利用いただけます！</strong>
+                    </p>
+                  </div>
+                  <button v-if="extra?.items?.length && mobileModalTab !== 'items'" 
+                          @click="mobileModalTab = 'items'" 
+                          class="md:hidden text-xs bg-amber-500 text-white font-bold px-3 py-2 rounded-xl shadow hover:bg-amber-600 transition">
+                    📋 頒布物メニューを開く
+                  </button>
                 </div>
 
-                <!-- Xの埋め込みポストが表示されるコンテナ -->
-                <div v-show="extra?.oshinagaki_url" id="tweet-container" class="w-full flex justify-center"></div>
-                
-                <!-- URL未登録時 -->
-                <div v-show="!extra?.oshinagaki_url" class="text-center text-gray-400 py-10">
-                  <svg class="w-10 h-10 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                  <p class="text-xs font-bold text-gray-500 mb-0.5">お品書き未登録</p>
-                  <p class="text-[10px]">※公式Xのポストが登録されると表示されます</p>
-                </div>
+                <template v-else>
+                  <!-- スケルトンUI -->
+                  <div v-if="isTweetLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/80 backdrop-blur-sm rounded-2xl z-10 transition-opacity duration-300">
+                    <div class="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+                    <p class="text-xs text-gray-500 font-bold animate-pulse">お品書きを読み込み中...</p>
+                  </div>
+
+                  <!-- Xの埋め込みポストが表示されるコンテナ -->
+                  <div v-show="extra?.oshinagaki_url" id="tweet-container" class="w-full flex justify-center"></div>
+                  
+                  <!-- URL未登録時 -->
+                  <div v-show="!extra?.oshinagaki_url" class="text-center text-gray-400 py-10">
+                    <svg class="w-10 h-10 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <p class="text-xs font-bold text-gray-500 mb-0.5">お品書き未登録</p>
+                    <p class="text-[10px]">※公式Xのポストが登録されると表示されます</p>
+                  </div>
+                </template>
               </div>
 
             </div>
@@ -285,6 +306,10 @@ const props = defineProps({
   isTweetLoading: {
     type: Boolean,
     default: false
+  },
+  isOnline: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -301,7 +326,11 @@ const extra = computed(() => {
 watch(() => props.circle, (newCircle) => {
   if (newCircle) {
     const hasItems = props.circleExtraInfo[newCircle.circle_id]?.items?.length > 0;
-    mobileModalTab.value = hasItems ? 'items' : 'tweet';
+    if (!props.isOnline && hasItems) {
+      mobileModalTab.value = 'items';
+    } else {
+      mobileModalTab.value = hasItems ? 'items' : 'tweet';
+    }
   }
 });
 
