@@ -59,6 +59,9 @@
       </div>
     </nav>
 
+    <!-- 11/14 当日カウントダウン ＆ 進行状況バー（全画面共通・アコーディオン展開対応） -->
+    <EventCountdownBar :countdown="eventCountdown" :is-current-schedule="isCurrentSchedule" />
+
     <!-- メインレイアウト -->
     <div class="flex-1 flex overflow-hidden bg-gray-100">
       
@@ -67,45 +70,6 @@
       ========================================== -->
       <div class="hidden md:flex w-5/12 lg:w-1/2 flex-col bg-white border-r shadow-sm overflow-y-auto relative">
         <div class="p-6 space-y-6">
-          <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200/80 shadow-sm space-y-3">
-            <div class="flex justify-between items-center border-b border-gray-200 pb-2.5">
-              <h2 class="text-base font-bold text-gray-900 flex items-center gap-1.5">
-                <span>🗓️ イベント概要</span>
-              </h2>
-              <div class="text-xs text-gray-700 font-bold bg-white px-2.5 py-0.5 rounded-full border shadow-sm">11/14(土) TRC第一展示場</div>
-            </div>
-
-            <!-- カウントダウンバナー -->
-            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-2.5 rounded-xl shadow text-center">
-              <div class="text-xs font-bold tracking-wide flex items-center justify-center gap-1.5">
-                <span>{{ eventCountdown.text }}</span>
-              </div>
-            </div>
-
-            <ul class="text-xs space-y-1.5 pt-1">
-                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold': isCurrentSchedule('9:45')}">
-                  <div class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">9:45-</span><span class="text-gray-700">一般参加者受付開始</span></div>
-                  <span v-if="isCurrentSchedule('9:45')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full animate-pulse">NOW</span>
-                </li>
-                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold': isCurrentSchedule('10:00')}">
-                  <div class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">10:00-</span><span class="text-gray-700">サークル入場 (11:40迄) / 更衣室</span></div>
-                  <span v-if="isCurrentSchedule('10:00')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full animate-pulse">NOW</span>
-                </li>
-                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold ring-2 ring-blue-400': isCurrentSchedule('12:00')}">
-                  <div class="flex items-start"><span class="w-16 font-bold text-blue-600 shrink-0">12:00</span><span class="text-blue-700 font-bold">即売会開始</span></div>
-                  <span v-if="isCurrentSchedule('12:00')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full animate-pulse">開催中🔥</span>
-                </li>
-                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-red-50 font-bold': isCurrentSchedule('15:30')}">
-                  <div class="flex items-start"><span class="w-16 font-bold text-red-500 shrink-0">15:30</span><span class="text-red-600 font-bold">即売会終了</span></div>
-                  <span v-if="isCurrentSchedule('15:30')" class="text-[10px] bg-red-600 text-white px-1.5 py-0.2 rounded-full">終了</span>
-                </li>
-                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold': isCurrentSchedule('15:45')}">
-                  <div class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">15:45-</span><span class="text-gray-700">アフターイベント</span></div>
-                  <span v-if="isCurrentSchedule('15:45')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full">NOW</span>
-                </li>
-            </ul>
-          </div>
-
           <div>
             <div class="flex justify-between items-end mb-2">
               <h1 class="text-xl font-bold text-gray-800">会場マップ</h1>
@@ -151,44 +115,7 @@
           <!-- =========================================
                [スマホ専用] マップ タブ
           ========================================== -->
-          <div v-show="activeTab === 'map'" class="md:hidden p-4 space-y-6 pb-24">
-            <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 space-y-3">
-              <div class="flex justify-between items-center border-b border-gray-100 pb-2">
-                <h2 class="text-base font-bold text-gray-900">🗓️ イベント概要</h2>
-                <div class="text-xs text-gray-600 font-bold bg-gray-100 px-2 py-0.5 rounded-full">11/14(土)</div>
-              </div>
-
-              <!-- カウントダウンバナー -->
-              <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-2.5 rounded-xl shadow text-center">
-                <div class="text-xs font-bold tracking-wide">
-                  {{ eventCountdown.text }}
-                </div>
-              </div>
-
-              <ul class="text-xs space-y-1.5 pt-1">
-                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold': isCurrentSchedule('9:45')}">
-                  <div class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">9:45-</span><span class="text-gray-700">一般参加者受付開始</span></div>
-                  <span v-if="isCurrentSchedule('9:45')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full animate-pulse">NOW</span>
-                </li>
-                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold': isCurrentSchedule('10:00')}">
-                  <div class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">10:00-</span><span class="text-gray-700">サークル入場 (11:40迄) / 更衣室</span></div>
-                  <span v-if="isCurrentSchedule('10:00')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full animate-pulse">NOW</span>
-                </li>
-                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold ring-2 ring-blue-400': isCurrentSchedule('12:00')}">
-                  <div class="flex items-start"><span class="w-16 font-bold text-blue-600 shrink-0">12:00</span><span class="text-blue-700 font-bold">即売会開始</span></div>
-                  <span v-if="isCurrentSchedule('12:00')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full animate-pulse">開催中🔥</span>
-                </li>
-                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-red-50 font-bold': isCurrentSchedule('15:30')}">
-                  <div class="flex items-start"><span class="w-16 font-bold text-red-500 shrink-0">15:30</span><span class="text-red-600 font-bold">即売会終了</span></div>
-                  <span v-if="isCurrentSchedule('15:30')" class="text-[10px] bg-red-600 text-white px-1.5 py-0.2 rounded-full">終了</span>
-                </li>
-                <li class="flex items-start justify-between p-1 rounded transition" :class="{'bg-blue-50 font-bold': isCurrentSchedule('15:45')}">
-                  <div class="flex items-start"><span class="w-16 font-bold text-gray-800 shrink-0">15:45-</span><span class="text-gray-700">アフターイベント</span></div>
-                  <span v-if="isCurrentSchedule('15:45')" class="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full">NOW</span>
-                </li>
-              </ul>
-            </div>
-            
+          <div v-show="activeTab === 'map'" class="md:hidden p-4 space-y-4 pb-24">
             <div>
               <div class="flex justify-between items-end mb-2">
                 <h1 class="text-lg font-bold text-gray-800 px-1">会場マップ</h1>
@@ -583,6 +510,7 @@ import CircleDetailModal from './components/CircleDetailModal.vue';
 import HelpModal from './components/HelpModal.vue';
 import AuthModal from './components/AuthModal.vue';
 import ShareModal from './components/ShareModal.vue';
+import EventCountdownBar from './components/EventCountdownBar.vue';
 
 
     
