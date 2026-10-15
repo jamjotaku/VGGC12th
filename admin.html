@@ -17,6 +17,21 @@
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    kbd {
+      background-color: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-bottom: 2px solid #94a3b8;
+      border-radius: 6px;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+      color: #334155;
+      display: inline-block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      line-height: 1;
+      padding: 3px 6px;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body class="bg-slate-100 p-2 sm:p-4 md:p-6 text-gray-800 antialiased min-h-screen">
@@ -49,6 +64,15 @@
           <span v-else>💾</span>
           <span>未保存 {{ unsavedSet.size }}件を一括保存</span>
           <span class="text-[10px] bg-slate-950/20 px-1 rounded font-mono">Ctrl+S</span>
+        </button>
+
+        <!-- ショートカットヘルプボタン -->
+        <button @click="showShortcutsHelp = true" 
+                class="text-xs bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 font-bold shadow-sm"
+                title="キーボードショートカット一覧を表示 (キー: ?)">
+          <span>⌨️</span>
+          <span>ショートカット</span>
+          <kbd class="text-[10px] bg-slate-950 text-slate-300 border-slate-700 px-1 py-0.2 rounded font-mono">?</kbd>
         </button>
 
         <a href="/" target="_blank" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-lg transition flex items-center gap-1 font-bold">
@@ -261,7 +285,7 @@
             条件に一致するサークルがありません
           </div>
 
-          <div v-for="circle in filteredCircles" :key="circle.circle_id"
+          <div v-for="circle in filteredCircles" :key="circle.circle_id" :data-circle-id="circle.circle_id"
                class="bg-white border rounded-2xl p-3.5 sm:p-4 transition-all shadow-sm relative overflow-hidden flex flex-col justify-between"
                :class="[
                  unsavedSet.has(circle.circle_id) ? 'border-amber-400 ring-2 ring-amber-200 bg-amber-50/10' : 'border-slate-200 hover:border-slate-300',
@@ -296,6 +320,7 @@
 
                 <!-- 個別保存ボタン -->
                 <button @click="saveCircle(circle.circle_id)" 
+                        :title="unsavedSet.has(circle.circle_id) ? '未保存の変更を保存 (Ctrl+S)' : 'このサークル情報を保存 (Ctrl+S)'"
                         class="px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm active:scale-95 text-white"
                         :class="[
                           saveStatus[circle.circle_id] === 'saved' ? 'bg-emerald-600 hover:bg-emerald-700' :
@@ -556,6 +581,145 @@
       </div>
     </div>
 
+    <!-- ★ キーボードショートカット ヘルプモーダル -->
+    <div v-if="showShortcutsHelp" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+      <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+        
+        <!-- モーダルヘッダー -->
+        <div class="bg-slate-900 text-white p-4 sm:p-5 flex justify-between items-center">
+          <div class="flex items-center gap-2.5">
+            <span class="text-xl">⌨️</span>
+            <div>
+              <h3 class="font-bold text-base sm:text-lg text-white">キーボードショートカット & 操作ヘルプ</h3>
+              <p class="text-xs text-slate-400">PCでの高速編集をサポートするキー一覧</p>
+            </div>
+          </div>
+          <button @click="showShortcutsHelp = false" class="text-slate-400 hover:text-white p-1 rounded-lg transition" title="閉じる (Esc)">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <!-- モーダル本文 -->
+        <div class="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar space-y-5 text-xs sm:text-sm">
+          
+          <!-- セクション1: 保存・同期操作 -->
+          <div>
+            <h4 class="font-bold text-slate-800 text-xs sm:text-sm uppercase tracking-wider mb-2.5 flex items-center gap-1.5 border-b pb-1.5">
+              <span>💾</span>
+              <span>保存 & 同期</span>
+            </h4>
+            <div class="space-y-2">
+              <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                <span class="text-slate-700">編集中のサークルを即時保存</span>
+                <div class="flex items-center gap-1">
+                  <kbd>Ctrl</kbd> + <kbd>S</kbd>
+                  <span class="text-slate-400 text-xs">または</span>
+                  <kbd>⌘</kbd> + <kbd>S</kbd>
+                </div>
+              </div>
+              <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                <span class="text-slate-700">未保存の全サークルを一括保存</span>
+                <div class="flex items-center gap-1">
+                  <span class="text-slate-400 text-xs">フォーカス外で</span>
+                  <kbd>Ctrl</kbd> + <kbd>S</kbd>
+                </div>
+              </div>
+              <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                <span class="text-slate-700">商品モーダルの内容を保存して閉じる</span>
+                <div class="flex items-center gap-1">
+                  <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- セクション2: 移動・検索・ナビゲーション -->
+          <div>
+            <h4 class="font-bold text-slate-800 text-xs sm:text-sm uppercase tracking-wider mb-2.5 flex items-center gap-1.5 border-b pb-1.5">
+              <span>🔍</span>
+              <span>検索 & ナビゲーション</span>
+            </h4>
+            <div class="space-y-2">
+              <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                <span class="text-slate-700">検索バーに即座にフォーカス</span>
+                <div><kbd>/</kbd></div>
+              </div>
+              <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                <span class="text-slate-700">検索クリア / モーダル閉じる / フォーカス解除</span>
+                <div><kbd>Esc</kbd></div>
+              </div>
+              <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                <span class="text-slate-700">ショートカットヘルプの開閉</span>
+                <div><kbd>?</kbd> (Shift + /)</div>
+              </div>
+              <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                <span class="text-slate-700">次のサークル / 前のサークルへ移動</span>
+                <div class="flex items-center gap-1">
+                  <kbd>Alt</kbd> + <kbd>N</kbd> / <kbd>Alt</kbd> + <kbd>P</kbd>
+                </div>
+              </div>
+              <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                <span class="text-slate-700">フィルター切替 (1:すべて, 2:未保存, 3:主未登録, 4:商品未登録)</span>
+                <div class="flex items-center gap-1">
+                  <kbd>Alt</kbd> + <kbd>1</kbd> ~ <kbd>4</kbd>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- セクション3: 安心仕様・データ保護の仕組み -->
+          <div class="bg-blue-50/60 border border-blue-200 rounded-xl p-3.5 space-y-1.5 text-xs text-blue-950">
+            <div class="font-bold flex items-center gap-1.5 text-blue-900">
+              <span>🛡️</span>
+              <span>安心のデータ保護仕様</span>
+            </div>
+            <ul class="list-disc list-inside space-y-1 text-slate-600 pl-1">
+              <li><strong class="text-slate-800">別タブ確認の安全性:</strong> X アカウントのリンクをクリックしても別タブで開くため、入力途中のデータは一切破棄されません。</li>
+              <li><strong class="text-slate-800">自動ローカル下書き:</strong> 入力内容はブラウザの localStorage に自動退避されるため、誤ってリロードしても復元されます。</li>
+              <li><strong class="text-slate-800">誤離脱防止:</strong> 未保存がある状態でタブを閉じようとすると、ブラウザ警告が表示されます。</li>
+            </ul>
+          </div>
+
+          <!-- セクション4: Supabase カラム追加用SQL (ワンクリックコピー) -->
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-slate-800 flex items-center gap-1">
+                <span>🗄️</span>
+                <span>Supabase カラム追加用 SQL (初回のみ)</span>
+              </span>
+              <button @click="copySqlToClipboard" class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm active:scale-95">
+                <span>📋</span>
+                <span>SQLをコピー</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-slate-500">サークル主・売り子X情報をDBに永続化するため、Supabase SQL Editorで1度だけ実行してください。</p>
+            <pre class="bg-slate-900 text-slate-100 p-2.5 rounded-lg font-mono text-[11px] overflow-x-auto"><code>ALTER TABLE public.circle_info 
+ADD COLUMN IF NOT EXISTS twitter_id TEXT,
+ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
+          </div>
+
+        </div>
+
+        <!-- モーダルフッター -->
+        <div class="p-3.5 bg-slate-50 border-t border-slate-200 flex justify-end">
+          <button @click="showShortcutsHelp = false" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition shadow-sm">
+            閉じる (Esc)
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ★ トースト通知 (画面右下固定) -->
+    <div class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm">
+      <div v-for="t in toasts" :key="t.id"
+           class="pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-bold transition-all shadow-slate-950/20"
+           :class="t.type === 'error' ? 'bg-rose-900 text-white border-rose-700' : (t.type === 'warning' ? 'bg-amber-800 text-white border-amber-600' : (t.type === 'info' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-900 text-white border-slate-700'))">
+        <span class="text-sm">{{ t.type === 'error' ? '❌' : (t.type === 'warning' ? '⚠️' : (t.type === 'info' ? 'ℹ️' : '✅')) }}</span>
+        <span class="flex-1 leading-snug">{{ t.message }}</span>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -585,6 +749,43 @@
         const activeFilter = ref('all');
         const unsavedSet = ref(new Set());
         const isBulkSaving = ref(false);
+        const showShortcutsHelp = ref(false);
+        const toasts = ref([]);
+
+        const showToast = (message, type = 'success', duration = 3000) => {
+          const id = Date.now() + Math.random();
+          toasts.value.push({ id, message, type });
+          setTimeout(() => {
+            toasts.value = toasts.value.filter(t => t.id !== id);
+          }, duration);
+        };
+
+        const copySqlToClipboard = async () => {
+          const sql = `ALTER TABLE public.circle_info \nADD COLUMN IF NOT EXISTS twitter_id TEXT,\nADD COLUMN IF NOT EXISTS staff_twitter TEXT;`;
+          try {
+            await navigator.clipboard.writeText(sql);
+            showToast('📋 SQLをクリップボードにコピーしました！', 'success');
+          } catch (e) {
+            prompt('以下のSQLをコピーしてください:', sql);
+          }
+        };
+
+        const navigateCircles = (direction) => {
+          const cards = Array.from(document.querySelectorAll('[data-circle-id]'));
+          if (cards.length === 0) return;
+          const activeEl = document.activeElement;
+          const currentCard = activeEl ? activeEl.closest('[data-circle-id]') : null;
+          let currentIndex = currentCard ? cards.indexOf(currentCard) : -1;
+          let nextIndex = currentIndex + direction;
+          if (nextIndex < 0) nextIndex = 0;
+          if (nextIndex >= cards.length) nextIndex = cards.length - 1;
+          const targetCard = cards[nextIndex];
+          if (targetCard) {
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const firstInput = targetCard.querySelector('input');
+            if (firstInput) firstInput.focus();
+          }
+        };
 
         const activeCircleForItems = ref(null);
         const itemInputMode = ref('list'); // 'list' | 'bulk'
@@ -735,23 +936,89 @@
 
           // ★PC特化キーボードショートカット
           window.addEventListener('keydown', (e) => {
-            // '/' キーで検索バーへフォーカス
-            if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName) && !activeCircleForItems.value) {
+            // '?' (Shift + /) でショートカットヘルプ表示 (入力中以外)
+            if (e.key === '?' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
               e.preventDefault();
-              document.querySelector('input[placeholder*="サークル名"]')?.focus();
+              showShortcutsHelp.value = !showShortcutsHelp.value;
+              return;
             }
-            // Ctrl+S / Cmd+S で未保存一括保存
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-              if (hasUnsavedChanges.value && !isBulkSaving.value) {
+
+            // Esc キー (モーダル閉じる、検索クリア、フォーカス解除)
+            if (e.key === 'Escape') {
+              if (showShortcutsHelp.value) {
                 e.preventDefault();
+                showShortcutsHelp.value = false;
+                return;
+              }
+              if (activeCircleForItems.value) {
+                e.preventDefault();
+                closeItemsModal();
+                return;
+              }
+              if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
+                document.activeElement.blur();
+                return;
+              }
+              if (searchQuery.value) {
+                searchQuery.value = '';
+                return;
+              }
+            }
+
+            // '/' キーで検索バーへフォーカス (入力中・モーダル中以外)
+            if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName) && !activeCircleForItems.value && !showShortcutsHelp.value) {
+              e.preventDefault();
+              const searchInput = document.querySelector('input[placeholder*="サークル名"]');
+              if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+              }
+              return;
+            }
+
+            // Ctrl+Enter / Cmd+Enter で商品モーダルを保存して閉じる
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+              if (activeCircleForItems.value) {
+                e.preventDefault();
+                saveItemsAndClose();
+                return;
+              }
+            }
+
+            // Ctrl+S / Cmd+S で保存
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+              e.preventDefault();
+              // 商品モーダルが開いていれば保存
+              if (activeCircleForItems.value) {
+                saveItemsAndClose();
+                return;
+              }
+              // 入力フォーカス中のカードがあればそのサークルのみを保存
+              const activeEl = document.activeElement;
+              const card = activeEl ? activeEl.closest('[data-circle-id]') : null;
+              if (card && card.dataset.circleId) {
+                saveCircle(card.dataset.circleId);
+                return;
+              }
+              // フォーカス外で未保存があれば一括保存
+              if (hasUnsavedChanges.value && !isBulkSaving.value) {
                 saveAllDirty();
               }
+              return;
             }
-            // Esc でモーダル閉じる
-            if (e.key === 'Escape') {
-              if (activeCircleForItems.value) {
-                closeItemsModal();
-              }
+
+            // Alt + 1 ~ 4 でフィルター切替
+            if (e.altKey && !e.ctrlKey && !e.metaKey) {
+              if (e.key === '1') { e.preventDefault(); activeFilter.value = 'all'; showToast('フィルター: すべて', 'info', 1500); }
+              if (e.key === '2' && hasUnsavedChanges.value) { e.preventDefault(); activeFilter.value = 'unsaved'; showToast('フィルター: 未保存のみ', 'info', 1500); }
+              if (e.key === '3') { e.preventDefault(); activeFilter.value = 'no_author_twitter'; showToast('フィルター: サークル主X未登録', 'info', 1500); }
+              if (e.key === '4') { e.preventDefault(); activeFilter.value = 'needs_items'; showToast('フィルター: お品書きあり商品未登録', 'info', 1500); }
+            }
+
+            // Alt+N / Alt+P でサークルカード移動
+            if (e.altKey && (e.key.toLowerCase() === 'n' || e.key.toLowerCase() === 'p')) {
+              e.preventDefault();
+              navigateCircles(e.key.toLowerCase() === 'n' ? 1 : -1);
             }
           });
         });
@@ -912,7 +1179,7 @@
           isBulkSaving.value = false;
           saveDraftToStorage();
           if (fail === 0) {
-            alert(`✅ ${success} 件のサークル情報を一括保存しました！`);
+            showToast(`💾 ${success} 件のサークル情報を一括保存しました！`, 'success', 3500);
           } else {
             alert(`⚠️ ${success} 件保存成功、${fail} 件でエラーが発生しました。`);
           }
@@ -1117,7 +1384,7 @@
               const retry = await supabaseClient.from('circle_info').upsert(payload);
               if (retry.error) throw retry.error;
               if (!silent) {
-                alert('保存成功しましたが、Supabaseに twitter_id / staff_twitter 列がまだ追加されていないため、X IDはDBに保持されませんでした。\nSupabase SQL Editorでカラムを追加してください。');
+                showToast('⚠️ DBに twitter_id/staff_twitter 列が無いためX IDは保持されませんでした。SQLでカラムを追加してください。', 'warning', 6000);
               }
             } else if (error) {
               if (error.code === '42501') {
@@ -1129,6 +1396,13 @@
             unsavedSet.value.delete(circleId);
             saveDraftToStorage();
             saveStatus.value[circleId] = 'saved';
+            
+            if (!silent) {
+              const target = circles.value.find(c => c.circle_id === circleId);
+              const name = target ? `[${target.space_sym}-${target.space_num}] ${target.circle_name}` : circleId;
+              showToast(`✅ ${name} を保存しました`, 'success', 2500);
+            }
+
             setTimeout(() => { 
               if (saveStatus.value[circleId] === 'saved') saveStatus.value[circleId] = null; 
             }, 2500);
@@ -1137,7 +1411,7 @@
             console.error(err);
             saveStatus.value[circleId] = null;
             if (!silent) {
-              alert('保存エラー: ' + err.message);
+              showToast('❌ 保存エラー: ' + err.message, 'error', 5000);
             }
             throw err;
           }
@@ -1147,6 +1421,7 @@
           user, authId, authPassword, authMode, authError, handleAuth, signOut,
           loading, circles, editData, saveStatus, searchQuery, selectedBlock,
           availableBlocks, activeFilter, unsavedSet, hasUnsavedChanges, isBulkSaving,
+          showShortcutsHelp, toasts, showToast, copySqlToClipboard, navigateCircles,
           countHasAuthorTwitter, countHasStaffTwitter, countHasUrl, percentUrl, percentItems,
           countNeedsItems, circlesWithItemsCount,
           filteredCircles, cleanTwitterId, parseAccounts, parseHandles, markDirty, onUrlInput, 
