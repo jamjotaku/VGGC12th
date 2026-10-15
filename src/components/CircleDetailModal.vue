@@ -108,10 +108,22 @@
               <!-- 外部リンク＆メンバータグ -->
               <div class="space-y-2">
                 <div class="flex flex-wrap gap-1.5">
-                  <a v-if="circle.twitter_id" :href="`https://twitter.com/${circle.twitter_id}`" target="_blank" class="flex items-center gap-1 text-xs bg-gray-800 text-white px-2.5 py-1 rounded-lg hover:bg-gray-700 transition font-bold shadow-sm">
+                  <!-- サークル主 X (合同サークル等で複数人の場合も全員表示) -->
+                  <a v-for="authorId in authorTwitterList" :key="'au_'+authorId" :href="`https://x.com/${authorId}`" target="_blank" 
+                     class="flex items-center gap-1 text-xs bg-gray-800 text-white px-2.5 py-1 rounded-lg hover:bg-gray-700 transition font-bold shadow-sm"
+                     title="サークル主のXアカウント">
                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                    @{{ circle.twitter_id }}
+                    <span>@{{ authorId }}</span>
                   </a>
+
+                  <!-- 売り子 X (登録がある場合) -->
+                  <a v-for="staffId in staffTwitterList" :key="'st_'+staffId" :href="`https://x.com/${staffId}`" target="_blank" 
+                     class="flex items-center gap-1 text-xs bg-purple-50 text-purple-800 border border-purple-200 px-2.5 py-1 rounded-lg hover:bg-purple-100 transition font-bold shadow-sm"
+                     title="売り子さんのXアカウント">
+                    <span>🤝</span>
+                    <span>@{{ staffId }}</span>
+                  </a>
+
                   <a v-if="circle.pixiv_url" :href="circle.pixiv_url" target="_blank" class="flex items-center gap-1 text-xs bg-blue-600 text-white px-2.5 py-1 rounded-lg hover:bg-blue-700 transition font-bold shadow-sm">
                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6H7v-2h2V7h2v2h2v2h-2v6z"/></svg>
                     Pixiv
@@ -121,10 +133,10 @@
                     Web
                   </a>
 
-                  <!-- ★ 公式速報 (サークル主の完売・在庫告知) -->
-                  <a :href="getCircleOfficialSearchUrl(circle)" target="_blank" 
+                  <!-- ★ 公式速報 (サークル主 & 売り子の完売・在庫告知) -->
+                  <a :href="getCircleOfficialSearchUrl(circle, extra)" target="_blank" 
                      class="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition font-bold border border-blue-200 shadow-sm"
-                     title="サークル主の最新ツイートから完売・在庫・列情報を検索">
+                     title="サークル主・売り子の最新ツイートから完売・在庫・列情報を検索">
                     <span class="text-amber-500 font-bold">⚡</span>
                     <span>公式速報</span>
                     <svg class="w-3 h-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
@@ -324,7 +336,7 @@ import { ref, computed, watch } from 'vue';
 import { getItemBadge } from '../utils/badges';
 import { getMemberStyle, getMemberMark } from '../utils/memberStyle';
 import { priorityColors } from '../constants';
-import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl } from '../utils/xSearch';
+import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl, cleanTwitterHandle, parseTwitterHandles } from '../utils/xSearch';
 
 const props = defineProps({
   circle: {
@@ -364,6 +376,20 @@ const mobileModalTab = ref('items');
 const extra = computed(() => {
   if (!props.circle) return null;
   return props.circleExtraInfo[props.circle.circle_id] || null;
+});
+
+// サークル主X (合同サークルの複数人にも対応)
+const authorTwitterList = computed(() => {
+  const ids = [
+    ...parseTwitterHandles(props.circle?.twitter_id),
+    ...parseTwitterHandles(extra.value?.twitter_id)
+  ];
+  return Array.from(new Set(ids));
+});
+
+// 売り子X (複数人対応)
+const staffTwitterList = computed(() => {
+  return parseTwitterHandles(extra.value?.staff_twitter);
 });
 
 // モーダルが開かれたらタブを初期化

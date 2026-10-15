@@ -425,10 +425,10 @@
                          未公開
                        </button>
 
-                       <!-- ★ 公式速報 (サークル主の完売・在庫ツイート) -->
-                       <a :href="getCircleOfficialSearchUrl(circle)" target="_blank"
+                       <!-- ★ 公式速報 (サークル主 & 売り子の完売・在庫ツイート) -->
+                       <a :href="getCircleOfficialSearchUrl(circle, circleExtraInfo[circle.circle_id])" target="_blank"
                           class="flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 hover:bg-blue-100 px-2 py-1 rounded font-bold border border-blue-200 transition shadow-sm active:scale-95"
-                          title="サークル主の最新ツイートから完売・在庫・列情報を検索">
+                          title="サークル主・売り子の最新ツイートから完売・在庫・列情報を検索">
                          <span class="text-amber-500 font-bold">⚡</span>
                          <span>公式速報</span>
                          <svg class="w-2.5 h-2.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
@@ -857,7 +857,7 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           try {
             const [localRes, supabaseRes] = await Promise.all([
               fetch('/data.json'),
-              supabaseClient.from('circle_info').select('circle_id, tags, members, oshinagaki_url, items')
+              supabaseClient.from('circle_info').select('*')
             ]);
             
             // 静的データのマッピング
@@ -881,7 +881,9 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
                   tags: info.tags || [],
                   members: info.members || [],
                   oshinagaki_url: info.oshinagaki_url || '',
-                  items: Array.isArray(info.items) ? info.items : []
+                  items: Array.isArray(info.items) ? info.items : [],
+                  twitter_id: info.twitter_id || '',
+                  staff_twitter: info.staff_twitter || ''
                 };
               });
               circleExtraInfo.value = infoMap;
@@ -899,7 +901,9 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
                     tags: payload.new.tags || [],
                     members: payload.new.members || [],
                     oshinagaki_url: payload.new.oshinagaki_url || '',
-                    items: Array.isArray(payload.new.items) ? payload.new.items : []
+                    items: Array.isArray(payload.new.items) ? payload.new.items : [],
+                    twitter_id: payload.new.twitter_id || '',
+                    staff_twitter: payload.new.staff_twitter || ''
                   };
                 }
               })

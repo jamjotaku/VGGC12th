@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VGGC 12th - 管理者画面</title>
+  <title>VGGC 12th - 管理者ダッシュボード</title>
   
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <!-- Supabase -->
@@ -11,210 +11,433 @@
   <script src="https://cdn.tailwindcss.com"></script>
   
   <style>
-    body { font-family: 'Helvetica Neue', Arial, sans-serif; }
+    body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif; }
     [v-cloak] { display: none; }
+    .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
 </head>
-<body class="bg-gray-100 p-2 md:p-6 text-gray-800">
-  <div id="app" class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden" v-cloak>
+<body class="bg-slate-100 p-2 sm:p-4 md:p-8 text-gray-800">
+  <div id="app" class="max-w-7xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200" v-cloak>
     
     <!-- ヘッダー -->
-    <div class="bg-gray-800 text-white p-4 md:p-6 flex justify-between items-center">
+    <header class="bg-slate-900 text-white p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800">
       <div>
-        <h1 class="text-lg md:text-2xl font-bold flex items-center gap-2">
-          <span>VGGC 12th 管理画面</span>
-          <span class="text-xs font-normal bg-blue-600 px-2 py-0.5 rounded">お品書き商品対応版</span>
-        </h1>
-        <p class="text-xs text-gray-400 mt-1 hidden md:block">メンバー・タグ・お品書きURL・頒布物(商品)と価格の設定</p>
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <span class="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+            <span>🛡️ VGGC 12th</span>
+            <span class="text-xs font-bold bg-blue-600 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider">Admin v2.0</span>
+          </span>
+          <span class="text-xs bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-md font-mono">
+            サークル主 & 売り子X情報・お品書き管理
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 mt-1">リアルタイム速報用Xアカウント、タグ、頒布物メニューを一括設定・Supabase同期</p>
       </div>
-      <button v-if="user" @click="signOut" class="text-xs md:text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1.5 md:px-4 md:py-2 rounded transition">ログアウト</button>
-    </div>
 
-    <!-- ログイン前 -->
-    <div v-if="!user" class="p-6 md:p-8 max-w-md mx-auto my-10 bg-gray-50 rounded-xl border">
-      <h2 class="font-bold text-lg mb-4 text-center">管理者ログイン</h2>
-      <div v-if="authError" class="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{{ authError }}</div>
+      <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+        <a href="/" target="_blank" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-lg transition flex items-center gap-1 font-bold">
+          <span>アプリ本編を開く</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        </a>
+        <button v-if="user" @click="signOut" class="text-xs bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-300 px-3 py-1.5 rounded-lg transition font-bold">
+          ログアウト
+        </button>
+      </div>
+    </header>
+
+    <!-- ログインフォーム (未認証時) -->
+    <div v-if="!user" class="p-6 md:p-12 max-w-md mx-auto my-10 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl shadow-inner font-bold">
+        🔒
+      </div>
+      <h2 class="font-bold text-xl text-center text-slate-800 mb-1">管理者ログイン</h2>
+      <p class="text-xs text-slate-500 text-center mb-6">VGGC 12th データベース管理権限が必要です</p>
+      
+      <div v-if="authError" class="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl mb-4 text-xs font-bold leading-relaxed">
+        {{ authError }}
+      </div>
+      
       <form @submit.prevent="handleAuth" class="space-y-4">
         <div>
-          <label class="block text-xs font-bold text-gray-500 mb-1">管理者ID (admin固定)</label>
-          <input type="text" v-model="authId" readonly class="w-full px-4 py-2 bg-gray-200 border rounded cursor-not-allowed text-gray-600 font-bold">
+          <label class="block text-xs font-bold text-slate-600 mb-1">管理者ID</label>
+          <input type="text" v-model="authId" readonly class="w-full px-3.5 py-2.5 bg-slate-200 border border-slate-300 rounded-xl cursor-not-allowed text-slate-600 font-mono font-bold text-sm">
         </div>
         <div>
-          <label class="block text-xs font-bold text-gray-500 mb-1">パスワード</label>
-          <input type="password" v-model="authPassword" required minlength="6" class="w-full px-4 py-2 bg-white border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+          <label class="block text-xs font-bold text-slate-600 mb-1">パスワード</label>
+          <input type="password" v-model="authPassword" required minlength="6" placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm transition">
         </div>
-        <div class="flex gap-3 pt-2">
-          <button type="submit" @click="authMode = 'login'" class="flex-1 bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">ログイン</button>
-          <button type="submit" @click="authMode = 'register'" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2 rounded font-bold hover:bg-gray-50">初回登録</button>
+        <div class="flex gap-2.5 pt-2">
+          <button type="submit" @click="authMode = 'login'" class="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white py-2.5 rounded-xl font-bold text-sm transition shadow-sm">
+            ログイン
+          </button>
+          <button type="submit" @click="authMode = 'register'" class="px-4 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 py-2.5 rounded-xl font-bold text-sm transition">
+            初回作成
+          </button>
         </div>
       </form>
     </div>
 
-    <!-- ログイン後 (管理コンテンツ) -->
-    <div v-else class="p-3 md:p-6">
-      <div v-if="loading" class="text-center py-10 text-gray-500 font-bold animate-pulse">
-        データを読み込み中...
+    <!-- ログイン済みコンテンツ -->
+    <main v-else class="p-3 sm:p-5 md:p-6 space-y-5">
+      
+      <!-- ローディング -->
+      <div v-if="loading" class="text-center py-20 text-slate-500 font-bold space-y-3">
+        <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p class="text-sm animate-pulse">サークルデータ & Supabase情報を取得中...</p>
       </div>
       
-      <div v-else>
-        <!-- コントロールバー -->
-        <div class="flex flex-col gap-3 mb-4 border-b pb-4">
-          <div class="flex flex-col md:flex-row justify-between items-center gap-3">
-            <input type="text" v-model="searchQuery" placeholder="サークル名、配置(例: M-31)、ペンネームで検索..." 
-                   class="w-full md:w-1/2 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-            <div class="flex items-center gap-2 text-xs text-gray-500 font-bold w-full md:w-auto justify-between md:justify-end">
-              <span>表示中: {{ filteredCircles.length }} / {{ circles.length }}</span>
-              <span class="text-green-700 bg-green-50 px-2.5 py-1 rounded border border-green-200">
-                商品登録済: {{ circlesWithItemsCount }}件
-              </span>
+      <div v-else class="space-y-4">
+        
+        <!-- 統計サマリーカード -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 shadow-sm">
+            <span class="text-[11px] font-bold text-slate-500">全サークル数</span>
+            <div class="text-xl sm:text-2xl font-black text-slate-800 mt-0.5">{{ circles.length }} <span class="text-xs font-normal text-slate-400">サークル</span></div>
+          </div>
+          <div class="bg-blue-50/60 border border-blue-200 rounded-xl p-3 shadow-sm">
+            <span class="text-[11px] font-bold text-blue-700 flex items-center gap-1">
+              <span>⚡ サークル主X登録済</span>
+            </span>
+            <div class="text-xl sm:text-2xl font-black text-blue-900 mt-0.5">
+              {{ countHasAuthorTwitter }} <span class="text-xs font-normal text-blue-600/70">/ {{ circles.length }}</span>
+            </div>
+          </div>
+          <div class="bg-purple-50/60 border border-purple-200 rounded-xl p-3 shadow-sm">
+            <span class="text-[11px] font-bold text-purple-700 flex items-center gap-1">
+              <span>🤝 売り子X登録サークル</span>
+            </span>
+            <div class="text-xl sm:text-2xl font-black text-purple-900 mt-0.5">
+              {{ countHasStaffTwitter }} <span class="text-xs font-normal text-purple-600/70">件</span>
+            </div>
+          </div>
+          <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-3 shadow-sm">
+            <span class="text-[11px] font-bold text-amber-800 flex items-center gap-1">
+              <span>📦 商品メニュー登録済</span>
+            </span>
+            <div class="text-xl sm:text-2xl font-black text-amber-900 mt-0.5">
+              {{ circlesWithItemsCount }} <span class="text-xs font-normal text-amber-700/70">件</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ツールバー & フィルター -->
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:p-4 space-y-3">
+          
+          <!-- 検索バー & 保存ステータス表示 -->
+          <div class="flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div class="relative w-full sm:w-1/2">
+              <input type="text" v-model="searchQuery" placeholder="サークル名、スペース(例: A-01, M31)、代表者、X IDで検索..." 
+                     class="w-full pl-9 pr-8 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm transition">
+              <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end text-xs font-bold text-slate-500">
+              <div v-if="hasUnsavedChanges" class="flex items-center gap-1.5 text-amber-700 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-lg animate-pulse">
+                <span>⚠️ 未保存の変更があります</span>
+              </div>
+              <div class="bg-white border border-slate-200 px-3 py-1 rounded-lg">
+                表示: <span class="text-blue-600 font-mono text-sm">{{ filteredCircles.length }}</span> / {{ circles.length }}
+              </div>
             </div>
           </div>
 
-          <!-- クイック作業フィルターボタン群 -->
-          <div class="flex flex-wrap gap-2 text-xs font-bold pt-1">
+          <!-- ブロック別タブ -->
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-xs">
+            <span class="text-[11px] font-bold text-slate-400 shrink-0 mr-1">ブロック:</span>
+            <button @click="selectedBlock = ''" 
+                    class="px-2.5 py-1 rounded-lg font-bold transition shadow-sm shrink-0"
+                    :class="!selectedBlock ? 'bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'">
+              すべて
+            </button>
+            <button v-for="b in availableBlocks" :key="'b_'+b" @click="selectedBlock = selectedBlock === b ? '' : b"
+                    class="px-2.5 py-1 rounded-lg font-bold border transition shadow-sm shrink-0"
+                    :class="selectedBlock === b ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'">
+              {{ b }}列
+            </button>
+          </div>
+
+          <!-- 絞り込みフィルターボタン群 -->
+          <div class="flex flex-wrap gap-2 text-xs font-bold pt-1 border-t border-slate-200/80">
             <button @click="activeFilter = 'all'" 
                     class="px-3 py-1.5 rounded-lg border transition shadow-sm"
-                    :class="activeFilter === 'all' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'">
-              全サークル ({{ circles.length }})
+                    :class="activeFilter === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'">
+              全表示
             </button>
             
+            <button @click="activeFilter = 'no_author_twitter'" 
+                    class="px-3 py-1.5 rounded-lg border transition shadow-sm flex items-center gap-1.5"
+                    :class="activeFilter === 'no_author_twitter' ? 'bg-rose-600 text-white border-rose-600 ring-2 ring-rose-200' : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'">
+              <span>⚡ サークル主X 未設定</span>
+              <span class="bg-white/80 text-rose-800 px-1.5 py-0.2 rounded-full text-[10px]">{{ circles.length - countHasAuthorTwitter }}</span>
+            </button>
+
             <button @click="activeFilter = 'needs_items'" 
                     class="px-3 py-1.5 rounded-lg border transition shadow-sm flex items-center gap-1.5"
-                    :class="activeFilter === 'needs_items' ? 'bg-red-600 text-white border-red-600 ring-2 ring-red-200' : 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'">
-              <span>⚠️ 要作業: お品書きあり・商品未登録</span>
-              <span class="bg-white/80 text-red-800 px-1.5 py-0.2 rounded-full text-[10px]">{{ countNeedsItems }}</span>
+                    :class="activeFilter === 'needs_items' ? 'bg-amber-600 text-white border-amber-600 ring-2 ring-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'">
+              <span>⚠️ お品書きあり・商品未登録</span>
+              <span class="bg-white/80 text-amber-900 px-1.5 py-0.2 rounded-full text-[10px]">{{ countNeedsItems }}</span>
             </button>
 
             <button @click="activeFilter = 'has_items'" 
                     class="px-3 py-1.5 rounded-lg border transition shadow-sm flex items-center gap-1.5"
-                    :class="activeFilter === 'has_items' ? 'bg-amber-600 text-white border-amber-600 ring-2 ring-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'">
+                    :class="activeFilter === 'has_items' ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-200' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'">
               <span>📦 商品登録済</span>
-              <span class="bg-white/80 text-amber-900 px-1.5 py-0.2 rounded-full text-[10px]">{{ circlesWithItemsCount }}</span>
+              <span class="bg-white/80 text-emerald-900 px-1.5 py-0.2 rounded-full text-[10px]">{{ circlesWithItemsCount }}</span>
             </button>
+          </div>
 
-            <button @click="activeFilter = 'has_url'" 
-                    class="px-3 py-1.5 rounded-lg border transition shadow-sm flex items-center gap-1.5"
-                    :class="activeFilter === 'has_url' ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-200' : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'">
-              <span>📸 お品書きURLあり</span>
-              <span class="bg-white/80 text-blue-900 px-1.5 py-0.2 rounded-full text-[10px]">{{ countHasUrl }}</span>
-            </button>
+        </div>
+
+        <!-- サークル一覧 (すっきり整理されたカード型リスト) -->
+        <div class="space-y-3">
+          <div v-if="filteredCircles.length === 0" class="text-center py-16 bg-slate-50 border border-slate-200 rounded-2xl text-slate-500 font-bold">
+            条件に一致するサークルがありません
+          </div>
+
+          <div v-for="circle in filteredCircles" :key="circle.circle_id"
+               class="bg-white border rounded-2xl p-3.5 sm:p-4 transition-all shadow-sm relative overflow-hidden"
+               :class="[
+                 unsavedSet.has(circle.circle_id) ? 'border-amber-400 ring-2 ring-amber-200 bg-amber-50/10' : 'border-slate-200 hover:border-slate-300',
+                 saveStatus[circle.circle_id] === 'saved' ? 'border-emerald-500 ring-2 ring-emerald-200' : ''
+               ]">
+            
+            <!-- 上段: 配置、サークル名、代表者、保存ボタン -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
+              <div class="flex items-center gap-2.5">
+                <span class="px-2.5 py-1 bg-blue-100 text-blue-900 text-xs sm:text-sm font-black rounded-lg border border-blue-200 shadow-sm shrink-0">
+                  {{ circle.space_sym }}-{{ circle.space_num }}
+                </span>
+                <div>
+                  <h3 class="font-bold text-sm sm:text-base text-slate-900 leading-tight">
+                    {{ circle.circle_name }}
+                  </h3>
+                  <p class="text-[11px] text-slate-500">代表: {{ circle.penname }}</p>
+                </div>
+              </div>
+
+              <!-- アクションボタンエリア -->
+              <div class="flex items-center gap-2 shrink-0">
+                <!-- 商品登録ボタン -->
+                <button @click="openItemsModal(circle)" 
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border shadow-sm active:scale-95"
+                        :class="(editData[circle.circle_id]?.items?.length > 0) 
+                          ? 'bg-amber-100 border-amber-300 text-amber-900 hover:bg-amber-200' 
+                          : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'">
+                  <span>📦</span>
+                  <span>{{ (editData[circle.circle_id]?.items?.length > 0) ? `商品: ${editData[circle.circle_id].items.length}件` : '＋ 商品登録' }}</span>
+                </button>
+
+                <!-- 個別保存ボタン -->
+                <button @click="saveCircle(circle.circle_id)" 
+                        class="px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm active:scale-95 text-white"
+                        :class="[
+                          saveStatus[circle.circle_id] === 'saved' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                          unsavedSet.has(circle.circle_id) ? 'bg-amber-500 hover:bg-amber-600 ring-2 ring-amber-300' :
+                          'bg-blue-600 hover:bg-blue-700'
+                        ]"
+                        :disabled="saveStatus[circle.circle_id] === 'saving'">
+                  <svg v-if="saveStatus[circle.circle_id] === 'saved'" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                  <span v-else-if="saveStatus[circle.circle_id] === 'saving'" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  <span v-else>💾</span>
+                  <span>{{ saveStatus[circle.circle_id] === 'saved' ? '保存完了' : (unsavedSet.has(circle.circle_id) ? '保存する*' : '保存') }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 下段: 入力グリッド (2カラム) -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-3 text-xs">
+              
+              <!-- 左ブロック (6カラム): X アカウント情報 (サークル主 & 売り子) -->
+              <div class="md:col-span-6 space-y-2.5 bg-blue-50/30 p-2.5 rounded-xl border border-blue-100">
+                
+                <!-- サークル主 X ID (合同サークルの複数人にも対応) -->
+                <div>
+                  <div class="flex justify-between items-center mb-1 flex-wrap gap-1">
+                    <label class="font-bold text-slate-700 flex items-center gap-1">
+                      <span class="text-blue-500">👤</span>
+                      <span>サークル主 X ID (合同・複数可):</span>
+                    </label>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <a v-for="id in parseHandles(editData[circle.circle_id]?.twitterId)" :key="'au_link_'+id"
+                         :href="'https://x.com/' + id" target="_blank"
+                         class="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5 font-bold bg-blue-100/50 px-1.5 py-0.2 rounded">
+                        <span>@{{ id }}</span>
+                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                      </a>
+                    </div>
+                  </div>
+                  <input type="text" 
+                         v-model="editData[circle.circle_id].twitterId"
+                         @input="markDirty(circle.circle_id)"
+                         @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
+                         @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
+                         placeholder="@author1, @author2 (合同サークルは複数可)" 
+                         class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 font-mono text-xs">
+                </div>
+
+                <!-- 売り子 X ID (複数可) -->
+                <div>
+                  <div class="flex justify-between items-center mb-1 flex-wrap gap-1">
+                    <label class="font-bold text-slate-700 flex items-center gap-1">
+                      <span class="text-purple-500">🤝</span>
+                      <span>売り子 X ID (カンマ区切りで複数可):</span>
+                    </label>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <a v-for="id in parseHandles(editData[circle.circle_id]?.staffTwitter)" :key="'st_link_'+id"
+                         :href="'https://x.com/' + id" target="_blank"
+                         class="text-[10px] text-purple-700 hover:underline flex items-center gap-0.5 font-bold bg-purple-100/60 px-1.5 py-0.2 rounded">
+                        <span>@{{ id }}</span>
+                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                      </a>
+                    </div>
+                  </div>
+                  <input type="text" 
+                         v-model="editData[circle.circle_id].staffTwitter"
+                         @input="markDirty(circle.circle_id)"
+                         @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
+                         @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
+                         placeholder="@staff_a, @staff_b" 
+                         class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-400 font-mono text-xs">
+                </div>
+
+                <!-- お品書きURL ＆ ID自動抽出ボタン -->
+                <div>
+                  <div class="flex justify-between items-center mb-1">
+                    <label class="font-bold text-slate-700 flex items-center gap-1">
+                      <span>📸</span>
+                      <span>お品書き (Xポスト) URL:</span>
+                    </label>
+                    <button v-if="editData[circle.circle_id]?.url" 
+                            @click="extractTwitterIdFromUrl(circle.circle_id)"
+                            class="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-0.5 rounded font-bold transition flex items-center gap-0.5"
+                            title="URL内のユーザー名からサークル主X IDを自動入力します">
+                      <span>⚡ URLからID自動抽出</span>
+                    </button>
+                  </div>
+                  <div class="flex gap-1.5">
+                    <input type="text" 
+                           v-model="editData[circle.circle_id].url"
+                           @input="onUrlInput(circle.circle_id)"
+                           @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
+                           @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
+                           placeholder="https://x.com/username/status/..." 
+                           class="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 font-mono text-xs">
+                    <a v-if="editData[circle.circle_id]?.url" :href="editData[circle.circle_id].url" target="_blank" class="px-2 py-1.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 font-bold shrink-0 flex items-center">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- 右ブロック (6カラム): メンバータグ & 頒布物タグ -->
+              <div class="md:col-span-6 space-y-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                
+                <!-- メンバータグ -->
+                <div>
+                  <div class="flex justify-between items-center mb-1">
+                    <label class="font-bold text-slate-700 flex items-center gap-1">
+                      <span>👤</span>
+                      <span>メンバー (ぶいすぽ等・カンマ区切り):</span>
+                    </label>
+                  </div>
+                  <input type="text" 
+                         v-model="editData[circle.circle_id].membersInput"
+                         @input="markDirty(circle.circle_id)"
+                         @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
+                         @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
+                         placeholder="花芽すみれ, 白波らむね" 
+                         class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-green-400 text-xs">
+                </div>
+
+                <!-- 頒布物タグ -->
+                <div>
+                  <div class="flex justify-between items-center mb-1">
+                    <label class="font-bold text-slate-700 flex items-center gap-1">
+                      <span>🏷️</span>
+                      <span>頒布物タグ (カンマ区切り):</span>
+                    </label>
+                  </div>
+                  <input type="text" 
+                         v-model="editData[circle.circle_id].tagsInput"
+                         @input="markDirty(circle.circle_id)"
+                         @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
+                         @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
+                         placeholder="イラスト本, アクスタ, 色紙" 
+                         class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 text-xs">
+                </div>
+
+                <!-- 登録中商品プレビュー -->
+                <div>
+                  <label class="font-bold text-slate-500 mb-1 block">登録商品プレビュー:</label>
+                  <div v-if="editData[circle.circle_id]?.items?.length" class="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
+                    <span v-for="it in editData[circle.circle_id].items" :key="it.name" 
+                          class="px-2 py-0.5 bg-amber-50 text-amber-900 border border-amber-200 rounded font-bold text-[10px] flex items-center gap-1">
+                      <span>{{ it.name }}</span>
+                      <span class="text-amber-600 font-mono">¥{{ it.price }}</span>
+                    </span>
+                  </div>
+                  <div v-else class="text-[11px] text-slate-400 italic">商品未登録（上の「＋ 商品登録」から追加可能）</div>
+                </div>
+
+              </div>
+
+            </div>
+
           </div>
         </div>
 
-        <!-- サークル一覧テーブル -->
-        <div class="overflow-x-auto border border-gray-200 rounded-lg">
-          <table class="w-full text-xs md:text-sm text-left">
-            <thead class="bg-gray-100 text-gray-700 border-b">
-              <tr>
-                <th class="p-2.5 md:p-3 border-r w-20 md:w-24 text-center whitespace-nowrap">配置</th>
-                <th class="p-2.5 md:p-3 border-r w-40 md:w-48 whitespace-nowrap">サークル名</th>
-                <th class="p-2.5 md:p-3 border-r min-w-[130px] whitespace-nowrap bg-amber-50/60">📦 お品書き商品</th>
-                <th class="p-2.5 md:p-3 border-r min-w-[140px]">メンバー</th>
-                <th class="p-2.5 md:p-3 border-r min-w-[150px]">頒布物タグ</th>
-                <th class="p-2.5 md:p-3 border-r min-w-[180px]">お品書き(X) URL</th>
-                <th class="p-2.5 md:p-3 text-center w-20 md:w-24 sticky right-0 bg-gray-100 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] z-10">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="circle in filteredCircles" :key="circle.circle_id" class="border-b hover:bg-blue-50/30 transition-colors">
-                <td class="p-2.5 md:p-3 border-r font-bold text-gray-700 text-center whitespace-nowrap">
-                  {{ circle.space_sym }}-{{ circle.space_num }}
-                </td>
-                <td class="p-2.5 md:p-3 border-r font-bold">
-                  <div>{{ circle.circle_name }}</div>
-                  <div class="text-[10px] text-gray-500 font-normal mt-0.5">代表: {{ circle.penname }}</div>
-                </td>
-
-                <!-- ★ お品書き商品管理ボタン -->
-                <td class="p-2.5 md:p-3 border-r bg-amber-50/20 whitespace-nowrap">
-                  <button @click="openItemsModal(circle)" 
-                          class="px-2.5 py-1.5 rounded text-xs font-bold transition flex items-center gap-1.5 border shadow-sm w-full justify-center"
-                          :class="(editData[circle.circle_id]?.items?.length > 0) 
-                            ? 'bg-amber-100 border-amber-300 text-amber-900 hover:bg-amber-200' 
-                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'">
-                    <span>📦</span>
-                    <span>{{ (editData[circle.circle_id]?.items?.length > 0) ? `商品: ${editData[circle.circle_id].items.length}件` : '＋ 商品登録' }}</span>
-                  </button>
-                </td>
-                
-                <!-- メンバータグ -->
-                <td class="p-2.5 md:p-3 border-r bg-green-50/20">
-                  <input type="text" v-model="editData[circle.circle_id].membersInput" placeholder="花芽すみれ, 白波らむね" 
-                         class="w-full px-2 py-1.5 border border-green-200 rounded focus:ring-2 focus:ring-green-500 outline-none text-xs">
-                </td>
-                
-                <!-- 頒布物タグ -->
-                <td class="p-2.5 md:p-3 border-r">
-                  <input type="text" v-model="editData[circle.circle_id].tagsInput" placeholder="イラスト本, アクスタ" 
-                         class="w-full px-2 py-1.5 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-xs">
-                </td>
-                
-                <!-- お品書きURL -->
-                <td class="p-2.5 md:p-3 border-r">
-                  <input type="text" v-model="editData[circle.circle_id].url" placeholder="https://x.com/..." 
-                         class="w-full px-2 py-1.5 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-xs">
-                </td>
-                
-                <td class="p-2.5 md:p-3 text-center sticky right-0 bg-white/95 backdrop-blur-sm shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] z-10">
-                  <button @click="saveCircle(circle.circle_id)" 
-                          class="bg-blue-600 text-white px-3 py-1.5 rounded font-bold hover:bg-blue-700 active:scale-95 transition-transform flex items-center justify-center gap-1 w-full text-xs"
-                          :class="{'bg-green-600 hover:bg-green-700': saveStatus[circle.circle_id] === 'saved'}">
-                    <svg v-if="saveStatus[circle.circle_id] === 'saved'" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                    {{ saveStatus[circle.circle_id] === 'saved' ? '保存済' : '保存' }}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-if="filteredCircles.length === 0" class="text-center py-10 text-gray-500 font-bold">
-          該当するサークルがありません
-        </div>
       </div>
-    </div>
+    </main>
 
-    <!-- ★ お品書き商品 登録・編集モーダル (スマホ・PC完全対応) -->
+    <!-- ★ お品書き商品 登録・編集モーダル -->
     <div v-if="activeCircleForItems" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 md:p-6" @click.self="closeItemsModal">
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
         <!-- モーダルヘッダー -->
-        <div class="p-4 md:p-5 border-b bg-gray-50 flex justify-between items-start">
+        <div class="p-4 md:p-5 border-b bg-slate-50 flex justify-between items-start">
           <div>
             <div class="flex items-center gap-2 mb-1">
               <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-bold rounded border border-blue-200">
                 {{ activeCircleForItems.space_sym }}-{{ activeCircleForItems.space_num }}
               </span>
-              <h2 class="font-bold text-base md:text-lg text-gray-900 leading-tight">
+              <h2 class="font-bold text-base md:text-lg text-slate-900 leading-tight">
                 {{ activeCircleForItems.circle_name }}
               </h2>
             </div>
-            <p class="text-xs text-gray-500">代表: {{ activeCircleForItems.penname }}</p>
+            <p class="text-xs text-slate-500">代表: {{ activeCircleForItems.penname }}</p>
           </div>
           
-          <button @click="closeItemsModal" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          <button @click="closeItemsModal" class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
 
         <!-- お品書きURLへのリンク案内 -->
-        <div v-if="editData[activeCircleForItems.circle_id]?.url" class="px-4 py-2 bg-blue-50/70 border-b border-blue-100 flex items-center justify-between text-xs">
-          <span class="text-blue-800 font-medium truncate mr-2">お品書きポストを確認しながら入力できます</span>
-          <a :href="editData[activeCircleForItems.circle_id].url" target="_blank" class="bg-blue-600 text-white px-2.5 py-1 rounded font-bold hover:bg-blue-700 shrink-0 flex items-center gap-1 shadow-sm">
+        <div v-if="editData[activeCircleForItems.circle_id]?.url" class="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between text-xs">
+          <span class="text-blue-800 font-medium truncate mr-2">公式Xポストを確認しながら入力できます</span>
+          <a :href="editData[activeCircleForItems.circle_id].url" target="_blank" class="bg-blue-600 text-white px-2.5 py-1 rounded-lg font-bold hover:bg-blue-700 shrink-0 flex items-center gap-1 shadow-sm">
             <span>Xで開く</span>
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
           </a>
         </div>
 
         <!-- タブ切り替え（リスト入力 vs 一括コピペ） -->
-        <div class="flex border-b text-xs font-bold bg-gray-50">
+        <div class="flex border-b text-xs font-bold bg-slate-50">
           <button @click="itemInputMode = 'list'" 
                   class="flex-1 py-2.5 text-center transition border-b-2"
-                  :class="itemInputMode === 'list' ? 'border-amber-500 text-amber-700 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'">
+                  :class="itemInputMode === 'list' ? 'border-amber-500 text-amber-800 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'">
             ✍️ 1件ずつ入力
           </button>
           <button @click="itemInputMode = 'bulk'" 
                   class="flex-1 py-2.5 text-center transition border-b-2"
-                  :class="itemInputMode === 'bulk' ? 'border-amber-500 text-amber-700 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'">
+                  :class="itemInputMode === 'bulk' ? 'border-amber-500 text-amber-800 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'">
             📋 テキスト一括コピペ
           </button>
         </div>
@@ -224,32 +447,32 @@
           
           <!-- モード1: リスト入力 -->
           <div v-if="itemInputMode === 'list'" class="space-y-2.5">
-            <div v-if="tempItems.length === 0" class="text-center py-8 text-gray-400 text-xs md:text-sm">
+            <div v-if="tempItems.length === 0" class="text-center py-8 text-slate-400 text-xs md:text-sm">
               商品がまだ登録されていません。<br>下の「＋ 商品を追加」ボタンを押して登録してください。
             </div>
 
-            <div v-for="(item, index) in tempItems" :key="index" class="flex items-center gap-2 bg-gray-50 p-2 md:p-2.5 rounded-xl border border-gray-200">
-              <span class="text-xs font-bold text-gray-400 w-5 text-center">{{ index + 1 }}</span>
+            <div v-for="(item, index) in tempItems" :key="index" class="flex items-center gap-2 bg-slate-50 p-2 md:p-2.5 rounded-xl border border-slate-200">
+              <span class="text-xs font-bold text-slate-400 w-5 text-center">{{ index + 1 }}</span>
               
               <!-- 商品名 -->
               <input type="text" v-model="item.name" placeholder="商品名 (例: 新刊① ファーストブルーム)" 
-                     class="flex-1 px-3 py-1.5 text-xs md:text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-400 outline-none">
+                     class="flex-1 px-3 py-1.5 text-xs md:text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-400 outline-none">
               
               <!-- 金額 -->
-              <div class="flex items-center bg-white border border-gray-300 rounded-lg overflow-hidden w-28 md:w-32 focus-within:ring-2 focus-within:ring-amber-400">
-                <span class="px-2 text-xs font-bold text-gray-400 bg-gray-100 py-1.5 border-r">¥</span>
+              <div class="flex items-center bg-white border border-slate-300 rounded-lg overflow-hidden w-28 md:w-32 focus-within:ring-2 focus-within:ring-amber-400">
+                <span class="px-2 text-xs font-bold text-slate-400 bg-slate-100 py-1.5 border-r">¥</span>
                 <input type="number" v-model.number="item.price" placeholder="2000" min="0" step="50"
                        class="w-full px-2 py-1.5 text-xs md:text-sm outline-none text-right font-mono font-bold">
               </div>
 
               <!-- 削除ボタン -->
-              <button @click="removeItemRow(index)" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="削除">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              <button @click="removeItemRow(index)" class="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition" title="削除">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
             </div>
 
             <!-- 追加ボタン -->
-            <button @click="addItemRow" class="w-full py-2.5 border-2 border-dashed border-gray-300 hover:border-amber-500 rounded-xl text-xs md:text-sm font-bold text-gray-600 hover:text-amber-600 transition flex items-center justify-center gap-1.5 bg-gray-50/50 hover:bg-amber-50/30">
+            <button @click="addItemRow" class="w-full py-2.5 border-2 border-dashed border-slate-300 hover:border-amber-500 rounded-xl text-xs md:text-sm font-bold text-slate-600 hover:text-amber-600 transition flex items-center justify-center gap-1.5 bg-slate-50/50 hover:bg-amber-50/30">
               <span>＋ 商品を追加</span>
             </button>
           </div>
@@ -267,9 +490,9 @@
             </div>
 
             <textarea v-model="bulkText" rows="6" placeholder="商品名と価格を1行ずつ貼り付けてください..." 
-                      class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none text-xs md:text-sm font-mono"></textarea>
+                      class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none text-xs md:text-sm font-mono"></textarea>
 
-            <button @click="parseAndApplyBulkText" class="w-full bg-amber-600 text-white font-bold py-2 rounded-xl hover:bg-amber-700 transition text-xs md:text-sm shadow-sm">
+            <button @click="parseAndApplyBulkText" class="w-full bg-amber-600 text-white font-bold py-2 rounded-xl hover:bg-amber-700 transition text-xs md:text-sm shadow-sm active:scale-95">
               ✨ テキストを解析してリストに反映する
             </button>
           </div>
@@ -277,16 +500,16 @@
         </div>
 
         <!-- モーダルフッター -->
-        <div class="p-3 md:p-4 border-t bg-gray-50 flex items-center justify-between">
-          <div class="text-xs text-gray-500 font-bold">
+        <div class="p-3 md:p-4 border-t bg-slate-50 flex items-center justify-between">
+          <div class="text-xs text-slate-500 font-bold">
             合計 {{ tempItems.length }} 点
           </div>
           
           <div class="flex items-center gap-2">
-            <button @click="closeItemsModal" class="px-4 py-2 border border-gray-300 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-100 transition">
+            <button @click="closeItemsModal" class="px-4 py-2 border border-slate-300 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-100 transition">
               キャンセル
             </button>
-            <button @click="saveItemsAndClose" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs md:text-sm transition shadow flex items-center gap-1.5"
+            <button @click="saveItemsAndClose" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs md:text-sm transition shadow flex items-center gap-1.5 active:scale-95"
                     :disabled="isSavingItems">
               <span v-if="isSavingItems" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
               <span>商品リストを保存</span>
@@ -319,14 +542,35 @@
         const editData = ref({});
         const saveStatus = ref({}); 
         const searchQuery = ref('');
-        const activeFilter = ref('all'); // 'all' | 'needs_items' | 'has_items' | 'has_url'
+        const selectedBlock = ref('');
+        const activeFilter = ref('all'); // 'all' | 'no_author_twitter' | 'needs_items' | 'has_items'
+        const unsavedSet = ref(new Set());
 
-        // ★ 商品モーダル関連
+        // 商品モーダル関連
         const activeCircleForItems = ref(null);
         const itemInputMode = ref('list'); // 'list' | 'bulk'
         const tempItems = ref([]);
         const bulkText = ref('');
         const isSavingItems = ref(false);
+
+        const cleanTwitterId = (id) => {
+          if (!id) return '';
+          return String(id).trim().replace(/^@+/, '');
+        };
+
+        const parseHandles = (str) => {
+          if (!str) return [];
+          return String(str)
+            .split(/[,、\s]+/)
+            .map(s => cleanTwitterId(s))
+            .filter(Boolean);
+        };
+
+        const markDirty = (circleId) => {
+          unsavedSet.value.add(circleId);
+        };
+
+        const hasUnsavedChanges = computed(() => unsavedSet.value.size > 0);
 
         onMounted(async () => {
           const { data: { session } } = await supabaseClient.auth.getSession();
@@ -334,7 +578,7 @@
           if (session?.user && session.user.email !== 'admin@vggc.dummy.local') {
             await supabaseClient.auth.signOut();
             user.value = null;
-            authError.value = '一般ユーザーとしてログインしていました。安全のため一度ログアウトしました。管理者パスワードを入力してログインし直してください。';
+            authError.value = '一般ユーザーとしてログインしていました。管理者パスワードを入力してログインしてください。';
           } else if (session?.user) {
             user.value = session.user;
             await loadData();
@@ -371,6 +615,7 @@
           await supabaseClient.auth.signOut();
           circles.value = [];
           editData.value = {};
+          unsavedSet.value.clear();
         };
 
         const loadData = async () => {
@@ -378,13 +623,21 @@
           try {
             const res = await fetch('/data.json');
             const data = await res.json();
-            circles.value = data.circles;
+            circles.value = data.circles || [];
 
             const initialEditData = {};
             circles.value.forEach(c => {
-              initialEditData[c.circle_id] = { tagsInput: '', membersInput: '', url: '', items: [] };
+              initialEditData[c.circle_id] = { 
+                twitterId: c.twitter_id || '',
+                staffTwitter: '',
+                tagsInput: '', 
+                membersInput: '', 
+                url: '', 
+                items: [] 
+              };
             });
 
+            // Supabaseから追加データを取得
             const { data: dbData, error } = await supabaseClient.from('circle_info').select('*');
             if (!error && dbData) {
               dbData.forEach(info => {
@@ -393,10 +646,13 @@
                   initialEditData[info.circle_id].membersInput = (info.members || []).join(', ');
                   initialEditData[info.circle_id].url = info.oshinagaki_url || '';
                   initialEditData[info.circle_id].items = Array.isArray(info.items) ? info.items : [];
+                  if (info.twitter_id) initialEditData[info.circle_id].twitterId = info.twitter_id;
+                  if (info.staff_twitter) initialEditData[info.circle_id].staffTwitter = info.staff_twitter;
                 }
               });
             }
             editData.value = initialEditData;
+            unsavedSet.value.clear();
           } catch (error) {
             console.error('Data loading error:', error);
             alert('データの読み込みに失敗しました。');
@@ -405,7 +661,44 @@
           }
         };
 
-        // 各フィルターごとの件数
+        // URL入力時にお品書きからTwitter IDを自動推測
+        const onUrlInput = (circleId) => {
+          markDirty(circleId);
+          extractTwitterIdFromUrl(circleId, false);
+        };
+
+        const extractTwitterIdFromUrl = (circleId, force = true) => {
+          const item = editData.value[circleId];
+          if (!item || !item.url) return;
+          const match = item.url.match(/(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)\/status\//i);
+          if (match && match[1]) {
+            const extracted = match[1];
+            // 既にIDが入っておらず、または強制抽出の場合
+            if (force || !item.twitterId) {
+              item.twitterId = extracted;
+              markDirty(circleId);
+            }
+          }
+        };
+
+        // 利用可能なブロック一覧
+        const availableBlocks = computed(() => {
+          const set = new Set();
+          circles.value.forEach(c => {
+            if (c.space_sym) set.add(c.space_sym);
+          });
+          return Array.from(set).sort();
+        });
+
+        // 統計計算
+        const countHasAuthorTwitter = computed(() => {
+          return Object.values(editData.value).filter(d => Boolean(cleanTwitterId(d.twitterId))).length;
+        });
+
+        const countHasStaffTwitter = computed(() => {
+          return Object.values(editData.value).filter(d => Boolean(d.staffTwitter && d.staffTwitter.trim())).length;
+        });
+
         const countNeedsItems = computed(() => {
           return circles.value.filter(c => {
             const d = editData.value[c.circle_id];
@@ -413,43 +706,50 @@
           }).length;
         });
 
-        const countHasUrl = computed(() => {
-          return circles.value.filter(c => {
-            const d = editData.value[c.circle_id];
-            return d && d.url;
-          }).length;
-        });
-
-        const filteredCircles = computed(() => {
-          const q = (searchQuery.value || '').trim().toLowerCase();
-          return circles.value.filter(c => {
-            const d = editData.value[c.circle_id] || {};
-            
-            // クイックフィルター条件
-            if (activeFilter.value === 'needs_items') {
-              if (!d.url || (d.items && d.items.length > 0)) return false;
-            } else if (activeFilter.value === 'has_items') {
-              if (!d.items || d.items.length === 0) return false;
-            } else if (activeFilter.value === 'has_url') {
-              if (!d.url) return false;
-            }
-
-            if (!q) return true;
-            return (
-              (c.circle_name && c.circle_name.toLowerCase().includes(q)) ||
-              (c.space_sym && c.space_sym.toLowerCase().includes(q)) ||
-              (c.space_num && c.space_num.toLowerCase().includes(q)) ||
-              (`${c.space_sym}-${c.space_num}`.toLowerCase().includes(q)) ||
-              (c.penname && c.penname.toLowerCase().includes(q))
-            );
-          });
-        });
-
         const circlesWithItemsCount = computed(() => {
           return Object.values(editData.value).filter(d => d.items && d.items.length > 0).length;
         });
 
-        // ★ 商品モーダルのオープン
+        const filteredCircles = computed(() => {
+          const q = (searchQuery.value || '').trim().toLowerCase();
+          const block = selectedBlock.value;
+
+          return circles.value.filter(c => {
+            const d = editData.value[c.circle_id] || {};
+            
+            // ブロックフィルター
+            if (block && c.space_sym !== block) return false;
+
+            // クイックフィルター条件
+            if (activeFilter.value === 'no_author_twitter') {
+              if (cleanTwitterId(d.twitterId)) return false;
+            } else if (activeFilter.value === 'needs_items') {
+              if (!d.url || (d.items && d.items.length > 0)) return false;
+            } else if (activeFilter.value === 'has_items') {
+              if (!d.items || d.items.length === 0) return false;
+            }
+
+            if (!q) return true;
+            
+            const fullSpace = `${c.space_sym || ''}-${c.space_num || ''}`.toLowerCase();
+            const compactSpace = `${c.space_sym || ''}${c.space_num || ''}`.toLowerCase();
+            const circleName = (c.circle_name || '').toLowerCase();
+            const penname = (c.penname || '').toLowerCase();
+            const authorId = (d.twitterId || '').toLowerCase();
+            const staffId = (d.staffTwitter || '').toLowerCase();
+
+            return (
+              circleName.includes(q) ||
+              penname.includes(q) ||
+              fullSpace.includes(q) ||
+              compactSpace.includes(q) ||
+              authorId.includes(q) ||
+              staffId.includes(q)
+            );
+          });
+        });
+
+        // 商品モーダルのオープン
         const openItemsModal = (circle) => {
           activeCircleForItems.value = circle;
           itemInputMode.value = 'list';
@@ -473,7 +773,7 @@
           tempItems.value.splice(index, 1);
         };
 
-        // 一括コピペテキストの賢い解析
+        // 一括コピペテキストの解析
         const parseAndApplyBulkText = () => {
           if (!bulkText.value.trim()) return;
           const lines = bulkText.value.split('\n');
@@ -483,7 +783,6 @@
             const line = rawLine.trim();
             if (!line) continue;
             
-            // パターン1: "商品名: 2000" や "商品名: ¥2,000円"
             let match = line.match(/^(.*?)(?:[:：\t]+)[¥￥]?\s*([0-9,]+)\s*円?$/);
             if (match) {
               const name = match[1].trim();
@@ -494,7 +793,6 @@
               }
             }
             
-            // パターン2: "商品名 2000" や "商品名 ¥2,000" (空白区切り)
             match = line.match(/^(.*?)\s+[¥￥]?\s*([0-9,]+)\s*円?$/);
             if (match) {
               const name = match[1].trim();
@@ -505,7 +803,6 @@
               }
             }
 
-            // 金額が見つからない場合
             parsed.push({ name: line, price: 0 });
           }
 
@@ -520,83 +817,83 @@
           if (!activeCircleForItems.value) return;
           const circleId = activeCircleForItems.value.circle_id;
           
-          // 空行を除外
           const cleanItems = tempItems.value
             .map(item => ({ name: (item.name || '').trim(), price: Number(item.price) || 0 }))
             .filter(item => item.name.length > 0);
 
           isSavingItems.value = true;
           try {
-            const input = editData.value[circleId];
-            const tagsArray = input.tagsInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
-            const membersArray = input.membersInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
-
-            const { error } = await supabaseClient.from('circle_info').upsert({
-              circle_id: circleId,
-              tags: tagsArray,
-              members: membersArray,
-              oshinagaki_url: input.url.trim() || null,
-              items: cleanItems,
-              updated_at: new Date().toISOString()
-            });
-
-            if (error) throw error;
-
-            // ローカルステートにも反映
             editData.value[circleId].items = cleanItems;
+            await saveCircle(circleId);
             closeItemsModal();
-
-            // 保存完了演出
-            saveStatus.value[circleId] = 'saved';
-            setTimeout(() => { saveStatus.value[circleId] = null; }, 2000);
           } catch (err) {
             console.error(err);
-            alert('保存エラー: ' + err.message);
           } finally {
             isSavingItems.value = false;
           }
         };
 
-        // テーブル側の「保存」ボタン
+        // サークル情報のSupabase保存
         const saveCircle = async (circleId) => {
           const input = editData.value[circleId];
-          const tagsArray = input.tagsInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
-          const membersArray = input.membersInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+          const tagsArray = (input.tagsInput || '').split(',').map(s => s.trim()).filter(s => s.length > 0);
+          const membersArray = (input.membersInput || '').split(',').map(s => s.trim()).filter(s => s.length > 0);
           const currentItems = input.items || [];
+          const authorTwitterClean = cleanTwitterId(input.twitterId);
+          const staffTwitterClean = (input.staffTwitter || '').trim();
           
-          try {
-            const { error } = await supabaseClient.from('circle_info').upsert({
-              circle_id: circleId,
-              tags: tagsArray,
-              members: membersArray,
-              oshinagaki_url: input.url.trim() || null,
-              items: currentItems,
-              updated_at: new Date().toISOString()
-            });
+          saveStatus.value[circleId] = 'saving';
 
-            if (error) {
+          const payload = {
+            circle_id: circleId,
+            tags: tagsArray,
+            members: membersArray,
+            oshinagaki_url: (input.url || '').trim() || null,
+            items: currentItems,
+            updated_at: new Date().toISOString()
+          };
+
+          // twitter_id と staff_twitter を含める
+          payload.twitter_id = authorTwitterClean || null;
+          payload.staff_twitter = staffTwitterClean || null;
+
+          try {
+            let { error } = await supabaseClient.from('circle_info').upsert(payload);
+
+            // もしカラム未作成エラー(42703)が出た場合、フォールバックで既存カラムのみ保存
+            if (error && error.code === '42703') {
+              console.warn('twitter_id / staff_twitter columns not created yet in Supabase. Falling back to core columns.');
+              delete payload.twitter_id;
+              delete payload.staff_twitter;
+              const retry = await supabaseClient.from('circle_info').upsert(payload);
+              if (retry.error) throw retry.error;
+              alert('保存成功しましたが、Supabaseに twitter_id / staff_twitter 列がまだ追加されていないため、X IDはDBに保持されませんでした。\nSupabase SQL Editorでカラムを追加してください。');
+            } else if (error) {
               if (error.code === '42501') {
                 throw new Error('保存権限がありません。管理者としてログインしているか確認してください。');
               }
               throw error;
             }
 
+            unsavedSet.value.delete(circleId);
             saveStatus.value[circleId] = 'saved';
-            setTimeout(() => { saveStatus.value[circleId] = null; }, 2000);
+            setTimeout(() => { 
+              if (saveStatus.value[circleId] === 'saved') saveStatus.value[circleId] = null; 
+            }, 2500);
 
           } catch (err) {
             console.error(err);
+            saveStatus.value[circleId] = null;
             alert('保存エラー: ' + err.message);
           }
         };
 
         return {
           user, authId, authPassword, authMode, authError, handleAuth, signOut,
-          loading, circles, editData, saveStatus, searchQuery, filteredCircles,
-          circlesWithItemsCount,
-          activeFilter,
-          countNeedsItems,
-          countHasUrl,
+          loading, circles, editData, saveStatus, searchQuery, selectedBlock,
+          availableBlocks, activeFilter, unsavedSet, hasUnsavedChanges,
+          countHasAuthorTwitter, countHasStaffTwitter, countNeedsItems, circlesWithItemsCount,
+          filteredCircles, cleanTwitterId, parseHandles, markDirty, onUrlInput, extractTwitterIdFromUrl,
           activeCircleForItems, itemInputMode, tempItems, bulkText, isSavingItems,
           openItemsModal, closeItemsModal, addItemRow, removeItemRow,
           parseAndApplyBulkText, saveItemsAndClose, saveCircle
