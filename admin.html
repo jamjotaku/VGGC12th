@@ -822,7 +822,14 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           return null;
         };
 
-        const parseAccounts = (str, defaultFirstName = null) => {
+        const splitPennames = (pennameStr) => {
+          if (!pennameStr) return [];
+          const s = String(pennameStr).trim();
+          if (!s) return [];
+          return s.split(/[,、/／&＆\n]+/).map(p => p.trim()).filter(Boolean);
+        };
+
+        const parseAccounts = (str, penname = null) => {
           if (!str) return [];
           const s = String(str).trim();
           if (!s) return [];
@@ -834,14 +841,16 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
             tokens = s.split(/\s+/);
           }
 
+          const defaultNames = splitPennames(penname);
+
           const results = [];
           const seen = new Set();
           tokens.forEach((t, idx) => {
             const acc = parseSingleAccount(t);
             if (acc && acc.handle && !seen.has(acc.handle.toLowerCase())) {
               seen.add(acc.handle.toLowerCase());
-              if (!acc.name && idx === 0 && defaultFirstName) {
-                acc.name = defaultFirstName;
+              if (!acc.name && defaultNames[idx]) {
+                acc.name = defaultNames[idx];
               }
               results.push(acc);
             }

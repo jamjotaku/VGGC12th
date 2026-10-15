@@ -96,8 +96,20 @@ export const parseTwitterHandles = (handlesStr) => {
 export const parseStaffTwitterIds = parseTwitterHandles;
 
 /**
+ * 代表ペンネームが連名 (例: "ムチムチP, カリカリ大学芋", "A / B", "A & B") の場合に分割
+ * @param {string} pennameStr 
+ * @returns {string[]}
+ */
+export const splitPennames = (pennameStr) => {
+  if (!pennameStr) return [];
+  const s = String(pennameStr).trim();
+  if (!s) return [];
+  return s.split(/[,、/／&＆\n]+/).map(p => p.trim()).filter(Boolean);
+};
+
+/**
  * サークル主 (合同サークル含む複数人) のアカウント情報配列を取得
- * 名前が明示されていない場合、1人目のサークル主には代表ペンネーム (circle.penname) をデフォルト適用！
+ * 名前が明示されていない場合、代表ペンネーム (連名の場合は順に対応) をデフォルト適用！
  * @param {Object} circle サークル情報
  * @param {Object} extraInfo Supabaseの追加情報
  * @returns {Array<{ name: string | null, handle: string }>}
@@ -112,12 +124,12 @@ export const getCircleAuthorAccounts = (circle, extraInfo = null) => {
   const accounts = parseTwitterAccounts(rawAuthors);
   if (accounts.length === 0) return [];
 
-  // サークル代表者のペンネーム (例: "花丸かかし")
-  const defaultPenname = circle.penname ? String(circle.penname).trim() : null;
+  // サークル代表者のペンネーム (連名の場合は分割配列)
+  const defaultNames = splitPennames(circle.penname);
 
   return accounts.map((acc, index) => {
-    // 明示的な名前指定がない場合、1人目のサークル主には代表ペンネームを充当
-    const displayName = acc.name || (index === 0 ? defaultPenname : null);
+    // 明示的な名前指定がない場合、対応するインデックスのペンネームを充当
+    const displayName = acc.name || (defaultNames[index] || null);
     return {
       name: displayName,
       handle: acc.handle
