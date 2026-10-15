@@ -334,6 +334,28 @@
                   </button>
                 </div>
               </div>
+
+              <!-- ★ 会場Xリアルタイム速報チップ (ワンタップ最新検索) -->
+              <div class="mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs custom-scrollbar">
+                <span class="text-[10px] font-bold text-gray-500 shrink-0 flex items-center gap-1">
+                  <span class="text-amber-500 font-black animate-pulse">⚡</span>会場速報(X):
+                </span>
+                <a :href="getEventLiveSearchUrl('soldout')" target="_blank" 
+                   class="shrink-0 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-sm active:scale-95 transition">
+                  <span>💔 完売情報</span>
+                  <svg class="w-3 h-3 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                </a>
+                <a :href="getEventLiveSearchUrl('line')" target="_blank" 
+                   class="shrink-0 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-sm active:scale-95 transition">
+                  <span>🚶 列・最後尾</span>
+                  <svg class="w-3 h-3 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                </a>
+                <a :href="getEventLiveSearchUrl('all')" target="_blank" 
+                   class="shrink-0 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-sm active:scale-95 transition">
+                  <span>📢 #VGGC12th 最新</span>
+                  <svg class="w-3 h-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                </a>
+              </div>
             </div>
 
             <!-- リスト本体 (画像なしレイアウト) -->
@@ -395,13 +417,31 @@
                         </span>
                       </div>
                     </div>
-                    <div class="flex gap-2">
-                       <button v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length" @click="openDetails(circle)" class="mt-1 flex items-center gap-1 text-[10px] bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200 transition font-bold border border-gray-200">
+                    <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                       <button v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length" @click="openDetails(circle)" class="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200 transition font-bold border border-gray-200 shadow-sm active:scale-95">
                          お品書き
                        </button>
-                       <button v-else disabled class="mt-1 flex items-center gap-1 text-[10px] bg-gray-100 text-gray-400 px-2 py-1 rounded border border-gray-200 cursor-not-allowed">
+                       <button v-else disabled class="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-400 px-2 py-1 rounded border border-gray-200 cursor-not-allowed">
                          未公開
                        </button>
+
+                       <!-- ★ 公式速報 (サークル主の完売・在庫ツイート) -->
+                       <a :href="getCircleOfficialSearchUrl(circle)" target="_blank"
+                          class="flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 hover:bg-blue-100 px-2 py-1 rounded font-bold border border-blue-200 transition shadow-sm active:scale-95"
+                          title="サークル主の最新ツイートから完売・在庫・列情報を検索">
+                         <span class="text-amber-500 font-bold">⚡</span>
+                         <span>公式速報</span>
+                         <svg class="w-2.5 h-2.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                       </a>
+
+                       <!-- ★ 口コミ・目撃情報 (参加者の完売・列ツイート) -->
+                       <a :href="getCirclePublicSearchUrl(circle)" target="_blank"
+                          class="flex items-center gap-1 text-[10px] bg-gray-50 text-gray-600 hover:bg-gray-100 px-2 py-1 rounded font-bold border border-gray-200 transition shadow-sm active:scale-95"
+                          title="参加者の目撃ツイートから完売や最後尾情報を検索">
+                         <span>👥</span>
+                         <span>目撃/列</span>
+                         <svg class="w-2.5 h-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                       </a>
                     </div>
                     
                     <div class="flex flex-wrap items-center gap-2 mt-2">
@@ -536,6 +576,7 @@ import { STORAGE_KEY, vspoDict, priorityColors } from './constants';
 import { calculateCurrencyBreakdown } from './utils/currency';
 import { getEventCountdown, checkScheduleActive } from './utils/countdown';
 import { getMemberStyle, getMemberMark } from './utils/memberStyle';
+import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl, getEventLiveSearchUrl } from './utils/xSearch';
 
 import BudgetModal from './components/BudgetModal.vue';
 import MemoDashboard from './components/MemoDashboard.vue';
