@@ -203,7 +203,9 @@
             
             <!-- 検索タブのサークル一覧 (画像なし、バッジ中心のレイアウト) -->
             <ul class="px-2 md:px-4 mt-2 space-y-2">
-              <li v-for="circle in filteredCircles" :key="circle.circle_id" class="p-4 bg-white rounded-xl shadow-sm border border-gray-100 relative">
+              <li v-for="circle in filteredCircles" :key="circle.circle_id" 
+                  class="p-4 rounded-xl shadow-sm border relative transition-colors"
+                  :class="isCircleAbsent(circle.circle_id) ? 'bg-rose-50/40 border-rose-200' : 'bg-white border-gray-100'">
                 
                 <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" 
                         class="absolute top-4 right-4 p-2 rounded-full transition-all active:scale-90 flex items-center justify-center z-10"
@@ -216,10 +218,15 @@
 
                 <div class="flex flex-col gap-3 pr-12">
                   <div class="flex flex-col gap-1.5">
-                    <!-- サークル番号 -->
-                    <div class="flex">
-                      <span class="inline-block px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded shadow-sm border border-blue-200">
+                    <!-- サークル番号 ＆ 不参加バッジ -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="inline-block px-2.5 py-1 text-xs font-bold rounded shadow-sm border"
+                            :class="isCircleAbsent(circle.circle_id) ? 'bg-rose-100 text-rose-800 border-rose-300 line-through' : 'bg-blue-100 text-blue-800 border-blue-200'">
                         {{ circle.space_sym }}-{{ circle.space_num }}
+                      </span>
+                      <span v-if="isCircleAbsent(circle.circle_id)" class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-rose-600 text-white text-xs font-bold rounded-md shadow-sm">
+                        <span>🚫</span>
+                        <span>当日不参加</span>
                       </span>
                     </div>
                     <!-- ★ DBから取得したメンバータグ -->
@@ -237,7 +244,10 @@
                     </div>
                   </div>
                   <div>
-                    <h3 class="font-bold text-lg leading-tight text-gray-900 mb-0.5">{{ circle.circle_name }}</h3>
+                    <h3 class="font-bold text-lg leading-tight mb-0.5"
+                        :class="isCircleAbsent(circle.circle_id) ? 'text-gray-500 line-through decoration-rose-400' : 'text-gray-900'">
+                      {{ circle.circle_name }}
+                    </h3>
                     <p class="text-sm text-gray-500">代表: {{ circle.penname }}</p>
                   </div>
 
@@ -391,7 +401,13 @@
               </div>
               
               <ul class="space-y-3">
-                <li v-for="circle in sortedSavedCircles" :key="circle.circle_id" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition-all duration-300" :class="{'opacity-50 bg-gray-50/80': savedList[circle.circle_id].bought, 'opacity-60 bg-gray-100/90 border-dashed border-gray-300': savedList[circle.circle_id].soldout}">
+                <li v-for="circle in sortedSavedCircles" :key="circle.circle_id" 
+                    class="rounded-xl shadow-sm border overflow-hidden relative transition-all duration-300" 
+                    :class="[
+                      savedList[circle.circle_id].bought ? 'opacity-50 bg-gray-50/80 border-gray-200' : 
+                      savedList[circle.circle_id].soldout ? 'opacity-60 bg-gray-100/90 border-dashed border-gray-300' : 
+                      isCircleAbsent(circle.circle_id) ? 'bg-rose-50/50 border-rose-300' : 'bg-white border-gray-200'
+                    ]">
                   
                   <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" class="absolute top-3 right-3 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors z-10">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -401,8 +417,13 @@
                     <div class="flex flex-col gap-1.5 mb-1">
                       <!-- サークル番号と状態バッジ -->
                       <div class="flex items-center gap-2 flex-wrap">
-                        <span class="inline-block px-2 py-0.5 bg-pink-100 text-pink-800 text-xs font-bold rounded border border-pink-200 shadow-sm">
+                        <span class="inline-block px-2 py-0.5 text-xs font-bold rounded border shadow-sm"
+                              :class="isCircleAbsent(circle.circle_id) ? 'bg-rose-100 text-rose-800 border-rose-300 line-through' : 'bg-pink-100 text-pink-800 border-pink-200'">
                           {{ circle.space_sym }}-{{ circle.space_num }}
+                        </span>
+                        <span v-if="isCircleAbsent(circle.circle_id)" class="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-600 text-white text-xs font-bold rounded shadow-sm">
+                          <span>🚫</span>
+                          <span>当日不参加</span>
                         </span>
                         <span v-if="savedList[circle.circle_id].soldout" class="inline-block px-2 py-0.5 bg-rose-100 text-rose-800 text-xs font-bold rounded border border-rose-300 shadow-sm animate-pulse">
                           💔 完売・スキップ
@@ -427,7 +448,10 @@
                       </div>
                     </div>
                     <div>
-                      <h3 class="font-bold text-base text-gray-900 leading-tight">{{ circle.circle_name }}</h3>
+                      <h3 class="font-bold text-base leading-tight"
+                          :class="isCircleAbsent(circle.circle_id) ? 'text-gray-500 line-through decoration-rose-400' : 'text-gray-900'">
+                        {{ circle.circle_name }}
+                      </h3>
                       <p v-if="circle.penname" class="text-xs text-gray-500 mt-0.5">代表: {{ circle.penname }}</p>
                     </div>
 
@@ -924,13 +948,17 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
             if (supabaseRes && !supabaseRes.error && supabaseRes.data) {
               const infoMap = {};
               supabaseRes.data.forEach(info => {
+                const rawTags = Array.isArray(info.tags) ? info.tags : [];
+                const isAbsent = Boolean(info.is_absent) || rawTags.includes('__ABSENT__') || rawTags.includes('不参加') || rawTags.includes('欠席');
+                const cleanTags = rawTags.filter(t => t !== '__ABSENT__');
                 infoMap[info.circle_id] = {
-                  tags: info.tags || [],
+                  tags: cleanTags,
                   members: info.members || [],
                   oshinagaki_url: info.oshinagaki_url || '',
                   items: Array.isArray(info.items) ? info.items : [],
                   twitter_id: info.twitter_id || '',
-                  staff_twitter: info.staff_twitter || ''
+                  staff_twitter: info.staff_twitter || '',
+                  is_absent: isAbsent
                 };
               });
               circleExtraInfo.value = infoMap;
@@ -944,13 +972,17 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
               .channel('public:circle_info')
               .on('postgres_changes', { event: '*', schema: 'public', table: 'circle_info' }, (payload) => {
                 if (payload.new && payload.new.circle_id) {
+                  const rawTags = Array.isArray(payload.new.tags) ? payload.new.tags : [];
+                  const isAbsent = Boolean(payload.new.is_absent) || rawTags.includes('__ABSENT__') || rawTags.includes('不参加') || rawTags.includes('欠席');
+                  const cleanTags = rawTags.filter(t => t !== '__ABSENT__');
                   circleExtraInfo.value[payload.new.circle_id] = {
-                    tags: payload.new.tags || [],
+                    tags: cleanTags,
                     members: payload.new.members || [],
                     oshinagaki_url: payload.new.oshinagaki_url || '',
                     items: Array.isArray(payload.new.items) ? payload.new.items : [],
                     twitter_id: payload.new.twitter_id || '',
-                    staff_twitter: payload.new.staff_twitter || ''
+                    staff_twitter: payload.new.staff_twitter || '',
+                    is_absent: isAbsent
                   };
                 }
               })
@@ -961,6 +993,12 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
             loading.value = false; 
           }
         });
+
+        const isCircleAbsent = (circleId) => {
+          const extra = circleExtraInfo.value[circleId];
+          if (!extra) return false;
+          return Boolean(extra.is_absent) || (extra.tags || []).includes('__ABSENT__') || (extra.tags || []).includes('不参加') || (extra.tags || []).includes('欠席');
+        };
 
         const loadSharedList = async (id) => {
           const { data } = await supabaseClient.from('shopping_lists').select('list_data, is_public').eq('id', id).single();
@@ -1074,7 +1112,8 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           sortedSavedCircles.value.forEach(c => {
             const data = savedList.value[c.circle_id];
             let status = '[未]';
-            if (data.soldout) status = '[完売]';
+            if (isCircleAbsent(c.circle_id)) status = '[不参加]';
+            else if (data.soldout) status = '[完売]';
             else if (data.bought) status = '[済]';
             const prio = data.priority ? `(${data.priority})` : '';
             const price = data.price ? ` ¥${data.price}` : '';
@@ -1201,7 +1240,9 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
           const tags = new Set();
           const members = new Set();
           Object.values(circleExtraInfo.value).forEach(info => {
-            (info.tags || []).forEach(t => tags.add(t));
+            (info.tags || []).forEach(t => {
+              if (t !== '__ABSENT__') tags.add(t);
+            });
             (info.members || []).forEach(m => members.add(m));
           });
           return { tags: Array.from(tags).sort(), members: Array.from(members).sort() };

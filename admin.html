@@ -275,6 +275,13 @@
               <span>📦 商品登録済</span>
               <span class="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-full text-[10px]">{{ circlesWithItemsCount }}</span>
             </button>
+
+            <button @click="activeFilter = 'absent'" 
+                    class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 shadow-sm"
+                    :class="activeFilter === 'absent' ? 'bg-rose-700 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'">
+              <span>🚫 当日不参加</span>
+              <span class="px-1.5 py-0.2 rounded-full text-[10px]" :class="activeFilter === 'absent' ? 'bg-rose-900 text-white' : 'bg-rose-100 text-rose-700'">{{ countAbsent }}</span>
+            </button>
           </div>
 
         </div>
@@ -286,28 +293,49 @@
           </div>
 
           <div v-for="circle in filteredCircles" :key="circle.circle_id" :data-circle-id="circle.circle_id"
-               class="bg-white border rounded-2xl p-3.5 sm:p-4 transition-all shadow-sm relative overflow-hidden flex flex-col justify-between"
+               class="border rounded-2xl p-3.5 sm:p-4 transition-all shadow-sm relative overflow-hidden flex flex-col justify-between"
                :class="[
-                 unsavedSet.has(circle.circle_id) ? 'border-amber-400 ring-2 ring-amber-200 bg-amber-50/10' : 'border-slate-200 hover:border-slate-300',
+                 editData[circle.circle_id]?.isAbsent ? 'bg-rose-50/40 border-rose-300' : 'bg-white',
+                 unsavedSet.has(circle.circle_id) ? 'border-amber-400 ring-2 ring-amber-200 bg-amber-50/10' : (!editData[circle.circle_id]?.isAbsent ? 'border-slate-200 hover:border-slate-300' : ''),
                  saveStatus[circle.circle_id] === 'saved' ? 'border-emerald-500 ring-2 ring-emerald-200' : ''
                ]">
             
-            <!-- 上段: 配置、サークル名、代表者、商品登録 ＆ 保存ボタン -->
+            <!-- 上段: 配置、サークル名、代表者、不参加トグル、商品登録 ＆ 保存ボタン -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
               <div class="flex items-center gap-2.5 min-w-0">
-                <span class="px-2.5 py-1 bg-blue-100 text-blue-900 text-xs sm:text-sm font-black rounded-lg border border-blue-200 shadow-sm shrink-0">
+                <span class="px-2.5 py-1 text-xs sm:text-sm font-black rounded-lg border shadow-sm shrink-0"
+                      :class="editData[circle.circle_id]?.isAbsent ? 'bg-rose-100 text-rose-900 border-rose-300 line-through' : 'bg-blue-100 text-blue-900 border-blue-200'">
                   {{ circle.space_sym }}-{{ circle.space_num }}
                 </span>
                 <div class="min-w-0">
-                  <h3 class="font-bold text-sm sm:text-base text-slate-900 leading-tight truncate" :title="circle.circle_name">
-                    {{ circle.circle_name }}
-                  </h3>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <h3 class="font-bold text-sm sm:text-base leading-tight truncate"
+                        :class="editData[circle.circle_id]?.isAbsent ? 'text-rose-950 line-through decoration-rose-500/70' : 'text-slate-900'"
+                        :title="circle.circle_name">
+                      {{ circle.circle_name }}
+                    </h3>
+                    <span v-if="editData[circle.circle_id]?.isAbsent" class="px-2 py-0.5 bg-rose-600 text-white text-[10px] font-black rounded-md shadow-sm shrink-0">
+                      🚫 当日不参加
+                    </span>
+                  </div>
                   <p class="text-[11px] text-slate-500 truncate">代表: {{ circle.penname }}</p>
                 </div>
               </div>
 
               <!-- アクションボタンエリア -->
-              <div class="flex items-center gap-2 shrink-0">
+              <div class="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap">
+                <!-- 当日不参加トグルボタン -->
+                <button @click="toggleAbsent(circle.circle_id)"
+                        type="button"
+                        title="当日不参加（欠席）マークのON/OFFを切り替えます"
+                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 border shadow-sm active:scale-95"
+                        :class="editData[circle.circle_id]?.isAbsent
+                          ? 'bg-rose-600 border-rose-700 text-white hover:bg-rose-700 ring-2 ring-rose-200'
+                          : 'bg-white border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200'">
+                  <span>🚫</span>
+                  <span>{{ editData[circle.circle_id]?.isAbsent ? '不参加中' : '不参加' }}</span>
+                </button>
+
                 <!-- 商品登録ボタン -->
                 <button @click="openItemsModal(circle)" 
                         class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border shadow-sm active:scale-95"
@@ -1087,7 +1115,8 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
                 tagsInput: '', 
                 membersInput: '', 
                 url: '', 
-                items: [] 
+                items: [],
+                isAbsent: false
               };
             });
 
@@ -1096,7 +1125,11 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
             if (!error && dbData) {
               dbData.forEach(info => {
                 if (initialEditData[info.circle_id]) {
-                  initialEditData[info.circle_id].tagsInput = (info.tags || []).join(', ');
+                  const rawTags = Array.isArray(info.tags) ? info.tags : [];
+                  const isAbsent = Boolean(info.is_absent) || rawTags.includes('__ABSENT__') || rawTags.includes('不参加') || rawTags.includes('欠席');
+                  const cleanTags = rawTags.filter(t => t !== '__ABSENT__');
+                  initialEditData[info.circle_id].isAbsent = isAbsent;
+                  initialEditData[info.circle_id].tagsInput = cleanTags.join(', ');
                   initialEditData[info.circle_id].membersInput = (info.members || []).join(', ');
                   initialEditData[info.circle_id].url = info.oshinagaki_url || '';
                   initialEditData[info.circle_id].items = Array.isArray(info.items) ? info.items : [];
@@ -1236,6 +1269,16 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           return Object.values(editData.value).filter(d => d.items && d.items.length > 0).length;
         });
 
+        const countAbsent = computed(() => {
+          return Object.values(editData.value).filter(d => d && d.isAbsent).length;
+        });
+
+        const toggleAbsent = (circleId) => {
+          if (!editData.value[circleId]) return;
+          editData.value[circleId].isAbsent = !editData.value[circleId].isAbsent;
+          markDirty(circleId);
+        };
+
         const filteredCircles = computed(() => {
           const q = (searchQuery.value || '').trim().toLowerCase();
           const block = selectedBlock.value;
@@ -1255,6 +1298,8 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
               if (!d.url || (d.items && d.items.length > 0)) return false;
             } else if (activeFilter.value === 'has_items') {
               if (!d.items || d.items.length === 0) return false;
+            } else if (activeFilter.value === 'absent') {
+              if (!d.isAbsent) return false;
             }
 
             if (!q) return true;
@@ -1364,7 +1409,10 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
         // サークル情報のSupabase保存
         const saveCircle = async (circleId, silent = false) => {
           const input = editData.value[circleId];
-          const tagsArray = (input.tagsInput || '').split(',').map(s => s.trim()).filter(s => s.length > 0);
+          const tagsArray = (input.tagsInput || '').split(',').map(s => s.trim()).filter(s => s.length > 0 && s !== '__ABSENT__');
+          if (input.isAbsent) {
+            tagsArray.push('__ABSENT__');
+          }
           const membersArray = (input.membersInput || '').split(',').map(s => s.trim()).filter(s => s.length > 0);
           const currentItems = input.items || [];
           const authorTwitterClean = (input.twitterId || '').trim();
@@ -1432,7 +1480,7 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           availableBlocks, activeFilter, unsavedSet, hasUnsavedChanges, isBulkSaving,
           showShortcutsHelp, toasts, showToast, copySqlToClipboard, navigateCircles,
           countHasAuthorTwitter, countHasStaffTwitter, countHasUrl, percentUrl, percentItems,
-          countNeedsItems, circlesWithItemsCount,
+          countNeedsItems, circlesWithItemsCount, countAbsent, toggleAbsent,
           filteredCircles, cleanTwitterId, parseAccounts, parseHandles, markDirty, onUrlInput, 
           extractTwitterIdFromUrl, extractAllTwitterIds, saveAllDirty,
           activeCircleForItems, itemInputMode, tempItems, bulkText, isSavingItems,

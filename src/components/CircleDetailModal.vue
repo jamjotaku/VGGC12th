@@ -4,17 +4,23 @@
       <div class="bg-white rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-2xl md:max-w-4xl lg:max-w-5xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
         
         <!-- ヘッダー -->
-        <div class="p-3.5 md:p-5 border-b bg-white flex justify-between items-start relative z-10 shadow-sm">
+        <div class="p-3.5 md:p-5 border-b bg-white flex justify-between items-start relative z-10 shadow-sm"
+             :class="isAbsent ? 'bg-red-50/40' : 'bg-white'">
           <div>
-            <div class="flex items-center gap-2 mb-1">
-              <span class="inline-block px-2.5 py-0.5 bg-blue-100 text-blue-800 text-xs font-bold rounded border border-blue-200 shadow-sm">
+            <div class="flex items-center flex-wrap gap-2 mb-1">
+              <span class="inline-block px-2.5 py-0.5 text-xs font-bold rounded border shadow-sm"
+                    :class="isAbsent ? 'bg-gray-200 text-gray-500 border-gray-300 line-through' : 'bg-blue-100 text-blue-800 border-blue-200'">
                 {{ circle.space_sym }}-{{ circle.space_num }}
+              </span>
+              <span v-if="isAbsent" class="text-[11px] bg-red-600 text-white border border-red-700 px-2.5 py-0.5 rounded-full font-bold shadow-sm">
+                🚫 当日不参加
               </span>
               <span v-if="extra?.items?.length" class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
                 お品書き登録済 ({{ extra.items.length }}品)
               </span>
             </div>
-            <h2 class="font-bold text-lg md:text-2xl text-gray-900 leading-tight">{{ circle.circle_name }}</h2>
+            <h2 class="font-bold text-lg md:text-2xl leading-tight"
+                :class="isAbsent ? 'text-gray-400 line-through' : 'text-gray-900'">{{ circle.circle_name }}</h2>
             <p class="text-xs md:text-sm text-gray-500 mt-0.5">代表: {{ circle.penname }}</p>
           </div>
           <button @click="$emit('close')" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition flex-shrink-0">
@@ -39,6 +45,13 @@
         
         <!-- コンテンツ（スクロール領域：PCは2カラムグリッド） -->
         <div class="p-3.5 md:p-6 overflow-y-auto flex-1 bg-gray-50/70 space-y-5">
+          <!-- 当日不参加アラートバナー -->
+          <div v-if="isAbsent" class="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2.5 text-red-800 shadow-sm">
+            <span class="text-lg shrink-0">🚫</span>
+            <div class="text-xs md:text-sm font-bold leading-snug">
+              このサークルは<span class="underline decoration-red-400">当日不参加（欠席）</span>として登録されています。
+            </div>
+          </div>
           
           <div class="flex flex-col md:grid md:grid-cols-12 md:gap-6">
             
@@ -158,7 +171,7 @@
                     <span>{{ getMemberMark(member) }}</span>
                     {{ member }}
                   </span>
-                  <span v-for="tag in (extra?.tags || [])" :key="tag" class="text-xs px-2.5 py-1 bg-white text-gray-700 rounded-full border border-gray-200 shadow-sm font-bold">{{ tag }}</span>
+                  <span v-for="tag in (extra?.tags || []).filter(t => t !== '__ABSENT__')" :key="tag" class="text-xs px-2.5 py-1 bg-white text-gray-700 rounded-full border border-gray-200 shadow-sm font-bold">{{ tag }}</span>
                 </div>
               </div>
 
@@ -376,6 +389,12 @@ const mobileModalTab = ref('items');
 const extra = computed(() => {
   if (!props.circle) return null;
   return props.circleExtraInfo[props.circle.circle_id] || null;
+});
+
+const isAbsent = computed(() => {
+  if (!extra.value) return false;
+  const tags = extra.value.tags || [];
+  return Boolean(extra.value.is_absent) || tags.includes('__ABSENT__') || tags.includes('不参加') || tags.includes('欠席');
 });
 
 // サークル主X (合同サークルの複数人にも対応、表示名優先)
