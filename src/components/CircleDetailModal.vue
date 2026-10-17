@@ -8,10 +8,12 @@
              :class="isAbsent ? 'bg-red-50/40' : 'bg-white'">
           <div>
             <div class="flex items-center flex-wrap gap-2 mb-1">
-              <span class="inline-block px-2.5 py-0.5 text-xs font-bold rounded border shadow-sm"
-                    :class="isAbsent ? 'bg-gray-200 text-gray-500 border-gray-300 line-through' : 'bg-blue-100 text-blue-800 border-blue-200'">
-                {{ circle.space_sym }}-{{ circle.space_num }}
-              </span>
+              <button @click="$emit('jumpToMap', circle); $emit('close')"
+                      title="タップして会場マップで位置を確認"
+                      class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-extrabold rounded-lg border shadow-sm transition active:scale-95 cursor-pointer"
+                      :class="isAbsent ? 'bg-gray-200 text-gray-500 border-gray-300 line-through' : 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700'">
+                <span>📍 {{ circle.space_sym }}-{{ circle.space_num }}</span>
+              </button>
               <span v-if="isAbsent" class="text-[11px] bg-red-600 text-white border border-red-700 px-2.5 py-0.5 rounded-full font-bold shadow-sm">
                 🚫 当日不参加
               </span>
@@ -23,21 +25,21 @@
                 :class="isAbsent ? 'text-gray-400 line-through' : 'text-gray-900'">{{ circle.circle_name }}</h2>
             <p class="text-xs md:text-sm text-gray-500 mt-0.5">代表: {{ circle.penname }}</p>
           </div>
-          <button @click="$emit('close')" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition flex-shrink-0">
+          <button @click="$emit('close')" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition flex-shrink-0 cursor-pointer">
             <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
         </div>
 
-        <!-- スマホ用タブ切り替え（商品登録がある場合のみ表示） -->
-        <div v-if="extra?.items?.length" class="flex border-b text-xs font-bold bg-gray-50 md:hidden">
+        <!-- スマホ用タブ切り替え（商品登録とお品書きURLの両方がある場合のみ表示） -->
+        <div v-if="extra?.items?.length && extra?.oshinagaki_url" class="flex border-b text-xs font-bold bg-gray-50 md:hidden">
           <button @click="mobileModalTab = 'items'" 
-                  class="flex-1 py-2.5 text-center transition border-b-2 flex items-center justify-center gap-1.5"
+                  class="flex-1 py-2.5 text-center transition border-b-2 flex items-center justify-center gap-1.5 cursor-pointer"
                   :class="mobileModalTab === 'items' ? 'border-amber-500 text-amber-800 bg-white font-bold' : 'border-transparent text-gray-500 hover:text-gray-700'">
             <span>📋 頒布物メニュー</span>
             <span class="bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded-full text-[10px]">{{ extra.items.length }}</span>
           </button>
           <button @click="mobileModalTab = 'tweet'" 
-                  class="flex-1 py-2.5 text-center transition border-b-2 flex items-center justify-center gap-1.5"
+                  class="flex-1 py-2.5 text-center transition border-b-2 flex items-center justify-center gap-1.5 cursor-pointer"
                   :class="mobileModalTab === 'tweet' ? 'border-amber-500 text-amber-800 bg-white font-bold' : 'border-transparent text-gray-500 hover:text-gray-700'">
             <span>📸 お品書き画像 (X)</span>
           </button>
@@ -53,30 +55,34 @@
             </div>
           </div>
           
-          <div class="flex flex-col md:grid md:grid-cols-12 md:gap-6">
+          <div class="flex flex-col md:grid md:grid-cols-12 md:gap-6 gap-4">
             
-            <!-- 左カラム: お品書きポスト埋め込み -->
-            <div class="md:col-span-6 lg:col-span-7 space-y-3"
-                 :class="{'hidden md:block': extra?.items?.length && mobileModalTab !== 'tweet'}">
+            <!-- 左カラム: お品書きポスト埋め込み (スマホでお品書き未登録時は下部に回してリンク・メニューを最優先表示) -->
+            <div class="md:col-span-6 lg:col-span-7 space-y-2.5"
+                 :class="[
+                   (extra?.items?.length && extra?.oshinagaki_url && mobileModalTab !== 'tweet') ? 'hidden md:block' : '',
+                   (!extra?.oshinagaki_url) ? 'order-2 md:order-1' : 'order-1'
+                 ]">
               
               <div class="flex justify-between items-center px-1">
-                <span class="text-xs font-bold text-gray-500 flex items-center gap-1">
-                  <svg class="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                <span class="text-xs font-bold text-gray-600 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 text-gray-500" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
                   公式X お品書きポスト
                 </span>
                 <a v-if="extra?.oshinagaki_url" 
                    :href="extra.oshinagaki_url" target="_blank" 
-                   class="text-[11px] text-blue-600 hover:underline flex items-center gap-0.5">
+                   class="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-0.5">
                   <span>Xで直接開く</span>
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                 </a>
               </div>
 
               <!-- お品書き埋め込みコンテナ -->
-              <div class="bg-white border border-gray-200 rounded-2xl p-3 md:p-4 min-h-[320px] flex items-center justify-center text-gray-400 flex-col shadow-inner w-full relative">
+              <div class="bg-white border border-gray-200 rounded-2xl p-3 md:p-4 flex items-center justify-center text-gray-400 flex-col shadow-inner w-full relative"
+                   :class="extra?.oshinagaki_url ? 'min-h-[300px]' : 'min-h-[140px] md:min-h-[260px]'">
                 <!-- オフライン案内（圏外時） -->
-                <div v-if="!isOnline" class="p-6 text-center space-y-3">
-                  <div class="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto text-xl shadow-sm">
+                <div v-if="!isOnline" class="p-4 text-center space-y-3">
+                  <div class="w-11 h-11 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto text-lg shadow-sm">
                     📡
                   </div>
                   <div>
@@ -104,10 +110,15 @@
                   <div v-show="extra?.oshinagaki_url" id="tweet-container" class="w-full flex justify-center"></div>
                   
                   <!-- URL未登録時 -->
-                  <div v-show="!extra?.oshinagaki_url" class="text-center text-gray-400 py-10">
-                    <svg class="w-10 h-10 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    <p class="text-xs font-bold text-gray-500 mb-0.5">お品書き未登録</p>
-                    <p class="text-[10px]">※公式Xのポストが登録されると表示されます</p>
+                  <div v-show="!extra?.oshinagaki_url" class="text-center text-gray-500 py-4 space-y-2.5">
+                    <div class="flex flex-col items-center">
+                      <svg class="w-8 h-8 text-gray-300 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                      <p class="text-xs font-bold text-gray-600">お品書きポストはまだ登録されていません</p>
+                    </div>
+                    <a :href="getCircleOfficialSearchUrl(circle, extra)" target="_blank"
+                       class="inline-flex items-center gap-1.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-xl font-bold transition shadow-xs">
+                      <span>🔍 公式Xの最新ポスト・お品書きを検索</span>
+                    </a>
                   </div>
                 </template>
               </div>
@@ -116,7 +127,10 @@
 
             <!-- 右カラム: メンバー・リンク ＆ 頒布物メニュー -->
             <div class="md:col-span-6 lg:col-span-5 space-y-4"
-                 :class="{'hidden md:block': extra?.items?.length && mobileModalTab !== 'items'}">
+                 :class="[
+                   (extra?.items?.length && extra?.oshinagaki_url && mobileModalTab !== 'items') ? 'hidden md:block' : '',
+                   (!extra?.oshinagaki_url) ? 'order-1 md:order-2' : 'order-2'
+                 ]">
               
               <!-- 外部リンク＆メンバータグ -->
               <div class="space-y-2">
@@ -382,7 +396,7 @@ const props = defineProps({
   }
 });
 
-defineEmits(['close', 'toggleSave', 'toggleBought', 'toggleSoldout', 'toggleItem', 'openCircle']);
+defineEmits(['close', 'toggleSave', 'toggleBought', 'toggleSoldout', 'toggleItem', 'openCircle', 'jumpToMap']);
 
 const mobileModalTab = ref('items');
 

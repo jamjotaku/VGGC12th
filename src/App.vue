@@ -1,9 +1,8 @@
 <template>
-<div class="font-sans bg-gray-50 text-gray-900 min-h-screen flex flex-col pt-14 pb-20 md:pb-0">
+<div class="font-sans bg-gray-50 text-gray-900 h-screen flex flex-col pt-12 md:pt-11 pb-14 md:pb-0 overflow-hidden">
 
-    
     <!-- ナビゲーションバー -->
-    <nav class="bg-white shadow-sm border-b px-3 md:px-4 py-2 md:py-3 flex justify-between items-center z-20 flex-shrink-0">
+    <nav class="bg-white shadow-sm border-b px-3 md:px-4 py-2 md:py-2.5 flex justify-between items-center z-20 flex-shrink-0">
       <div class="font-bold text-base md:text-lg flex items-center gap-2">
         VGGC 12th 
         <span v-if="isReadOnly" class="text-[10px] md:text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full font-bold">閲覧専用</span>
@@ -15,17 +14,17 @@
       </div>
       <div class="flex items-center gap-2 md:gap-3">
         <!-- ヘルプボタン -->
-        <button @click="showHelpModal = true" class="p-1 md:p-1.5 text-gray-500 hover:bg-gray-100 rounded-full transition" title="ヘルプ・免責事項">
+        <button @click="showHelpModal = true" class="p-1 md:p-1.5 text-gray-500 hover:bg-gray-100 rounded-full transition cursor-pointer" title="ヘルプ・免責事項">
           <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </button>
 
-        <button v-if="isReadOnly" @click="exitReadOnly" class="text-xs md:text-sm bg-gray-800 text-white px-2 md:px-3 py-1.5 rounded-lg hover:bg-gray-700 transition">
+        <button v-if="isReadOnly" @click="exitReadOnly" class="text-xs md:text-sm bg-gray-800 text-white px-2 md:px-3 py-1.5 rounded-lg hover:bg-gray-700 transition cursor-pointer">
           <span class="hidden md:inline">自分のリストへ戻る</span>
           <span class="md:hidden">戻る</span>
         </button>
         
         <template v-if="!user && !isReadOnly">
-          <button @click="showAuthModal = true" class="text-xs md:text-sm bg-blue-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-sm flex items-center gap-1">
+          <button @click="showAuthModal = true" class="text-xs md:text-sm bg-blue-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-sm flex items-center gap-1 cursor-pointer">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
             <span class="hidden sm:inline">ログイン / 同期</span>
             <span class="sm:hidden">ログイン</span>
@@ -46,11 +45,11 @@
                 </span>
               </template>
             </div>
-            <button @click="showShareModal = true" class="text-xs md:text-sm bg-pink-50 text-pink-600 border border-pink-200 p-1.5 md:px-3 md:py-1.5 rounded-lg hover:bg-pink-100 transition flex items-center gap-1 font-bold" title="共有">
+            <button @click="showShareModal = true" class="text-xs md:text-sm bg-pink-50 text-pink-600 border border-pink-200 p-1.5 md:px-3 md:py-1.5 rounded-lg hover:bg-pink-100 transition flex items-center gap-1 font-bold cursor-pointer" title="共有">
               <svg class="h-4 w-4 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
               <span class="hidden md:inline">共有</span>
             </button>
-            <button @click="signOut" class="text-gray-500 hover:text-gray-800 p-1.5 md:p-0 transition flex items-center gap-1" title="ログアウト">
+            <button @click="signOut" class="text-gray-500 hover:text-gray-800 p-1.5 md:p-0 transition flex items-center gap-1 cursor-pointer" title="ログアウト">
               <svg class="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
               <span class="text-xs underline hidden md:block">ログアウト</span>
             </button>
@@ -63,29 +62,87 @@
     <EventCountdownBar :countdown="eventCountdown" :is-current-schedule="isCurrentSchedule" />
 
     <!-- メインレイアウト -->
-    <div class="flex-1 flex overflow-hidden bg-gray-100">
+    <div class="flex-1 flex overflow-hidden bg-gray-100 min-h-0">
       
       <!-- =========================================
-           左側：マップエリア (PC専用)
+           左側：マップ ＆ クイックナビエリア (PC専用・マップ表示領域最大化)
       ========================================== -->
-      <div class="hidden md:flex w-5/12 lg:w-1/2 flex-col bg-white border-r shadow-sm overflow-y-auto relative">
-        <div class="p-6 space-y-6">
-          <div>
-            <div class="flex justify-between items-end mb-2">
-              <h1 class="text-xl font-bold text-gray-800">会場マップ</h1>
-              <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">📍ピンをドラッグして現在地をメモ</span>
+      <div class="hidden md:flex w-5/12 lg:w-[44%] xl:w-[42%] flex-col bg-white border-r border-gray-200 shadow-sm h-full overflow-hidden p-4 gap-3">
+        <!-- マップヘッダー -->
+        <div class="flex justify-between items-center shrink-0">
+          <div class="flex items-center gap-2 min-w-0">
+            <h1 class="text-base font-extrabold text-gray-800 flex items-center gap-1.5 shrink-0">
+              <span>🗺️</span>
+              <span>会場マップ</span>
+            </h1>
+            <span v-if="targetSpace" class="text-xs font-bold bg-pink-100 text-pink-800 border border-pink-200 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs truncate">
+              <span class="truncate">📍 {{ targetSpace }}</span>
+              <button @click="targetSpace = null" class="hover:text-pink-950 ml-0.5 cursor-pointer">×</button>
+            </span>
+          </div>
+          <span class="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md font-medium shrink-0">📍ドラッグで現在地</span>
+        </div>
+
+        <!-- PC用マップコンテナ (flex-1で残り高さを最大限活用) -->
+        <div class="map-container shadow-inner relative flex-1 min-h-[260px]">
+          <div class="absolute bottom-3 right-3 flex flex-col gap-1.5 z-20">
+            <button @click="mapScale = Math.min( +(mapScale + 0.25).toFixed(2), 2.5)" class="w-9 h-9 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="拡大">＋</button>
+            <button @click="mapScale = 1.0" class="w-9 h-7 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-[10px] text-gray-600 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="リセット">{{ Math.round(mapScale * 100) }}%</button>
+            <button @click="mapScale = Math.max( +(mapScale - 0.25).toFixed(2), 0.5)" class="w-9 h-9 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="縮小">－</button>
+          </div>
+          <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
+            <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
+            <!-- 現在地・ターゲットピン -->
+            <div class="draggable-pin select-none flex flex-col items-center"
+                 :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }"
+                 @mousedown.stop="startDrag"
+                 @touchstart.stop="startDrag">
+              <div v-if="targetSpace" class="mb-0.5 px-2 py-0.5 bg-gray-900/90 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20">
+                {{ targetSpace }}
+              </div>
+              <span class="text-2xl leading-none">📍</span>
             </div>
-            <!-- PC用マップコンテナ -->
-            <div class="map-container shadow-inner relative">
-              
-              <div class="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
-                <button @click="mapScale = Math.min(mapScale + 0.3, 2.5)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 hover:bg-gray-50 transition" title="拡大">＋</button>
-                <button @click="mapScale = Math.max(mapScale - 0.3, 0.4)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 hover:bg-gray-50 transition" title="縮小">－</button>
-              </div>
-              <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
-                <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
-                
-              </div>
+          </div>
+        </div>
+
+        <!-- PC用 配置ブロック絞り込み ＆ 会場速報 (コンパクト統合パネル) -->
+        <div class="bg-gray-50 rounded-xl p-3 border border-gray-200/80 shrink-0 space-y-2.5">
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <h2 class="text-[11px] font-extrabold text-gray-700 flex items-center gap-1">
+                <span>🧭</span>
+                <span>配置ブロックで絞り込み（マップ連動）</span>
+              </h2>
+              <button v-if="filterBlock" @click="selectBlockAndFocusMap(filterBlock)" class="text-[11px] text-blue-600 font-bold hover:underline cursor-pointer">
+                解除 ({{ filterBlock }})
+              </button>
+            </div>
+            <div class="flex flex-wrap gap-1">
+              <button v-for="block in blocks" :key="'pc_b_'+block" @click="selectBlockAndFocusMap(block)"
+                      class="min-w-[32px] h-7 px-2 rounded-lg text-xs font-extrabold transition-all active:scale-95 cursor-pointer"
+                      :class="filterBlock === block ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-300' : 'bg-white text-gray-700 border border-gray-200 hover:bg-blue-50 hover:border-blue-200'">
+                {{ block }}
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-gray-200/70 flex items-center justify-between gap-2">
+            <span class="text-[11px] font-extrabold text-slate-700 flex items-center gap-1 shrink-0">
+              <span class="text-amber-500">⚡</span>会場X速報:
+            </span>
+            <div class="grid grid-cols-3 gap-1.5 flex-1">
+              <a :href="getEventLiveSearchUrl('soldout')" target="_blank" 
+                 class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition">
+                <span>💔 完売</span>
+              </a>
+              <a :href="getEventLiveSearchUrl('line')" target="_blank" 
+                 class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition">
+                <span>🚶 列情報</span>
+              </a>
+              <a :href="getEventLiveSearchUrl('all')" target="_blank" 
+                 class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition">
+                <span>📢 #VGGC12th</span>
+              </a>
             </div>
           </div>
         </div>
@@ -94,19 +151,25 @@
       <!-- =========================================
            右側：メインコンテンツ (スマホでは全画面)
       ========================================== -->
-      <div class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50 relative">
+      <div class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50 relative min-w-0">
         
         <!-- PC専用タブヘッダー -->
-        <div class="hidden md:flex border-b bg-white shadow-sm z-10 flex-shrink-0">
-          <button @click="activeTab = 'search'" :class="activeTab === 'search' ? 'border-blue-500 text-blue-700 bg-blue-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-4 border-b-2 font-bold text-sm transition-colors">🔍 サークル検索</button>
-          <button @click="activeTab = 'list'" :class="activeTab === 'list' ? 'border-pink-500 text-pink-600 bg-pink-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-4 border-b-2 font-bold text-sm transition-colors flex justify-center items-center gap-2">
-            📝 買い物リスト <span class="bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full text-xs shadow-sm">{{ savedCount }}</span>
+        <div class="hidden md:flex border-b bg-white shadow-xs z-10 flex-shrink-0">
+          <button @click="activeTab = 'search'" :class="activeTab === 'search' ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-3 border-b-2 font-extrabold text-sm transition-colors flex justify-center items-center gap-1.5 cursor-pointer">
+            <span>🔍 サークルを探す</span>
+            <span class="text-xs px-2 py-0.5 rounded-full" :class="activeTab === 'search' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'">{{ filteredCircles.length }}</span>
           </button>
-          <button @click="activeTab = 'memo'" :class="activeTab === 'memo' ? 'border-green-500 text-green-700 bg-green-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-4 border-b-2 font-bold text-sm transition-colors">✍️ フリーメモ</button>
+          <button @click="activeTab = 'list'" :class="activeTab === 'list' ? 'border-pink-500 text-pink-600 bg-pink-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-3 border-b-2 font-extrabold text-sm transition-colors flex justify-center items-center gap-2 cursor-pointer">
+            <span>📝 買い物リスト</span>
+            <span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs shadow-xs">{{ savedCount }}</span>
+          </button>
+          <button @click="activeTab = 'memo'" :class="activeTab === 'memo' ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-3 border-b-2 font-extrabold text-sm transition-colors cursor-pointer">
+            ✍️ 準備・フリーメモ
+          </button>
         </div>
 
         <!-- スクロール可能なコンテンツエリア -->
-        <div class="flex-1 overflow-y-auto w-full relative">
+        <div class="flex-1 overflow-y-auto w-full relative min-h-0">
           
           <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-gray-50/80 z-20 backdrop-blur-sm">
             <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -115,30 +178,49 @@
           <!-- =========================================
                [スマホ専用] マップ タブ
           ========================================== -->
-          <div v-show="activeTab === 'map'" class="md:hidden p-4 space-y-4 pb-24">
+          <div v-show="activeTab === 'map'" class="md:hidden p-3 space-y-3 pb-20">
             <div>
-              <div class="flex justify-between items-end mb-2">
-                <h1 class="text-lg font-bold text-gray-800 px-1">会場マップ</h1>
-                <span class="text-[10px] text-gray-500 bg-gray-200 px-2 py-1 rounded">📍ピンをドラッグ</span>
+              <div class="flex justify-between items-center mb-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <h1 class="text-base font-extrabold text-gray-800 px-1 shrink-0">🗺️ 会場マップ</h1>
+                  <span v-if="targetSpace" class="text-[11px] font-bold bg-pink-100 text-pink-800 border border-pink-200 px-2 py-0.5 rounded-full flex items-center gap-1 truncate">
+                    <span class="truncate">📍 {{ targetSpace }}</span>
+                    <button @click="targetSpace = null" class="ml-0.5">×</button>
+                  </span>
+                </div>
+                <span class="text-[10px] text-gray-600 bg-gray-200/80 px-2 py-1 rounded-md font-bold shrink-0">📍ピンをドラッグ</span>
               </div>
-              <div class="map-container shadow-sm border-gray-200 relative">
-                <div class="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
-                  <button @click="mapScale = Math.min(mapScale + 0.3, 2.5)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 transition" title="拡大">＋</button>
-                  <button @click="mapScale = Math.max(mapScale - 0.3, 0.4)" class="w-10 h-10 bg-white/90 shadow-lg rounded-full flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:bg-gray-100 transition" title="縮小">－</button>
+              <div class="map-container shadow-sm border-gray-200 relative max-h-[58vh]">
+                <div class="absolute bottom-3 right-3 flex flex-col gap-1.5 z-20">
+                  <button @click="mapScale = Math.min( +(mapScale + 0.25).toFixed(2), 2.5)" class="w-11 h-11 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-gray-800 font-bold border border-gray-200 active:bg-gray-100 transition" title="拡大">＋</button>
+                  <button @click="mapScale = 1.0" class="w-11 h-8 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-[10px] text-gray-600 font-bold border border-gray-200 active:bg-gray-100 transition" title="リセット">{{ Math.round(mapScale * 100) }}%</button>
+                  <button @click="mapScale = Math.max( +(mapScale - 0.25).toFixed(2), 0.5)" class="w-11 h-11 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-gray-800 font-bold border border-gray-200 active:bg-gray-100 transition" title="縮小">－</button>
                 </div>
                 <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
                   <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
-                  
+                  <!-- 現在地・ターゲットピン -->
+                  <div class="draggable-pin select-none flex flex-col items-center"
+                       :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }"
+                       @mousedown.stop="startDrag"
+                       @touchstart.stop="startDrag">
+                    <div v-if="targetSpace" class="mb-0.5 px-2 py-0.5 bg-gray-900/90 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20">
+                      {{ targetSpace }}
+                    </div>
+                    <span class="text-2xl leading-none">📍</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <h2 class="text-sm font-bold mb-3 text-gray-600">配置ブロックで探す</h2>
+            <div class="bg-white rounded-2xl p-3.5 shadow-xs border border-gray-200/80">
+              <div class="flex justify-between items-center mb-2.5">
+                <h2 class="text-xs font-extrabold text-gray-700">🧭 配置ブロックでサークルを探す</h2>
+                <span class="text-[10px] text-gray-400">タップで検索タブへ</span>
+              </div>
               <div class="flex flex-wrap gap-2">
                 <button v-for="block in blocks" :key="block" @click="toggleBlock(block)"
-                        class="min-w-[40px] px-3 py-2 rounded-lg text-sm font-bold transition-all active:scale-95"
-                        :class="filterBlock === block ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-50 text-gray-600 border border-gray-200'">
+                        class="min-w-[44px] min-h-[42px] px-3 py-1.5 rounded-xl text-sm font-extrabold transition-all active:scale-95"
+                        :class="filterBlock === block ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-300' : 'bg-gray-50 text-gray-700 border border-gray-200'">
                   {{ block }}
                 </button>
               </div>
@@ -148,52 +230,107 @@
           <!-- =========================================
                探す (検索) タブ
           ========================================== -->
-          <div v-show="activeTab === 'search'" class="flex flex-col min-h-full pb-20 md:pb-6">
-            <div class="p-3 md:p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
-              <div class="relative shadow-sm rounded-xl overflow-hidden bg-white border border-gray-200">
+          <div v-show="activeTab === 'search'" class="flex flex-col min-h-full pb-20 md:pb-8">
+            <div class="p-2.5 md:p-3.5 bg-gray-50/95 backdrop-blur-md sticky top-0 z-10 border-b border-gray-200 shadow-xs">
+              <!-- 検索入力ボックス -->
+              <div class="relative shadow-xs rounded-xl overflow-hidden bg-white border border-gray-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                  <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
-                <input type="text" v-model="searchQuery" placeholder="サークル名、商品名（チェキ、新刊など）、配置で検索..." 
-                       class="w-full pl-10 pr-10 py-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input ref="searchInputRef" type="text" v-model="searchQuery" placeholder="サークル名、ペンネーム、商品名、配置(A-01)で検索..." 
+                       class="w-full pl-9 pr-14 py-2 text-base md:text-sm text-gray-900 placeholder-gray-400 focus:outline-none">
                 
-                <button v-if="searchQuery" @click="searchQuery = ''" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
-                  <svg class="w-5 h-5 bg-gray-100 rounded-full p-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-              </div>
-              <div class="mt-2.5 flex items-center justify-between gap-2 px-1">
-                <div v-if="filterBlock" class="flex items-center gap-1.5">
-                  <span class="text-xs font-bold text-gray-500">ブロック:</span>
-                  <span class="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 cursor-pointer shadow-sm" @click="filterBlock = ''">
-                    {{ filterBlock }} <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
-                  </span>
+                <div class="absolute inset-y-0 right-0 pr-2 flex items-center gap-1">
+                  <kbd v-if="!searchQuery" class="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono text-gray-400 bg-gray-100 border border-gray-200 rounded">/</kbd>
+                  <button v-if="searchQuery" @click="searchQuery = ''" class="p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors cursor-pointer" title="クリア">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
                 </div>
-                <div v-else></div>
+              </div>
 
-                <!-- ★ お品書き公開済みのみ 絞り込みトグル -->
-                <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold transition select-none px-2.5 py-1 rounded-lg border shadow-sm shrink-0"
-                       :class="filterHasOshinagaki ? 'bg-amber-50 border-amber-300 text-amber-900 ring-2 ring-amber-300/60 shadow' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'">
-                  <input type="checkbox" v-model="filterHasOshinagaki" class="accent-amber-500 w-3.5 h-3.5">
-                  <span>📸 お品書きありのみ</span>
-                </label>
+              <!-- 検索結果件数 ＆ クイック絞り込みバー -->
+              <div class="mt-2 flex items-center justify-between gap-1.5 px-0.5 flex-wrap">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-xs font-extrabold text-gray-700">
+                    全 <span class="text-blue-600 font-mono text-sm">{{ filteredCircles.length }}</span> 件
+                  </span>
+
+                  <!-- 選択中のフィルターチップ（パネルを閉じていても一目で分かりワンタップ解除可能） -->
+                  <button v-if="filterBlock" @click="selectBlockAndFocusMap(filterBlock, false)"
+                          class="text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-300 px-2 py-0.5 rounded-full flex items-center gap-1 hover:bg-blue-200 transition cursor-pointer">
+                    <span>📍 {{ filterBlock }}</span>
+                    <span>×</span>
+                  </button>
+                  <button v-if="filterMember" @click="filterMember = ''"
+                          class="text-[11px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 hover:opacity-80 transition cursor-pointer"
+                          :style="getMemberStyle(filterMember)">
+                    <span>{{ getMemberMark(filterMember) }}{{ filterMember }}</span>
+                    <span>×</span>
+                  </button>
+                  <button v-if="filterItemTag" @click="filterItemTag = ''"
+                          class="text-[11px] font-bold bg-gray-800 text-white px-2 py-0.5 rounded-full flex items-center gap-1 hover:bg-gray-700 transition cursor-pointer">
+                    <span>#{{ filterItemTag }}</span>
+                    <span>×</span>
+                  </button>
+
+                  <button v-if="searchQuery || filterBlock || filterMember || filterItemTag || filterHasOshinagaki"
+                          @click="resetAllFilters"
+                          class="text-[11px] font-bold text-rose-600 hover:underline px-1 py-0.5 cursor-pointer">
+                    クリア
+                  </button>
+                </div>
+
+                <div class="flex items-center gap-1.5 ml-auto">
+                  <!-- お品書き公開済みのみ 絞り込みトグル -->
+                  <label class="flex items-center gap-1 cursor-pointer text-xs font-bold transition select-none px-2.5 py-1 rounded-xl border shadow-xs shrink-0"
+                         :class="filterHasOshinagaki ? 'bg-amber-100 border-amber-400 text-amber-950 ring-1 ring-amber-300' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
+                    <input type="checkbox" v-model="filterHasOshinagaki" class="accent-amber-600 w-3.5 h-3.5">
+                    <span>📸 お品書き有</span>
+                  </label>
+
+                  <!-- フィルター開閉トグル -->
+                  <button @click="showSearchFilters = !showSearchFilters"
+                          class="px-2.5 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1 shadow-xs cursor-pointer"
+                          :class="(showSearchFilters || filterBlock || filterMember || filterItemTag) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
+                    <span>🌪️ 絞り込み</span>
+                    <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="showSearchFilters ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                  </button>
+                </div>
               </div>
               
-              <!-- ★ 絞り込みフィルター (クロス検索対応) -->
-              <div class="mt-3 space-y-2 px-1">
+              <!-- ★ 絞り込みフィルター群 (ブロック / メンバー / タグ クロス検索対応) -->
+              <div v-show="showSearchFilters" class="mt-2 pt-2 border-t border-gray-200/80 space-y-1.5 px-0.5">
+                <!-- ブロック横スクロール -->
                 <div class="flex items-center gap-2">
-                  <span class="text-[10px] font-bold text-gray-500 w-12 shrink-0">メンバー</span>
-                  <div class="flex gap-2 overflow-x-auto pb-1.5 custom-scrollbar flex-1">
-                    <button @click="filterMember = ''" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap transition shadow-sm" :class="!filterMember ? 'bg-gray-800 text-white border-gray-800' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'">すべて</button>
-                    <button v-for="m in availableTags.members" :key="'fm_'+m" @click="filterMember = filterMember === m ? '' : m" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap border flex items-center gap-1 transition shadow-sm" :style="filterMember === m ? getMemberStyle(m) : {}" :class="filterMember !== m ? 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50' : 'opacity-100 ring-2 ring-offset-1 ring-gray-300'">
-                      {{ getMemberMark(m) }} {{ m }}
+                  <span class="text-[11px] font-bold text-gray-500 w-12 shrink-0">配置</span>
+                  <div class="flex gap-1 overflow-x-auto pb-1 custom-scrollbar flex-1">
+                    <button @click="filterBlock = ''; targetSpace = null" class="px-2 py-0.5 text-xs font-bold rounded-lg whitespace-nowrap transition cursor-pointer" :class="!filterBlock ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'">すべて</button>
+                    <button v-for="b in blocks" :key="'sb_'+b" @click="selectBlockAndFocusMap(b, false)"
+                            class="min-w-[30px] px-2 py-0.5 text-xs font-extrabold rounded-lg whitespace-nowrap border transition cursor-pointer"
+                            :class="filterBlock === b ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
+                      {{ b }}
                     </button>
                   </div>
                 </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-[10px] font-bold text-gray-500 w-12 shrink-0">タグ</span>
-                  <div class="flex gap-2 overflow-x-auto pb-1.5 custom-scrollbar flex-1">
-                    <button @click="filterItemTag = ''" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap transition shadow-sm" :class="!filterItemTag ? 'bg-gray-800 text-white border-gray-800' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'">すべて</button>
-                    <button v-for="t in availableTags.tags" :key="'ft_'+t" @click="filterItemTag = filterItemTag === t ? '' : t" class="px-3 py-1 text-xs font-bold rounded-full whitespace-nowrap border transition shadow-sm" :class="filterItemTag === t ? 'bg-blue-100 border-blue-300 text-blue-800 ring-2 ring-offset-1 ring-blue-200' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'">
+
+                <!-- メンバー横スクロール -->
+                <div v-if="availableTags.members.length" class="flex items-center gap-2">
+                  <span class="text-[11px] font-bold text-gray-500 w-12 shrink-0">メンバー</span>
+                  <div class="flex gap-1 overflow-x-auto pb-1 custom-scrollbar flex-1">
+                    <button @click="filterMember = ''" class="px-2 py-0.5 text-xs font-bold rounded-full whitespace-nowrap transition cursor-pointer" :class="!filterMember ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'">すべて</button>
+                    <button v-for="m in availableTags.members" :key="'fm_'+m" @click="filterMember = filterMember === m ? '' : m" class="px-2.5 py-0.5 text-xs font-bold rounded-full whitespace-nowrap border flex items-center gap-1 transition cursor-pointer" :style="filterMember === m ? getMemberStyle(m) : {}" :class="filterMember !== m ? 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50' : 'opacity-100 ring-2 ring-offset-1 ring-gray-400'">
+                      <span>{{ getMemberMark(m) }}</span>
+                      <span>{{ m }}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- タグ横スクロール -->
+                <div v-if="availableTags.tags.length" class="flex items-center gap-2">
+                  <span class="text-[11px] font-bold text-gray-500 w-12 shrink-0">タグ</span>
+                  <div class="flex gap-1 overflow-x-auto pb-1 custom-scrollbar flex-1">
+                    <button @click="filterItemTag = ''" class="px-2 py-0.5 text-xs font-bold rounded-full whitespace-nowrap transition cursor-pointer" :class="!filterItemTag ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'">すべて</button>
+                    <button v-for="t in availableTags.tags" :key="'ft_'+t" @click="filterItemTag = filterItemTag === t ? '' : t" class="px-2.5 py-0.5 text-xs font-bold rounded-full whitespace-nowrap border transition cursor-pointer" :class="filterItemTag === t ? 'bg-blue-100 border-blue-400 text-blue-900 ring-2 ring-offset-1 ring-blue-200' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
                       {{ t }}
                     </button>
                   </div>
@@ -201,98 +338,129 @@
               </div>
             </div>
             
-            <!-- 検索タブのサークル一覧 (画像なし、バッジ中心のレイアウト) -->
-            <ul class="px-2 md:px-4 mt-2 space-y-2">
+            <!-- 検索結果 0件時のエンプティステート -->
+            <div v-if="filteredCircles.length === 0" class="p-10 text-center my-6">
+              <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🔍</div>
+              <p class="font-bold text-gray-700 text-sm mb-1">条件に一致するサークルが見つかりませんでした</p>
+              <p class="text-xs text-gray-500 mb-4">検索ワードや絞り込み条件を変更してみてください</p>
+              <button @click="resetAllFilters" class="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl shadow hover:bg-blue-700 transition cursor-pointer">
+                すべての絞り込みを解除
+              </button>
+            </div>
+
+            <!-- 検索タブのサークル一覧 (一覧性と視認性を両立したコンパクト3段カード) -->
+            <ul v-else class="px-2.5 md:px-4 mt-2.5 grid grid-cols-1 2xl:grid-cols-2 gap-2.5">
               <li v-for="circle in filteredCircles" :key="circle.circle_id" 
-                  class="p-4 rounded-xl shadow-sm border relative transition-colors"
-                  :class="isCircleAbsent(circle.circle_id) ? 'bg-rose-50/40 border-rose-200' : 'bg-white border-gray-100'">
+                  class="p-3 md:p-3.5 rounded-2xl shadow-xs border relative transition-all hover:shadow-md flex flex-col justify-between"
+                  :class="[
+                    isCircleAbsent(circle.circle_id) ? 'bg-rose-50/40 border-rose-200' : 
+                    savedList[circle.circle_id] ? 'bg-white border-pink-300 ring-1 ring-pink-100' : 'bg-white border-gray-200/90'
+                  ]">
                 
+                <!-- 買い物リスト追加/削除ボタン (44x44px タッチターゲット確保) -->
                 <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" 
-                        class="absolute top-4 right-4 p-2 rounded-full transition-all active:scale-90 flex items-center justify-center z-10"
-                        :class="savedList[circle.circle_id] ? 'bg-pink-500 text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
-                  <svg class="h-6 w-6" :fill="savedList[circle.circle_id] ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path v-if="!savedList[circle.circle_id]" d="M12 4v16m8-8H4" />
-                    <path v-else d="M5 13l4 4L19 7" />
+                        :title="savedList[circle.circle_id] ? '買い物リストから外す' : '買い物リストに追加'"
+                        class="absolute top-3 right-3 w-11 h-11 rounded-full transition-all active:scale-90 flex items-center justify-center z-10 cursor-pointer"
+                        :class="savedList[circle.circle_id] ? 'bg-pink-500 text-white shadow-md hover:bg-pink-600 ring-2 ring-pink-200' : 'bg-gray-100 text-gray-500 hover:bg-pink-50 hover:text-pink-600 border border-gray-200'">
+                  <svg class="h-5 w-5" :fill="savedList[circle.circle_id] ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path v-if="!savedList[circle.circle_id]" stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    <path v-else stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </button>
 
-                <div class="flex flex-col gap-3 pr-12">
-                  <div class="flex flex-col gap-1.5">
-                    <!-- サークル番号 ＆ 不参加バッジ -->
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <span class="inline-block px-2.5 py-1 text-xs font-bold rounded shadow-sm border"
-                            :class="isCircleAbsent(circle.circle_id) ? 'bg-rose-100 text-rose-800 border-rose-300 line-through' : 'bg-blue-100 text-blue-800 border-blue-200'">
-                        {{ circle.space_sym }}-{{ circle.space_num }}
-                      </span>
-                      <span v-if="isCircleAbsent(circle.circle_id)" class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-rose-600 text-white text-xs font-bold rounded-md shadow-sm">
-                        <span>🚫</span>
-                        <span>当日不参加</span>
-                      </span>
-                    </div>
-                    <!-- ★ DBから取得したメンバータグ -->
-                    <div v-if="circleExtraInfo[circle.circle_id]?.members?.length" class="flex flex-wrap gap-1.5">
-                      <span v-for="member in circleExtraInfo[circle.circle_id].members" :key="'m_'+member" class="px-2 py-0.5 text-[10px] font-bold rounded border shadow-sm flex items-center gap-0.5" :style="getMemberStyle(member)">
-                        <span>{{ getMemberMark(member) }}</span>
-                        {{ member }}
-                      </span>
-                    </div>
-                    <!-- ★ DBから取得した頒布物タグ -->
-                    <div v-if="circleExtraInfo[circle.circle_id]?.tags?.length" class="flex flex-wrap gap-1.5">
-                      <span v-for="tag in circleExtraInfo[circle.circle_id].tags" :key="tag" class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded border border-gray-200 shadow-sm">
-                        {{ tag }}
-                      </span>
-                    </div>
+                <div class="flex flex-col gap-2 pr-12">
+                  <!-- 【第1段】配置番号・ステータスバッジ -->
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <button @click="jumpToMap(circle)"
+                            title="タップして会場マップで位置を確認"
+                            class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-extrabold rounded-lg shadow-xs border transition active:scale-95 cursor-pointer"
+                            :class="isCircleAbsent(circle.circle_id) ? 'bg-rose-100 text-rose-800 border-rose-300 line-through' : 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700'">
+                      <span>📍</span>
+                      <span>{{ circle.space_sym }}-{{ circle.space_num }}</span>
+                    </button>
+
+                    <span v-if="isCircleAbsent(circle.circle_id)" class="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-600 text-white text-[11px] font-bold rounded-md shadow-xs">
+                      <span>🚫 当日不参加</span>
+                    </span>
+
+                    <span v-if="savedList[circle.circle_id]" class="inline-flex items-center gap-0.5 px-2 py-0.5 bg-pink-50 text-pink-700 border border-pink-200 text-[10px] font-extrabold rounded-md">
+                      <span>♥ リスト済</span>
+                    </span>
+
+                    <span v-if="circleExtraInfo[circle.circle_id]?.items?.length" class="text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <span>📦 {{ circleExtraInfo[circle.circle_id].items.length }}品</span>
+                    </span>
+
+                    <!-- 検索ワードに合致した商品名がある場合 -->
+                    <span v-if="searchQuery.trim() && getMatchedItemNames(circle.circle_id, searchQuery).length" class="text-[10px] font-bold bg-pink-100 text-pink-800 border border-pink-300 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <span>🎯「{{ getMatchedItemNames(circle.circle_id, searchQuery)[0] }}」</span>
+                      <span v-if="getMatchedItemNames(circle.circle_id, searchQuery).length > 1" class="text-[9px] text-pink-600">+{{ getMatchedItemNames(circle.circle_id, searchQuery).length - 1 }}</span>
+                    </span>
                   </div>
+
+                  <!-- 【第2段】サークル名・代表者 ＆ Xリンク (1行にまとめて縦伸びを防止) -->
                   <div>
-                    <h3 class="font-bold text-lg leading-tight mb-0.5"
-                        :class="isCircleAbsent(circle.circle_id) ? 'text-gray-500 line-through decoration-rose-400' : 'text-gray-900'">
+                    <h3 @click="openDetails(circle)" class="font-extrabold text-base md:text-lg leading-snug hover:text-blue-600 transition-colors cursor-pointer"
+                        :class="isCircleAbsent(circle.circle_id) ? 'text-gray-400 line-through decoration-rose-400' : 'text-gray-900'">
                       {{ circle.circle_name }}
                     </h3>
-                    <p class="text-sm text-gray-500">代表: {{ circle.penname }}</p>
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                      <span class="text-xs text-gray-600 font-medium">代表: {{ circle.penname }}</span>
+
+                      <!-- サークル主 ＆ 売り子 Xリンク -->
+                      <a v-for="acc in getCircleAuthorAccounts(circle, circleExtraInfo[circle.circle_id])" :key="'srch_au_'+circle.circle_id+'_'+acc.handle"
+                         :href="`https://x.com/${acc.handle}`" target="_blank" @click.stop
+                         class="inline-flex items-center gap-1 text-[11px] bg-gray-900 hover:bg-gray-700 text-white px-2 py-0.5 rounded-md font-bold transition shadow-xs active:scale-95"
+                         :title="acc.name ? `サークル主: ${acc.name} (@${acc.handle})` : `サークル主: @${acc.handle}`">
+                        <svg class="w-2.5 h-2.5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                        <span class="truncate max-w-[130px]">{{ acc.name || ('@' + acc.handle) }}</span>
+                      </a>
+
+                      <a v-for="acc in getCircleStaffAccounts(circleExtraInfo[circle.circle_id])" :key="'srch_st_'+circle.circle_id+'_'+acc.handle"
+                         :href="`https://x.com/${acc.handle}`" target="_blank" @click.stop
+                         class="inline-flex items-center gap-1 text-[11px] bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 px-2 py-0.5 rounded-md font-bold transition shadow-xs active:scale-95"
+                         :title="acc.name ? `売り子: ${acc.name} (@${acc.handle})` : `売り子: @${acc.handle}`">
+                        <span class="shrink-0">🤝</span>
+                        <span class="truncate max-w-[130px]">{{ acc.name || ('@' + acc.handle) }}</span>
+                      </a>
+                    </div>
                   </div>
 
-                  <!-- ★ サークル主 ＆ 売り子 Xリンク (表示名優先) -->
-                  <div v-if="getCircleAuthorAccounts(circle, circleExtraInfo[circle.circle_id]).length || getCircleStaffAccounts(circleExtraInfo[circle.circle_id]).length" 
-                       class="flex flex-wrap items-center gap-1.5 -mt-1">
-                    <!-- サークル主 X (合同サークル含む) -->
-                    <a v-for="acc in getCircleAuthorAccounts(circle, circleExtraInfo[circle.circle_id])" :key="'srch_au_'+circle.circle_id+'_'+acc.handle"
-                       :href="`https://x.com/${acc.handle}`" target="_blank" @click.stop
-                       class="inline-flex items-center gap-1 text-[11px] bg-gray-900 hover:bg-gray-800 text-white px-2 py-0.5 rounded-md font-bold transition shadow-sm active:scale-95"
-                       :title="acc.name ? `サークル主: ${acc.name} (@${acc.handle})` : `サークル主: @${acc.handle}`">
-                      <svg class="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                      <span class="truncate max-w-[140px]">{{ acc.name || ('@' + acc.handle) }}</span>
-                    </a>
+                  <!-- メンバー ＆ 頒布物タグ -->
+                  <div v-if="circleExtraInfo[circle.circle_id]?.members?.length || circleExtraInfo[circle.circle_id]?.tags?.length" class="flex flex-wrap gap-1">
+                    <span v-for="member in (circleExtraInfo[circle.circle_id]?.members || [])" :key="'m_'+member" 
+                          @click="filterMember = filterMember === member ? '' : member"
+                          class="px-2 py-0.5 text-[11px] font-bold rounded-md border shadow-xs flex items-center gap-1 cursor-pointer hover:opacity-80 transition" 
+                          :style="getMemberStyle(member)">
+                      <span>{{ getMemberMark(member) }}</span>
+                      <span>{{ member }}</span>
+                    </span>
+                    <span v-for="tag in (circleExtraInfo[circle.circle_id]?.tags || [])" :key="tag"
+                          @click="filterItemTag = filterItemTag === tag ? '' : tag"
+                          class="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-bold rounded-md border border-gray-200 cursor-pointer transition">
+                      #{{ tag }}
+                    </span>
+                  </div>
+                </div>
 
-                    <!-- 売り子 X (複数人対応) -->
-                    <a v-for="acc in getCircleStaffAccounts(circleExtraInfo[circle.circle_id])" :key="'srch_st_'+circle.circle_id+'_'+acc.handle"
-                       :href="`https://x.com/${acc.handle}`" target="_blank" @click.stop
-                       class="inline-flex items-center gap-1 text-[11px] bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md font-bold transition shadow-sm active:scale-95"
-                       :title="acc.name ? `売り子: ${acc.name} (@${acc.handle})` : `売り子: @${acc.handle}`">
-                      <span class="shrink-0">🤝</span>
-                      <span class="truncate max-w-[140px]">{{ acc.name || ('@' + acc.handle) }}</span>
-                    </a>
-                  </div>
-                  <div class="flex items-center gap-2 mt-1 flex-wrap">
-                    <template v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length">
-                      <button @click="openDetails(circle)" class="flex items-center gap-1.5 text-xs bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition font-bold shadow-sm active:scale-95">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        お品書き
-                      </button>
-                      <span v-if="circleExtraInfo[circle.circle_id]?.items?.length" class="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
-                        <span>📦</span>
-                        <span>商品 {{ circleExtraInfo[circle.circle_id].items.length }}点</span>
-                      </span>
-                      <!-- 検索ワードに合致した商品名がある場合 -->
-                      <span v-if="searchQuery.trim() && getMatchedItemNames(circle.circle_id, searchQuery).length" class="text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
-                        <span>🎯</span>
-                        <span>「{{ getMatchedItemNames(circle.circle_id, searchQuery)[0] }}」</span>
-                        <span v-if="getMatchedItemNames(circle.circle_id, searchQuery).length > 1" class="text-[9px] text-pink-500 font-normal">+{{ getMatchedItemNames(circle.circle_id, searchQuery).length - 1 }}</span>
-                      </span>
-                    </template>
-                    <button v-else disabled class="flex items-center gap-1.5 text-xs bg-gray-100 text-gray-400 px-3 py-1.5 rounded-lg font-bold border border-gray-200 cursor-not-allowed">
-                      お品書き未公開
-                    </button>
-                  </div>
+                <!-- 【第3段】下部アクションバー（お品書き有無がパッと見で判別できるメリハリ設計） -->
+                <div class="flex items-center gap-2 mt-2.5 pt-2 border-t border-gray-100">
+                  <button @click="openDetails(circle)"
+                          class="flex-1 min-h-[36px] flex items-center justify-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-extrabold transition active:scale-95 cursor-pointer"
+                          :class="(circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length)
+                            ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm'
+                            : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200'">
+                    <span v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length">📸 お品書き・頒布物を見る</span>
+                    <span v-else>📄 詳細・関連サークル</span>
+                  </button>
+
+                  <!-- 公式速報ボタン -->
+                  <a :href="getCircleOfficialSearchUrl(circle, circleExtraInfo[circle.circle_id])" target="_blank"
+                     class="min-h-[36px] flex items-center justify-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 text-blue-800 px-3 py-1.5 rounded-xl font-bold border border-blue-200 transition active:scale-95"
+                     title="サークル主・売り子の最新ツイートから完売・在庫・お品書き情報を検索">
+                    <span class="text-amber-500">⚡</span>
+                    <span>公式速報</span>
+                  </a>
                 </div>
               </li>
             </ul>
@@ -301,258 +469,282 @@
           <!-- =========================================
                リスト タブ (買い物リスト・予算・優先度)
           ========================================== -->
-          <div v-show="activeTab === 'list'" class="flex flex-col min-h-full pb-20 md:pb-6 relative">
+          <div v-show="activeTab === 'list'" class="flex flex-col min-h-full pb-24 md:pb-8 relative">
             
-            <div class="sticky top-0 z-20 bg-gray-50 p-3 md:p-4 border-b border-gray-200 shadow-sm">
-              <div v-if="savedCount > 0" class="mb-3">
-                <div class="flex justify-between items-end mb-1 px-1">
-                  <span class="text-xs font-bold text-gray-600">お買い物 達成度</span>
-                  <div class="text-xs font-bold flex items-center gap-1.5">
-                    <span class="text-blue-600">{{ boughtCount }} / {{ activeTargetCount }} <span class="text-gray-400 text-[10px]">サークル</span> ({{ progressPercent }}%)</span>
-                    <span v-if="soldoutCount > 0" class="text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded text-[10px] font-bold">
+            <div class="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-md p-3 md:p-4 border-b border-gray-200 shadow-sm">
+              <!-- 達成度プログレスバー -->
+              <div v-if="savedCount > 0" class="mb-2.5">
+                <div class="flex justify-between items-center mb-1 px-0.5">
+                  <span class="text-xs font-extrabold text-gray-700 flex items-center gap-1">
+                    <span>🎯 お買い物達成度</span>
+                  </span>
+                  <div class="text-xs font-extrabold flex items-center gap-1.5">
+                    <span class="text-blue-700 font-mono">{{ boughtCount }} / {{ activeTargetCount }} <span class="text-gray-500 text-[10px] font-sans">件</span> ({{ progressPercent }}%)</span>
+                    <span v-if="soldoutCount > 0" class="text-rose-700 bg-rose-100 border border-rose-200 px-1.5 py-0.5 rounded-md text-[10px] font-bold">
                       💔 完売 {{ soldoutCount }}
                     </span>
                   </div>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
-                  <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out" :style="{ width: progressPercent + '%' }"></div>
+                  <div class="bg-gradient-to-r from-blue-500 to-pink-500 h-2.5 rounded-full transition-all duration-500 ease-out" :style="{ width: progressPercent + '%' }"></div>
                 </div>
               </div>
 
-              <!-- ツールバー -->
-              <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-2 md:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 md:gap-3">
-                <div class="flex items-center justify-between gap-3">
+              <!-- ツールバー ＆ 予算サマリー -->
+              <div class="bg-white rounded-2xl shadow-sm border border-gray-200/90 p-2.5 md:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <!-- 左側: ソート ＆ 未購入フィルタ -->
+                <div class="flex items-center justify-between sm:justify-start gap-2">
                   <div class="flex items-center gap-1.5">
-                    <span class="text-xs font-bold text-gray-500">並び:</span>
-                    <select v-model="sortOrder" class="text-xs font-bold bg-gray-50 border border-gray-200 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-pink-500 text-gray-700">
+                    <span class="text-xs font-bold text-gray-600">並び:</span>
+                    <select v-model="sortOrder" class="h-9 text-xs font-bold bg-gray-50 border border-gray-300 rounded-xl px-2.5 outline-none focus:ring-2 focus:ring-pink-500 text-gray-800 cursor-pointer">
                       <option value="default">追加順</option>
-                      <option value="space">配置順</option>
-                      <option value="priority">優先順</option>
+                      <option value="space">配置順 (A→N)</option>
+                      <option value="priority">優先度順 (S→B)</option>
                     </select>
                   </div>
-                  <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold transition-colors px-2 py-1 rounded-md border select-none"
-                         :class="hideBought ? 'bg-pink-50 border-pink-200 text-pink-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'">
-                    <input type="checkbox" v-model="hideBought" class="accent-pink-500 w-3 h-3">
-                    未購入のみ
+                  <label class="h-9 flex items-center gap-1.5 cursor-pointer text-xs font-bold transition-colors px-3 rounded-xl border select-none"
+                         :class="hideBought ? 'bg-pink-100 border-pink-300 text-pink-900 ring-1 ring-pink-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                    <input type="checkbox" v-model="hideBought" class="accent-pink-600 w-3.5 h-3.5">
+                    <span>未購入のみ</span>
                   </label>
                 </div>
-                <div class="flex items-center justify-end gap-2">
-                  <div class="flex flex-col items-end gap-0.5">
-                    <div class="flex items-center gap-2">
-                      <div class="text-[10px] font-bold text-gray-500 cursor-pointer hover:text-blue-500 transition flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded shadow-sm border" @click="openBudgetModal" title="予算を設定する">
-                        <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        予算: <span :class="budgetAmount > 0 ? 'text-gray-700' : ''">{{ budgetAmount > 0 ? '¥' + budgetAmount.toLocaleString() : '未設定' }}</span>
-                      </div>
-                      <div class="text-[10px] font-bold text-gray-500">
+
+                <!-- 右側: 予算・金額・シェア操作 -->
+                <div class="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                  <div class="flex flex-col items-start sm:items-end gap-0.5">
+                    <div class="flex items-center flex-wrap gap-1.5">
+                      <button type="button" class="text-[11px] font-bold text-gray-700 hover:text-blue-700 transition flex items-center gap-1 bg-gray-100 hover:bg-blue-50 px-2 py-0.5 rounded-lg border border-gray-200 cursor-pointer" @click="openBudgetModal" title="予算を設定する">
+                        <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>予算: {{ budgetAmount > 0 ? '¥' + budgetAmount.toLocaleString() : '設定' }}</span>
+                      </button>
+                      <span class="text-[11px] font-bold text-gray-600 font-mono">
                         予定: ¥{{ totalPrice.toLocaleString() }}
-                      </div>
-                      <!-- ★ 完売による浮き予算バッジ -->
-                      <div v-if="soldoutSavings > 0" class="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded shadow-sm flex items-center gap-0.5" title="完売・スキップにより浮いた金額">
-                        <span>💔 浮き: +¥{{ soldoutSavings.toLocaleString() }}</span>
-                      </div>
+                      </span>
+                      <span v-if="soldoutSavings > 0" class="text-[10px] font-bold text-rose-800 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-md flex items-center gap-0.5" title="完売・スキップにより浮いた金額">
+                        <span>💔 浮き +¥{{ soldoutSavings.toLocaleString() }}</span>
+                      </span>
                     </div>
-                    <div class="text-sm font-bold bg-pink-50 text-pink-700 px-2.5 py-1 rounded-md border border-pink-100 flex items-center shadow-sm">
-                      購入済: <span class="text-base ml-1">¥{{ spentPrice.toLocaleString() }}</span>
-                      <span v-if="budgetAmount > 0" class="text-[11px] ml-2" :class="remainingBudget < 0 ? 'text-red-600 font-black' : 'text-pink-600 font-bold'">
+                    <div class="text-xs sm:text-sm font-extrabold bg-pink-50 text-pink-900 px-2.5 py-1 rounded-lg border border-pink-200 flex items-center shadow-sm">
+                      <span>購入済:</span>
+                      <span class="text-sm sm:text-base font-mono ml-1">¥{{ spentPrice.toLocaleString() }}</span>
+                      <span v-if="budgetAmount > 0" class="text-[11px] font-mono ml-2 pl-2 border-l border-pink-200" :class="remainingBudget < 0 ? 'text-red-600 font-black' : 'text-pink-700 font-bold'">
                         残: ¥{{ remainingBudget.toLocaleString() }}
                       </span>
                     </div>
                   </div>
-                  <button @click="shareToTwitter" class="p-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-transform" title="X (Twitter) でシェア">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                  </button>
-                  <button @click="exportToText" class="p-1.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 active:scale-95 transition-transform" title="テキストでコピー">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
-                  </button>
+
+                  <div class="flex items-center gap-1.5">
+                    <button @click="shareToTwitter" class="w-9 h-9 bg-gray-900 text-white rounded-xl hover:bg-gray-700 active:scale-95 transition flex items-center justify-center shadow-sm cursor-pointer" title="X (Twitter) でシェア">
+                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    </button>
+                    <button @click="exportToText" class="w-9 h-9 bg-white text-gray-700 border border-gray-300 rounded-xl hover:bg-gray-100 active:scale-95 transition flex items-center justify-center shadow-sm cursor-pointer" title="テキストでクリップボードにコピー">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <!-- ★ 会場Xリアルタイム速報チップ (ワンタップ最新検索) -->
-              <div class="mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs custom-scrollbar">
-                <span class="text-[10px] font-bold text-gray-500 shrink-0 flex items-center gap-1">
-                  <span class="text-amber-500 font-black animate-pulse">⚡</span>会場速報(X):
+              <!-- ★ 会場Xリアルタイム速報チップ (スマホ用：PCは左ペインに常設) -->
+              <div class="md:hidden mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs custom-scrollbar">
+                <span class="text-[10px] font-bold text-gray-600 shrink-0 flex items-center gap-1">
+                  <span class="text-amber-500 font-black">⚡</span>会場速報:
                 </span>
                 <a :href="getEventLiveSearchUrl('soldout')" target="_blank" 
-                   class="shrink-0 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-sm active:scale-95 transition">
+                   class="shrink-0 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-sm active:scale-95 transition">
                   <span>💔 完売情報</span>
-                  <svg class="w-3 h-3 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                 </a>
                 <a :href="getEventLiveSearchUrl('line')" target="_blank" 
-                   class="shrink-0 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-sm active:scale-95 transition">
+                   class="shrink-0 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-sm active:scale-95 transition">
                   <span>🚶 列・最後尾</span>
-                  <svg class="w-3 h-3 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                 </a>
                 <a :href="getEventLiveSearchUrl('all')" target="_blank" 
-                   class="shrink-0 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-sm active:scale-95 transition">
+                   class="shrink-0 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-sm active:scale-95 transition">
                   <span>📢 #VGGC12th 最新</span>
-                  <svg class="w-3 h-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                 </a>
               </div>
             </div>
 
-            <!-- リスト本体 (画像なしレイアウト) -->
-            <div class="p-2 md:p-4">
-              <div v-if="sortedSavedCircles.length === 0" class="flex-1 flex flex-col items-center justify-center p-8 text-center mt-10">
-                <div class="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mb-4">
-                  <svg class="w-8 h-8 text-pink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                </div>
-                <p class="font-bold text-gray-600 mb-1">表示するサークルがありません</p>
-                <p v-if="hideBought && savedCount > 0" class="text-xs text-gray-400 mt-2">（「未購入のみ」がオンになっています）</p>
+            <!-- リスト本体 -->
+            <div class="p-2.5 md:p-4">
+              <div v-if="sortedSavedCircles.length === 0" class="flex-1 flex flex-col items-center justify-center p-8 text-center mt-8 bg-white rounded-2xl border border-gray-200/80 shadow-sm">
+                <div class="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mb-3 text-2xl">📝</div>
+                <p class="font-extrabold text-gray-700 mb-1">表示するサークルがありません</p>
+                <p v-if="hideBought && savedCount > 0" class="text-xs text-gray-500 mt-1 mb-3">（「未購入のみ」フィルターがオンになっています）</p>
+                <p v-else class="text-xs text-gray-500 mt-1 mb-4">「探す」タブから気になるサークルの「＋」ボタンを押して追加しましょう！</p>
+                <button v-if="hideBought && savedCount > 0" @click="hideBought = false" class="px-4 py-2 bg-pink-500 text-white text-xs font-bold rounded-xl shadow hover:bg-pink-600 transition">
+                  購入済・完売サークルも表示する
+                </button>
+                <button v-else @click="activeTab = 'search'" class="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl shadow hover:bg-blue-700 transition">
+                  🔍 サークルを探しに行く
+                </button>
               </div>
               
-              <ul class="space-y-3">
+              <ul v-else class="grid grid-cols-1 2xl:grid-cols-2 gap-3.5">
                 <li v-for="circle in sortedSavedCircles" :key="circle.circle_id" 
-                    class="rounded-xl shadow-sm border overflow-hidden relative transition-all duration-300" 
+                    class="rounded-2xl shadow-sm border overflow-hidden relative transition-all duration-200 flex flex-col justify-between" 
                     :class="[
-                      savedList[circle.circle_id].bought ? 'opacity-50 bg-gray-50/80 border-gray-200' : 
-                      savedList[circle.circle_id].soldout ? 'opacity-60 bg-gray-100/90 border-dashed border-gray-300' : 
-                      isCircleAbsent(circle.circle_id) ? 'bg-rose-50/50 border-rose-300' : 'bg-white border-gray-200'
+                      savedList[circle.circle_id].bought ? 'opacity-65 bg-gray-50 border-gray-200' : 
+                      savedList[circle.circle_id].soldout ? 'opacity-70 bg-gray-100/90 border-dashed border-gray-300' : 
+                      isCircleAbsent(circle.circle_id) ? 'bg-rose-50/50 border-rose-300' : 'bg-white border-gray-200/90 hover:border-pink-300'
                     ]">
                   
-                  <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" class="absolute top-3 right-3 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors z-10">
+                  <!-- リストから削除ボタン -->
+                  <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" 
+                          title="買い物リストから削除"
+                          class="absolute top-3 right-3 w-9 h-9 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors z-10 cursor-pointer">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                   </button>
 
-                  <div class="p-4 flex flex-col gap-2 relative pr-8">
-                    <div class="flex flex-col gap-1.5 mb-1">
-                      <!-- サークル番号と状態バッジ -->
-                      <div class="flex items-center gap-2 flex-wrap">
-                        <span class="inline-block px-2 py-0.5 text-xs font-bold rounded border shadow-sm"
-                              :class="isCircleAbsent(circle.circle_id) ? 'bg-rose-100 text-rose-800 border-rose-300 line-through' : 'bg-pink-100 text-pink-800 border-pink-200'">
-                          {{ circle.space_sym }}-{{ circle.space_num }}
-                        </span>
-                        <span v-if="isCircleAbsent(circle.circle_id)" class="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-600 text-white text-xs font-bold rounded shadow-sm">
-                          <span>🚫</span>
-                          <span>当日不参加</span>
-                        </span>
-                        <span v-if="savedList[circle.circle_id].soldout" class="inline-block px-2 py-0.5 bg-rose-100 text-rose-800 text-xs font-bold rounded border border-rose-300 shadow-sm animate-pulse">
-                          💔 完売・スキップ
-                        </span>
-                        <span v-else-if="savedList[circle.circle_id].bought" class="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded border border-emerald-300 shadow-sm">
-                          ✓ 購入済
-                        </span>
-                      </div>
-                      
-                      <!-- ★ メンバータグ -->
-                      <div v-if="circleExtraInfo[circle.circle_id]?.members?.length" class="flex flex-wrap gap-1.5">
-                        <span v-for="member in circleExtraInfo[circle.circle_id].members" :key="'m_'+member" class="px-2 py-0.5 text-[10px] font-bold rounded border shadow-sm flex items-center gap-0.5" :style="getMemberStyle(member)">
-                          <span>{{ getMemberMark(member) }}</span>
-                          {{ member }}
-                        </span>
-                      </div>
-                      <!-- ★ 頒布物タグ -->
-                      <div v-if="circleExtraInfo[circle.circle_id]?.tags?.length" class="flex flex-wrap gap-1.5">
-                        <span v-for="tag in circleExtraInfo[circle.circle_id].tags" :key="tag" class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded border border-gray-200 shadow-sm">
-                          {{ tag }}
-                        </span>
-                      </div>
+                  <!-- 【第1段・第2段】サークル基本情報 ＆ 買うもの・リンク -->
+                  <div class="p-3.5 md:p-4 flex flex-col gap-2.5 relative">
+                    <!-- 配置番号とステータスバッジ -->
+                    <div class="flex items-center gap-1.5 flex-wrap pr-8">
+                      <button @click="jumpToMap(circle)"
+                              title="タップして会場マップで位置を確認"
+                              class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-extrabold rounded-lg border shadow-sm transition active:scale-95 cursor-pointer"
+                              :class="isCircleAbsent(circle.circle_id) ? 'bg-rose-100 text-rose-800 border-rose-300 line-through' : 'bg-pink-600 text-white border-pink-700 hover:bg-pink-700'">
+                        <span>📍</span>
+                        <span>{{ circle.space_sym }}-{{ circle.space_num }}</span>
+                      </button>
+
+                      <span v-if="isCircleAbsent(circle.circle_id)" class="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-600 text-white text-xs font-bold rounded-md shadow-sm">
+                        <span>🚫 当日不参加</span>
+                      </span>
+                      <span v-if="savedList[circle.circle_id].soldout" class="inline-block px-2 py-0.5 bg-rose-100 text-rose-800 text-xs font-bold rounded-md border border-rose-300 shadow-sm">
+                        💔 完売・スキップ
+                      </span>
+                      <span v-else-if="savedList[circle.circle_id].bought" class="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-md border border-emerald-300 shadow-sm">
+                        ✓ 購入済
+                      </span>
                     </div>
-                    <div>
-                      <h3 class="font-bold text-base leading-tight"
-                          :class="isCircleAbsent(circle.circle_id) ? 'text-gray-500 line-through decoration-rose-400' : 'text-gray-900'">
+
+                    <!-- サークル名・代表者 ＆ Xリンク -->
+                    <div class="pr-6">
+                      <h3 @click="openDetails(circle)" class="font-extrabold text-base md:text-lg leading-snug hover:text-pink-600 transition-colors cursor-pointer"
+                          :class="isCircleAbsent(circle.circle_id) ? 'text-gray-400 line-through decoration-rose-400' : 'text-gray-900'">
                         {{ circle.circle_name }}
                       </h3>
-                      <p v-if="circle.penname" class="text-xs text-gray-500 mt-0.5">代表: {{ circle.penname }}</p>
-                    </div>
+                      <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                        <span v-if="circle.penname" class="text-xs text-gray-600 font-medium">代表: {{ circle.penname }}</span>
 
-                    <!-- ★ サークル主 ＆ 売り子 Xリンク (表示名優先) -->
-                    <div v-if="getCircleAuthorAccounts(circle, circleExtraInfo[circle.circle_id]).length || getCircleStaffAccounts(circleExtraInfo[circle.circle_id]).length" 
-                         class="flex flex-wrap items-center gap-1.5 -mt-0.5">
-                      <!-- サークル主 X (合同サークル含む) -->
-                      <a v-for="acc in getCircleAuthorAccounts(circle, circleExtraInfo[circle.circle_id])" :key="'lst_au_'+circle.circle_id+'_'+acc.handle"
-                         :href="`https://x.com/${acc.handle}`" target="_blank" @click.stop
-                         class="inline-flex items-center gap-1 text-[11px] bg-gray-900 hover:bg-gray-800 text-white px-2 py-0.5 rounded-md font-bold transition shadow-sm active:scale-95"
-                         :title="acc.name ? `サークル主: ${acc.name} (@${acc.handle})` : `サークル主: @${acc.handle}`">
-                        <svg class="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                        <span class="truncate max-w-[140px]">{{ acc.name || ('@' + acc.handle) }}</span>
-                      </a>
+                        <a v-for="acc in getCircleAuthorAccounts(circle, circleExtraInfo[circle.circle_id])" :key="'lst_au_'+circle.circle_id+'_'+acc.handle"
+                           :href="`https://x.com/${acc.handle}`" target="_blank" @click.stop
+                           class="inline-flex items-center gap-1 text-[11px] bg-gray-900 hover:bg-gray-700 text-white px-2 py-0.5 rounded-md font-bold transition shadow-xs active:scale-95"
+                           :title="acc.name ? `サークル主: ${acc.name} (@${acc.handle})` : `サークル主: @${acc.handle}`">
+                          <svg class="w-2.5 h-2.5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                          <span class="truncate max-w-[130px]">{{ acc.name || ('@' + acc.handle) }}</span>
+                        </a>
 
-                      <!-- 売り子 X (複数人対応) -->
-                      <a v-for="acc in getCircleStaffAccounts(circleExtraInfo[circle.circle_id])" :key="'lst_st_'+circle.circle_id+'_'+acc.handle"
-                         :href="`https://x.com/${acc.handle}`" target="_blank" @click.stop
-                         class="inline-flex items-center gap-1 text-[11px] bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md font-bold transition shadow-sm active:scale-95"
-                         :title="acc.name ? `売り子: ${acc.name} (@${acc.handle})` : `売り子: @${acc.handle}`">
-                        <span class="shrink-0">🤝</span>
-                        <span class="truncate max-w-[140px]">{{ acc.name || ('@' + acc.handle) }}</span>
-                      </a>
-                    </div>
-                    <!-- ★ 選択中のお品書き商品バッジ一覧 -->
-                    <div v-if="savedList[circle.circle_id].selectedItems?.length" class="mt-2 space-y-1">
-                      <div class="text-[10px] font-bold text-amber-800 flex items-center gap-1">
-                        <span>📦 買うものリスト:</span>
+                        <a v-for="acc in getCircleStaffAccounts(circleExtraInfo[circle.circle_id])" :key="'lst_st_'+circle.circle_id+'_'+acc.handle"
+                           :href="`https://x.com/${acc.handle}`" target="_blank" @click.stop
+                           class="inline-flex items-center gap-1 text-[11px] bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 px-2 py-0.5 rounded-md font-bold transition shadow-xs active:scale-95"
+                           :title="acc.name ? `売り子: ${acc.name} (@${acc.handle})` : `売り子: @${acc.handle}`">
+                          <span class="shrink-0">🤝</span>
+                          <span class="truncate max-w-[130px]">{{ acc.name || ('@' + acc.handle) }}</span>
+                        </a>
                       </div>
-                      <div class="flex flex-wrap gap-1">
+                    </div>
+
+                    <!-- メンバータグ ＆ 頒布物タグ -->
+                    <div v-if="circleExtraInfo[circle.circle_id]?.members?.length || circleExtraInfo[circle.circle_id]?.tags?.length" class="flex flex-wrap gap-1">
+                      <span v-for="member in (circleExtraInfo[circle.circle_id]?.members || [])" :key="'m_'+member" class="px-2 py-0.5 text-[11px] font-bold rounded-md border shadow-xs flex items-center gap-0.5" :style="getMemberStyle(member)">
+                        <span>{{ getMemberMark(member) }}</span>
+                        <span>{{ member }}</span>
+                      </span>
+                      <span v-for="tag in (circleExtraInfo[circle.circle_id]?.tags || [])" :key="tag" class="px-2 py-0.5 bg-gray-100 text-gray-700 text-[11px] font-bold rounded-md border border-gray-200">
+                        #{{ tag }}
+                      </span>
+                    </div>
+
+                    <!-- ★ 選択中のお品書き商品バッジ一覧 -->
+                    <div v-if="savedList[circle.circle_id].selectedItems?.length" 
+                         @click="openDetails(circle)"
+                         class="mt-0.5 p-2.5 bg-amber-50/70 hover:bg-amber-50 border border-amber-200 rounded-xl cursor-pointer transition space-y-1.5">
+                      <div class="text-[11px] font-extrabold text-amber-900 flex items-center justify-between">
+                        <span>📦 選択中の頒布物 ({{ savedList[circle.circle_id].selectedItems.length }}点):</span>
+                        <span class="text-[10px] text-amber-700 underline">変更する</span>
+                      </div>
+                      <div class="flex flex-wrap gap-1.5">
                         <span v-for="itName in savedList[circle.circle_id].selectedItems" :key="itName" 
-                              class="text-xs bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-md font-bold flex items-center gap-1 shadow-sm">
-                          <span class="text-amber-500 font-bold">✓</span>{{ itName }}
+                              class="text-xs bg-white text-amber-950 border border-amber-300 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 shadow-sm">
+                          <span class="text-amber-600 font-black">✓</span>{{ itName }}
                         </span>
                       </div>
                     </div>
-                    <div class="flex items-center gap-1.5 flex-wrap mt-1">
-                       <button v-if="circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length" @click="openDetails(circle)" class="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200 transition font-bold border border-gray-200 shadow-sm active:scale-95">
-                         お品書き
-                       </button>
-                       <button v-else disabled class="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-400 px-2 py-1 rounded border border-gray-200 cursor-not-allowed">
-                         未公開
-                       </button>
 
-                       <!-- ★ 公式速報 (サークル主 & 売り子の完売・在庫ツイート) -->
-                       <a :href="getCircleOfficialSearchUrl(circle, circleExtraInfo[circle.circle_id])" target="_blank"
-                          class="flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 hover:bg-blue-100 px-2 py-1 rounded font-bold border border-blue-200 transition shadow-sm active:scale-95"
-                          title="サークル主・売り子の最新ツイートから完売・在庫・列情報を検索">
-                         <span class="text-amber-500 font-bold">⚡</span>
-                         <span>公式速報</span>
-                         <svg class="w-2.5 h-2.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                       </a>
+                    <!-- 情報確認ボタンバー（お品書き・公式速報・目撃/列：押しやすいサイズに統一） -->
+                    <div class="grid grid-cols-3 gap-1.5 pt-1">
+                      <button @click="openDetails(circle)"
+                              class="min-h-[38px] flex items-center justify-center gap-1 text-xs px-2 py-1.5 rounded-xl font-bold border transition shadow-sm active:scale-95 cursor-pointer"
+                              :class="(circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length)
+                                ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                                : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'">
+                        <span>📸</span>
+                        <span class="truncate">{{ (circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length) ? 'お品書き' : '詳細/X' }}</span>
+                      </button>
 
-                       <!-- ★ 口コミ・目撃情報 (参加者の完売・列ツイート) -->
-                       <a :href="getCirclePublicSearchUrl(circle)" target="_blank"
-                          class="flex items-center gap-1 text-[10px] bg-gray-50 text-gray-600 hover:bg-gray-100 px-2 py-1 rounded font-bold border border-gray-200 transition shadow-sm active:scale-95"
-                          title="参加者の目撃ツイートから完売や最後尾情報を検索">
-                         <span>👥</span>
-                         <span>目撃/列</span>
-                         <svg class="w-2.5 h-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                       </a>
-                    </div>
-                    
-                    <div class="flex flex-wrap items-center gap-2 mt-2">
-                      <select v-model="savedList[circle.circle_id].priority" :disabled="isReadOnly" class="text-xs border border-gray-200 rounded px-1 py-1 bg-gray-50 focus:ring-1 focus:ring-pink-400 outline-none" :class="priorityColors[savedList[circle.circle_id].priority]">
-                        <option value="">優先度: -</option>
-                        <option value="S">S (絶対買う)</option>
-                        <option value="A">A (買いたい)</option>
-                        <option value="B">B (見に行く)</option>
-                      </select>
-                      <div class="flex items-center text-xs border border-gray-200 rounded bg-gray-50 overflow-hidden">
-                        <span class="px-1.5 text-gray-500">¥</span>
-                        <input type="number" v-model.number="savedList[circle.circle_id].price" :readonly="isReadOnly" placeholder="金額" class="w-14 py-1 px-1 bg-transparent outline-none focus:bg-white text-right">
-                      </div>
-                      <input type="text" v-model="savedList[circle.circle_id].forWho" :readonly="isReadOnly" placeholder="誰用？(例: 自分)" class="text-xs border border-gray-200 rounded px-1.5 py-1 bg-gray-50 w-24 outline-none focus:bg-white focus:ring-1 focus:ring-pink-400">
+                      <a :href="getCircleOfficialSearchUrl(circle, circleExtraInfo[circle.circle_id])" target="_blank"
+                         class="min-h-[38px] flex items-center justify-center gap-1 text-xs bg-blue-50 text-blue-800 hover:bg-blue-100 px-2 py-1.5 rounded-xl font-bold border border-blue-200 transition shadow-sm active:scale-95"
+                         title="サークル主・売り子の最新ツイートから完売・在庫・列情報を検索">
+                        <span class="text-amber-500">⚡</span>
+                        <span class="truncate">公式速報</span>
+                      </a>
+
+                      <a :href="getCirclePublicSearchUrl(circle)" target="_blank"
+                         class="min-h-[38px] flex items-center justify-center gap-1 text-xs bg-gray-50 text-gray-700 hover:bg-gray-100 px-2 py-1.5 rounded-xl font-bold border border-gray-200 transition shadow-sm active:scale-95"
+                         title="参加者の目撃ツイートから完売や最後尾情報を検索">
+                        <span>👥</span>
+                        <span class="truncate">目撃/列</span>
+                      </a>
                     </div>
                   </div>
                   
-                  <div class="bg-pink-50/40 p-3 border-t border-pink-100/50 flex flex-col gap-3">
-                    <textarea v-model="savedList[circle.circle_id].memo" :readonly="isReadOnly" placeholder="メモを入力...（例: 新刊セット、アクスタ）" 
-                              class="w-full px-3 py-2 text-sm rounded-lg border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-12 bg-white placeholder-pink-300"></textarea>
+                  <!-- 【第3段】お買い物プラン入力 ＆ 現場ステータストグル (44pxタッチ対応) -->
+                  <div class="bg-gray-50/90 p-3 md:p-3.5 border-t border-gray-200/80 flex flex-col gap-2.5">
+                    <!-- 優先度・予算・誰用 (高コントラスト化) -->
+                    <div class="grid grid-cols-12 gap-2">
+                      <select v-model="savedList[circle.circle_id].priority" :disabled="isReadOnly" 
+                              class="col-span-5 h-9 text-xs border border-gray-300 rounded-xl px-2 bg-white focus:ring-2 focus:ring-pink-400 outline-none font-bold cursor-pointer" 
+                              :class="priorityColors[savedList[circle.circle_id].priority]">
+                        <option value="">優先度: 未設定</option>
+                        <option value="S">優先: S (最優先)</option>
+                        <option value="A">優先: A (買いたい)</option>
+                        <option value="B">優先: B (見に行く)</option>
+                      </select>
+
+                      <div class="col-span-4 h-9 flex items-center text-xs border border-gray-300 rounded-xl bg-white overflow-hidden focus-within:ring-2 focus-within:ring-pink-400">
+                        <span class="pl-2.5 pr-1 text-gray-500 font-bold">¥</span>
+                        <input type="number" v-model.number="savedList[circle.circle_id].price" :readonly="isReadOnly" placeholder="予定額" 
+                               class="w-full py-1 pr-2.5 bg-transparent outline-none text-right font-mono font-bold text-gray-900 placeholder-gray-400">
+                      </div>
+
+                      <input type="text" v-model="savedList[circle.circle_id].forWho" :readonly="isReadOnly" placeholder="誰用？" 
+                             class="col-span-3 h-9 text-xs border border-gray-300 rounded-xl px-2.5 bg-white outline-none focus:ring-2 focus:ring-pink-400 text-gray-800 placeholder-gray-400 font-medium">
+                    </div>
+
+                    <!-- メモ欄 (屋外でも見やすいコントラスト) -->
+                    <textarea v-model="savedList[circle.circle_id].memo" :readonly="isReadOnly" placeholder="メモを入力（例: 新刊セット、アクスタ、スケブお願いする）" 
+                              class="w-full px-3 py-2 text-xs md:text-sm rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-12 bg-white text-gray-900 placeholder-gray-400 leading-snug"></textarea>
                     
-                    <!-- アクションボタン: 購入済み & 完売 -->
-                    <div v-if="!isReadOnly" class="grid grid-cols-12 gap-2">
+                    <!-- 現場用大型アクションボタン: 購入済み & 完売 (高さ44px確保) -->
+                    <div v-if="!isReadOnly" class="grid grid-cols-12 gap-2 pt-0.5">
                       <!-- 購入済みトグル (8カラム) -->
                       <button @click="toggleBought(circle.circle_id)"
-                              class="col-span-8 py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 border select-none"
+                              class="col-span-8 min-h-[44px] py-2.5 px-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 border select-none cursor-pointer"
                               :class="savedList[circle.circle_id].bought 
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-300/50 shadow-inner' 
-                                : 'bg-pink-500 text-white border-pink-600 shadow hover:bg-pink-600 active:scale-95'">
-                        <svg v-if="savedList[circle.circle_id].bought" class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                        <svg v-else class="w-4 h-4 opacity-90 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                        <span class="truncate">{{ savedList[circle.circle_id].bought ? '✓ 購入済 (戻す)' : '🛒 購入済みにする' }}</span>
+                                ? 'bg-emerald-100 text-emerald-900 border-emerald-400 ring-2 ring-emerald-300/60 shadow-inner' 
+                                : 'bg-pink-600 text-white border-pink-700 shadow-sm hover:bg-pink-700 active:scale-95'">
+                        <svg v-if="savedList[circle.circle_id].bought" class="w-4 h-4 text-emerald-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        <svg v-else class="w-4 h-4 opacity-95 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        <span class="truncate">{{ savedList[circle.circle_id].bought ? '✓ 購入済 (タップで戻す)' : '🛒 購入済みにする' }}</span>
                       </button>
 
                       <!-- 完売・スキップトグル (4カラム) -->
                       <button @click="toggleSoldout(circle.circle_id)"
-                              class="col-span-4 py-2.5 px-2 rounded-lg font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1 border select-none"
+                              class="col-span-4 min-h-[44px] py-2.5 px-2 rounded-xl font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-1 border select-none cursor-pointer"
                               :class="savedList[circle.circle_id].soldout 
-                                ? 'bg-rose-100 text-rose-800 border-rose-300 ring-2 ring-rose-300/50 shadow-inner' 
-                                : 'bg-white text-gray-600 border-gray-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 active:scale-95 shadow-sm'">
+                                ? 'bg-rose-100 text-rose-900 border-rose-400 ring-2 ring-rose-300/60 shadow-inner' 
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-300 active:scale-95 shadow-sm'">
                         <span>💔</span>
                         <span class="truncate">{{ savedList[circle.circle_id].soldout ? '完売中' : '完売' }}</span>
                       </button>
@@ -577,27 +769,31 @@
       </div>
     </div>
 
-    <!-- スマホ専用ボトムナビゲーション -->
-    <div class="md:hidden bg-white border-t border-gray-200 flex justify-around items-center pb-safe fixed bottom-0 w-full z-30 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-      <button @click="activeTab = 'map'" class="flex-1 py-2.5 flex flex-col items-center gap-1 transition-colors" :class="activeTab === 'map' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-        <span class="text-[10px] font-bold">マップ</span>
+    <!-- スマホ専用ボトムナビゲーション (44px以上のタッチ領域確保) -->
+    <div class="md:hidden bg-white/95 backdrop-blur-md border-t border-gray-200 flex justify-around items-stretch pb-safe fixed bottom-0 w-full z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+      <button @click="activeTab = 'map'" class="flex-1 min-h-[54px] py-2 flex flex-col items-center justify-center gap-0.5 transition-colors relative cursor-pointer" :class="activeTab === 'map' ? 'text-blue-600 font-extrabold bg-blue-50/40' : 'text-gray-500 hover:text-gray-800'">
+        <span v-if="activeTab === 'map'" class="absolute top-0 inset-x-4 h-0.5 bg-blue-600 rounded-b-full"></span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+        <span class="text-[11px] tracking-tight">マップ</span>
       </button>
-      <button @click="activeTab = 'search'" class="flex-1 py-2.5 flex flex-col items-center gap-1 transition-colors" :class="activeTab === 'search' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-        <span class="text-[10px] font-bold">探す</span>
+      <button @click="activeTab = 'search'" class="flex-1 min-h-[54px] py-2 flex flex-col items-center justify-center gap-0.5 transition-colors relative cursor-pointer" :class="activeTab === 'search' ? 'text-blue-600 font-extrabold bg-blue-50/40' : 'text-gray-500 hover:text-gray-800'">
+        <span v-if="activeTab === 'search'" class="absolute top-0 inset-x-4 h-0.5 bg-blue-600 rounded-b-full"></span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <span class="text-[11px] tracking-tight">探す</span>
       </button>
-      <button @click="activeTab = 'list'" class="flex-1 py-2.5 flex flex-col items-center gap-1 transition-colors relative" :class="activeTab === 'list' ? 'text-pink-600' : 'text-gray-400 hover:text-gray-600'">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-        <span class="text-[10px] font-bold">リスト</span>
-        <span v-if="savedCount > 0" class="absolute top-1 right-2 bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+      <button @click="activeTab = 'list'" class="flex-1 min-h-[54px] py-2 flex flex-col items-center justify-center gap-0.5 transition-colors relative cursor-pointer" :class="activeTab === 'list' ? 'text-pink-600 font-extrabold bg-pink-50/40' : 'text-gray-500 hover:text-gray-800'">
+        <span v-if="activeTab === 'list'" class="absolute top-0 inset-x-4 h-0.5 bg-pink-600 rounded-b-full"></span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+        <span class="text-[11px] tracking-tight">リスト</span>
+        <span v-if="savedCount > 0" class="absolute top-1.5 right-3 bg-pink-600 text-white text-[10px] min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full font-extrabold shadow-xs">
           <span v-if="hideBought">{{ Math.max(0, activeTargetCount - boughtCount) }}</span>
           <span v-else>{{ savedCount }}</span>
         </span>
       </button>
-      <button @click="activeTab = 'memo'" class="flex-1 py-2.5 flex flex-col items-center gap-1 transition-colors" :class="activeTab === 'memo' ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-        <span class="text-[10px] font-bold">メモ</span>
+      <button @click="activeTab = 'memo'" class="flex-1 min-h-[54px] py-2 flex flex-col items-center justify-center gap-0.5 transition-colors relative cursor-pointer" :class="activeTab === 'memo' ? 'text-emerald-600 font-extrabold bg-emerald-50/40' : 'text-gray-500 hover:text-gray-800'">
+        <span v-if="activeTab === 'memo'" class="absolute top-0 inset-x-4 h-0.5 bg-emerald-600 rounded-b-full"></span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        <span class="text-[11px] tracking-tight">メモ・準備</span>
       </button>
     </div>
 
@@ -619,6 +815,7 @@
       @toggle-soldout="toggleSoldout"
       @toggle-item="toggleItemSelection" 
       @open-circle="openDetails" 
+      @jump-to-map="jumpToMap"
     />
 
     <!-- ★予算設定モーダル -->
@@ -657,9 +854,6 @@ import AuthModal from './components/AuthModal.vue';
 import ShareModal from './components/ShareModal.vue';
 import EventCountdownBar from './components/EventCountdownBar.vue';
 
-
-    
-
         const circles = ref([]);
         const blocks = ref([]);
         const loading = ref(true);
@@ -668,6 +862,8 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         const filterMember = ref('');
         const filterItemTag = ref('');
         const filterHasOshinagaki = ref(false);
+        const showSearchFilters = ref(false);
+        const searchInputRef = ref(null);
         const activeTab = ref('search');
         const isTweetLoading = ref(false);
         
@@ -685,45 +881,77 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         const showShareModal = ref(false);
         const showHelpModal = ref(false);
         const targetSpace = ref(null);
-        console.log('DEBUG mapCoordsData:', mapCoordsData);
-const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.default : (mapCoordsData || {}));
+        const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.default : (mapCoordsData || {}));
+
+        const resetAllFilters = () => {
+          searchQuery.value = '';
+          filterBlock.value = '';
+          filterMember.value = '';
+          filterItemTag.value = '';
+          filterHasOshinagaki.value = false;
+        };
+
+        const scrollMapToPin = (x, y) => {
+          setTimeout(() => {
+            const containers = document.querySelectorAll('.map-container');
+            containers.forEach(container => {
+              if (container.clientWidth > 0) {
+                const scrollX = (x * mapScale.value) - (container.clientWidth / 2);
+                const scrollY = (y * mapScale.value) - (container.clientHeight / 2);
+                container.scrollTo({
+                  left: Math.max(0, scrollX),
+                  top: Math.max(0, scrollY),
+                  behavior: 'smooth'
+                });
+              }
+            });
+          }, 80);
+        };
+
+        const selectBlockAndFocusMap = (block, switchTabOnMobile = true) => {
+          filterBlock.value = filterBlock.value === block ? '' : block;
+          if (window.innerWidth >= 768 && activeTab.value === 'map') {
+            activeTab.value = 'search';
+          }
+          if (filterBlock.value && mapCoords.value[filterBlock.value]) {
+            const pos = mapCoords.value[filterBlock.value];
+            pinX.value = pos.x;
+            pinY.value = pos.y;
+            targetSpace.value = `ブロック ${filterBlock.value}`;
+            savePinPos();
+            scrollMapToPin(pos.x, pos.y);
+          } else if (!filterBlock.value) {
+            targetSpace.value = null;
+          }
+        };
+
         const jumpToMap = (circle) => {
           const spaceId = circle.space_sym + '-' + circle.space_num;
           const blockId = circle.space_sym;
           targetSpace.value = spaceId + ' (' + circle.circle_name + ')';
-          activeTab.value = 'map';
           
-          // 自動スクロールとピン移動
-          setTimeout(() => {
-            let targetPos = mapCoords.value[spaceId];
-            if (!targetPos && circle.space_num.includes('-')) {
-              const baseSpace = circle.space_sym + '-' + circle.space_num.split('-')[0];
-              targetPos = mapCoords.value[baseSpace];
-            }
-            if (!targetPos && mapCoords.value[blockId]) {
-              targetPos = mapCoords.value[blockId]; // フォールバック (ブロック単位)
-            }
-            if (targetPos) {
-              pinX.value = targetPos.x;
-              pinY.value = targetPos.y;
-            } else {
-              alert('エラー: 座標データが読み込めていません。キャッシュが古いか、データが存在しません (' + spaceId + ')');
-            }
-            if (targetPos) {
-              
-              // コンテナのスクロール位置を調整
-              const containers = document.querySelectorAll('.map-inner');
-              containers.forEach(container => {
-                const scrollX = (targetPos.x * mapScale.value) - (container.clientWidth / 2);
-                const scrollY = (targetPos.y * mapScale.value) - (container.clientHeight / 2);
-                container.scrollLeft = Math.max(0, scrollX);
-                container.scrollTop = Math.max(0, scrollY);
-              });
-            }
-          }, 100);
+          // モバイル表示のときのみマップタブへ切り替え（PCでは左ペインに常時マップがあるため現在のタブを維持）
+          if (window.innerWidth < 768) {
+            activeTab.value = 'map';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
           
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          let targetPos = mapCoords.value[spaceId];
+          if (!targetPos && circle.space_num && circle.space_num.includes('-')) {
+            const baseSpace = circle.space_sym + '-' + circle.space_num.split('-')[0];
+            targetPos = mapCoords.value[baseSpace];
+          }
+          if (!targetPos && mapCoords.value[blockId]) {
+            targetPos = mapCoords.value[blockId]; // フォールバック (ブロック単位)
+          }
+          if (targetPos) {
+            pinX.value = targetPos.x;
+            pinY.value = targetPos.y;
+            savePinPos();
+            scrollMapToPin(targetPos.x, targetPos.y);
+          }
         };
+
         const sortOrder = ref('default'); 
         const hideBought = ref(false);
         
@@ -732,8 +960,6 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
         
         // 詳細モーダルのステートと、X(Twitter)埋め込みの監視処理
         const selectedCircle = ref(null);
-        
-        
         
         // ★ 検索クエリに合致した商品名を取得
         const getMatchedItemNames = (circleId, query) => {
@@ -870,6 +1096,32 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
         };
 
         onMounted(async () => {
+          // キーボードショートカット ('/' で検索フォーカス、'Escape' でモーダルを閉じる)
+          window.addEventListener('keydown', (e) => {
+            const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+            const isInput = tag === 'input' || tag === 'textarea' || tag === 'select' || (e.target && e.target.isContentEditable);
+            if (e.key === '/' && !isInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+              e.preventDefault();
+              activeTab.value = 'search';
+              nextTick(() => {
+                searchInputRef.value?.focus();
+              });
+            } else if (e.key === 'Escape') {
+              if (selectedCircle.value) selectedCircle.value = null;
+              else if (showHelpModal.value) showHelpModal.value = false;
+              else if (showBudgetModal.value) showBudgetModal.value = false;
+              else if (showAuthModal.value) showAuthModal.value = false;
+              else if (showShareModal.value) showShareModal.value = false;
+            }
+          });
+
+          // PC画面へリサイズされた際に activeTab が 'map' のままだと右ペインが空になるのを防ぐ
+          window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768 && activeTab.value === 'map') {
+              activeTab.value = 'search';
+            }
+          });
+
           // ★ オフライン対策: キャッシュから即時データを復元 (SWR)
           try {
             const cachedData = localStorage.getItem('vggc12th_data_cache');
@@ -1326,13 +1578,14 @@ const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.d
 
 
     body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+    button, a, label, select, input, textarea { touch-action: manipulation; }
     
     .map-container { 
       position: relative; 
       width: 100%; 
       overflow: auto; 
       border: 1px solid #e5e7eb; 
-      border-radius: 0.5rem; 
+      border-radius: 0.75rem; 
       background: #fff; 
       -webkit-overflow-scrolling: touch; 
     }
