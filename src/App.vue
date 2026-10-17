@@ -92,15 +92,16 @@
           </div>
           <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
             <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
-            <!-- 現在地・ターゲットピン -->
-            <div class="draggable-pin select-none flex flex-col items-center"
+            <!-- 現在地・ターゲットピン (先端が正確に座標を指すよう吹き出しはabsolute配置) -->
+            <div class="draggable-pin select-none flex items-center justify-center"
                  :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }"
                  @mousedown.stop="startDrag"
                  @touchstart.stop="startDrag">
-              <div v-if="targetSpace" class="mb-0.5 px-2 py-0.5 bg-gray-900/90 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20">
+              <div v-if="targetSpace" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 bg-gray-900/95 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20 pointer-events-none">
                 {{ targetSpace }}
               </div>
-              <span class="text-2xl leading-none">📍</span>
+              <span v-if="targetSpace" class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3.5 h-3.5 rounded-full bg-rose-500/40 ring-2 ring-rose-600 animate-ping pointer-events-none"></span>
+              <span class="text-2xl leading-none relative z-10">📍</span>
             </div>
           </div>
         </div>
@@ -198,15 +199,16 @@
                 </div>
                 <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
                   <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
-                  <!-- 現在地・ターゲットピン -->
-                  <div class="draggable-pin select-none flex flex-col items-center"
+                  <!-- 現在地・ターゲットピン (先端が正確に座標を指すよう吹き出しはabsolute配置) -->
+                  <div class="draggable-pin select-none flex items-center justify-center"
                        :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }"
                        @mousedown.stop="startDrag"
                        @touchstart.stop="startDrag">
-                    <div v-if="targetSpace" class="mb-0.5 px-2 py-0.5 bg-gray-900/90 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20">
+                    <div v-if="targetSpace" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 bg-gray-900/95 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20 pointer-events-none">
                       {{ targetSpace }}
                     </div>
-                    <span class="text-2xl leading-none">📍</span>
+                    <span v-if="targetSpace" class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3.5 h-3.5 rounded-full bg-rose-500/40 ring-2 ring-rose-600 animate-ping pointer-events-none"></span>
+                    <span class="text-2xl leading-none relative z-10">📍</span>
                   </div>
                 </div>
               </div>
@@ -214,11 +216,14 @@
 
             <div class="bg-white rounded-2xl p-3.5 shadow-xs border border-gray-200/80">
               <div class="flex justify-between items-center mb-2.5">
-                <h2 class="text-xs font-extrabold text-gray-700">🧭 配置ブロックでサークルを探す</h2>
-                <span class="text-[10px] text-gray-400">タップで検索タブへ</span>
+                <h2 class="text-xs font-extrabold text-gray-700">🧭 配置ブロックで位置確認＆絞り込み</h2>
+                <button v-if="filterBlock" @click="activeTab = 'search'" class="text-[11px] font-bold text-blue-600 hover:underline">
+                  🔍 {{ filterBlock }}のサークル一覧を見る →
+                </button>
+                <span v-else class="text-[10px] text-gray-400">タップでマップ位置表示</span>
               </div>
               <div class="flex flex-wrap gap-2">
-                <button v-for="block in blocks" :key="block" @click="toggleBlock(block)"
+                <button v-for="block in blocks" :key="block" @click="selectBlockAndFocusMap(block)"
                         class="min-w-[44px] min-h-[42px] px-3 py-1.5 rounded-xl text-sm font-extrabold transition-all active:scale-95"
                         :class="filterBlock === block ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-300' : 'bg-gray-50 text-gray-700 border border-gray-200'">
                   {{ block }}
@@ -1062,8 +1067,8 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         });
         
         const mapScale = ref(1.0);
-        const pinX = ref(100);
-        const pinY = ref(100);
+        const pinX = ref(617);
+        const pinY = ref(84);
         let isDraggingPin = false;
 
         const shareUrl = computed(() => {
@@ -1076,8 +1081,12 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         const syncFreeMemoFromState = () => {
           if (savedList.value['__FREE_MEMO__']) freeMemoText.value = savedList.value['__FREE_MEMO__'].text || '';
           if (savedList.value['__PIN_POS__']) {
-            pinX.value = savedList.value['__PIN_POS__'].x || 100;
-            pinY.value = savedList.value['__PIN_POS__'].y || 100;
+            const sx = savedList.value['__PIN_POS__'].x;
+            const sy = savedList.value['__PIN_POS__'].y;
+            if (sx && sy && !(sx === 100 && sy === 100)) {
+              pinX.value = sx;
+              pinY.value = sy;
+            }
           }
         };
 
