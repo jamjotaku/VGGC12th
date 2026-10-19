@@ -67,7 +67,7 @@
       <!-- =========================================
            左側：マップ ＆ クイックナビエリア (PC専用・マップ表示領域最大化)
       ========================================== -->
-      <div class="hidden md:flex w-5/12 lg:w-[44%] xl:w-[42%] flex-col bg-white border-r border-gray-200 shadow-sm h-full overflow-hidden p-4 gap-2">
+      <div class="hidden md:flex w-5/12 lg:w-[44%] xl:w-[42%] flex-col bg-white border-r border-gray-200 shadow-sm h-full overflow-hidden p-3.5 gap-2">
         <!-- マップヘッダー -->
         <div class="flex justify-between items-center gap-2 shrink-0">
           <div class="flex items-center gap-2 min-w-0">
@@ -106,90 +106,114 @@
           </button>
         </div>
 
-        <!-- PC用マップコンテナ (flex-1で残り高さを最大限活用) -->
-        <div class="map-container shadow-inner relative flex-1 min-h-[240px]">
-          <div class="absolute bottom-3 right-3 flex flex-col gap-1.5 z-20">
-            <button @click="mapScale = Math.min( +(mapScale + 0.25).toFixed(2), 2.5)" class="w-9 h-9 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="拡大">＋</button>
-            <button @click="mapScale = 1.0" class="w-9 h-7 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-[10px] text-gray-600 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="リセット">{{ Math.round(mapScale * 100) }}%</button>
-            <button @click="mapScale = Math.max( +(mapScale - 0.25).toFixed(2), 0.5)" class="w-9 h-9 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="縮小">－</button>
+        <!-- PC用マップビューポートラッパー (ズームボタンとアクションバーをスクロール領域外に固定) -->
+        <div class="relative flex-1 min-h-[220px] flex flex-col rounded-xl border border-gray-200 bg-white shadow-inner overflow-hidden">
+          <!-- 固定ズームコントロール (スクロールしても常に右下に固定・アクションバー表示時は自動で上に退避) -->
+          <div class="absolute right-3 flex flex-col gap-1.5 z-20 transition-all duration-200"
+               :class="focusedMapCircle ? 'bottom-16' : 'bottom-3'">
+            <button @click="changeMapScale(0.25)" class="w-9 h-9 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="拡大 (Ctrl+ホイール)">＋</button>
+            <button @click="mapScale = 1.0" class="w-9 h-7 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-[10px] text-gray-600 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="100%にリセット">{{ Math.round(mapScale * 100) }}%</button>
+            <button @click="changeMapScale(-0.25)" class="w-9 h-9 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="縮小 (Ctrl+ホイール)">－</button>
           </div>
-          <div class="map-inner cursor-pointer"
-               @mousedown="handleMapPointerDown"
-               @touchstart.passive="handleMapPointerDown"
-               @click="handleMapClick"
-               @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
-            <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
 
-            <!-- ★ 買い物リストサークルの極小カラードット (4原色・pointer-events-none・近傍スナップ選択対応) -->
-            <div v-for="item in activeListMapPins" :key="'pc_mp_'+item.circle_id"
-                 class="list-map-dot pointer-events-none select-none"
-                 :style="getListPinStyle(item)">
-            </div>
+          <!-- スクロール領域本体 -->
+          <div class="map-container flex-1 w-full h-full"
+               @wheel="handleMapWheel"
+               @mousedown="startMapPan"
+               @mousemove="moveMapPan"
+               @mouseup="endMapPan"
+               @mouseleave="endMapPan">
+            <div class="map-inner"
+                 :class="isPanningMap ? 'cursor-grabbing' : 'cursor-grab'"
+                 @mousedown="handleMapPointerDown"
+                 @touchstart.passive="handleMapPointerDown"
+                 @click="handleMapClick"
+                 @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
+              <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
 
-            <!-- ターゲットピン (案B: targetSpace選択時のみ表示) -->
-            <div v-if="targetSpace"
-                 class="draggable-pin select-none flex items-center justify-center"
-                 :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }"
-                 @mousedown.stop="startDrag"
-                 @touchstart.stop="startDrag">
-              <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 bg-gray-900/95 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20 pointer-events-none">
-                {{ targetSpace }}
+              <!-- ★ 買い物リストサークルの極小カラードット (4原色・pointer-events-none・近傍スナップ選択対応) -->
+              <div v-for="item in activeListMapPins" :key="'pc_mp_'+item.circle_id"
+                   class="list-map-dot pointer-events-none select-none"
+                   :style="getListPinStyle(item)">
               </div>
-              <span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3.5 h-3.5 rounded-full bg-rose-500/40 ring-2 ring-rose-600 animate-ping pointer-events-none"></span>
-              <span class="text-2xl leading-none relative z-10">📍</span>
-            </div>
-          </div>
-        </div>
 
-        <!-- ★ Step 2: マップ選択中サークルのクイックアクションバー (PC) -->
-        <div v-if="focusedMapCircle" class="bg-slate-900 text-white rounded-xl px-3 py-2 shadow-md flex items-center justify-between gap-2 shrink-0 border border-slate-700">
-          <div class="flex items-center gap-2 min-w-0 flex-1">
-            <!-- 前後サークル順送りボタン (リスト複数登録時) -->
-            <div v-if="spaceOrderedListPins.length > 1" class="flex items-center gap-0.5 shrink-0">
-              <button @click="stepMapPin(-1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center text-xs font-bold cursor-pointer" title="前の配置のリストサークルへ">◀</button>
-              <button @click="stepMapPin(1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center text-xs font-bold cursor-pointer" title="次の配置のリストサークルへ">▶</button>
-            </div>
-            <span class="px-1.5 py-0.5 rounded text-[11px] font-extrabold shrink-0" :class="getFocusedPinBadgeClass(focusedMapCircle.circle_id)">
-              {{ focusedMapCircle.space_sym }}-{{ focusedMapCircle.space_num }}
-            </span>
-            <div class="min-w-0 flex-1">
-              <div class="text-xs font-extrabold truncate">{{ focusedMapCircle.circle_name }}</div>
-              <div v-if="savedList[focusedMapCircle.circle_id]" class="text-[10px] text-slate-300 truncate flex items-center gap-1.5">
-                <span v-if="savedList[focusedMapCircle.circle_id].priority">優先:{{ savedList[focusedMapCircle.circle_id].priority }}</span>
-                <span v-if="savedList[focusedMapCircle.circle_id].price">¥{{ Number(savedList[focusedMapCircle.circle_id].price).toLocaleString() }}</span>
-                <span v-if="savedList[focusedMapCircle.circle_id].memo" class="text-amber-300 truncate">📝{{ savedList[focusedMapCircle.circle_id].memo }}</span>
+              <!-- ターゲットピン (案B: targetSpace選択時のみ表示) -->
+              <div v-if="targetSpace"
+                   class="draggable-pin select-none flex items-center justify-center"
+                   :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }"
+                   @mousedown.stop="startDrag"
+                   @touchstart.stop="startDrag">
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 bg-gray-900/95 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20 pointer-events-none">
+                  {{ targetSpace }}
+                </div>
+                <span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3.5 h-3.5 rounded-full bg-rose-500/40 ring-2 ring-rose-600 animate-ping pointer-events-none"></span>
+                <span class="text-2xl leading-none relative z-10">📍</span>
               </div>
             </div>
           </div>
 
-          <div class="flex items-center gap-1.5 shrink-0">
-            <button @click="openDetails(focusedMapCircle)"
-                    class="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center gap-1 shadow-xs">
-              <span>📸</span>
-              <span>詳細</span>
-            </button>
-            <button v-if="!isReadOnly && savedList[focusedMapCircle.circle_id]"
-                    @click="toggleBought(focusedMapCircle.circle_id)"
-                    class="px-2.5 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center gap-1 border"
-                    :class="savedList[focusedMapCircle.circle_id].bought ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'">
-              <span>{{ savedList[focusedMapCircle.circle_id].bought ? '✓ 済' : '🛒 済にする' }}</span>
-            </button>
-            <button @click="clearMapFocus" class="w-6 h-6 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm cursor-pointer" title="閉じる">×</button>
+          <!-- ★ マップ選択中サークルのクイックアクションバー (PC: マップ下部オーバーレイ固定でガタつき防止) -->
+          <div v-if="focusedMapCircle" class="absolute bottom-2 inset-x-2 z-20 bg-slate-900/95 backdrop-blur-xs text-white rounded-xl px-3 py-2 shadow-lg flex items-center justify-between gap-2 border border-slate-700">
+            <div class="flex items-center gap-2 min-w-0 flex-1">
+              <!-- 前後サークル順送りボタン (リスト複数登録時) -->
+              <div v-if="spaceOrderedListPins.length > 1" class="flex items-center gap-0.5 shrink-0">
+                <button @click="stepMapPin(-1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center text-xs font-bold cursor-pointer" title="前の配置のリストサークルへ">◀</button>
+                <button @click="stepMapPin(1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center text-xs font-bold cursor-pointer" title="次の配置のリストサークルへ">▶</button>
+              </div>
+              <span class="px-1.5 py-0.5 rounded text-[11px] font-extrabold shrink-0" :class="getFocusedPinBadgeClass(focusedMapCircle.circle_id)">
+                {{ focusedMapCircle.space_sym }}-{{ focusedMapCircle.space_num }}
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="text-xs font-extrabold truncate">{{ focusedMapCircle.circle_name }}</div>
+                <div v-if="savedList[focusedMapCircle.circle_id]" class="text-[10px] text-slate-300 truncate flex items-center gap-1.5">
+                  <span v-if="savedList[focusedMapCircle.circle_id].priority">優先:{{ savedList[focusedMapCircle.circle_id].priority }}</span>
+                  <span v-if="savedList[focusedMapCircle.circle_id].price">¥{{ Number(savedList[focusedMapCircle.circle_id].price).toLocaleString() }}</span>
+                  <span v-if="savedList[focusedMapCircle.circle_id].memo" class="text-amber-300 truncate">📝{{ savedList[focusedMapCircle.circle_id].memo }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button @click="openDetails(focusedMapCircle)"
+                      class="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center gap-1 shadow-xs">
+                <span>📸</span>
+                <span>詳細</span>
+              </button>
+              <button v-if="!isReadOnly && savedList[focusedMapCircle.circle_id]"
+                      @click="toggleBought(focusedMapCircle.circle_id)"
+                      class="px-2.5 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center gap-1 border"
+                      :class="savedList[focusedMapCircle.circle_id].bought ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'">
+                <span>{{ savedList[focusedMapCircle.circle_id].bought ? '✓ 済' : '🛒 済にする' }}</span>
+              </button>
+              <button @click="clearMapFocus" class="w-6 h-6 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm cursor-pointer" title="閉じる">×</button>
+            </div>
           </div>
         </div>
 
-        <!-- PC用 配置ブロック絞り込み ＆ 会場速報 (コンパクト統合パネル) -->
-        <div class="bg-gray-50 rounded-xl p-3 border border-gray-200/80 shrink-0 space-y-2">
-          <div>
-            <div class="flex justify-between items-center mb-1.5">
-              <h2 class="text-[11px] font-extrabold text-gray-700 flex items-center gap-1">
+        <!-- PC用 配置ブロック絞り込み ＆ 会場速報 (折りたたみ対応でノートPCでもマップ領域を広く確保可能) -->
+        <div class="bg-gray-50 rounded-xl px-3 py-2 border border-gray-200/80 shrink-0 space-y-2">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+              <button @click="showPcBlockPanel = !showPcBlockPanel"
+                      class="text-[11px] font-extrabold text-gray-700 hover:text-gray-900 flex items-center gap-1 cursor-pointer select-none">
                 <span>🧭</span>
-                <span>配置ブロックで絞り込み（マップ連動）</span>
-              </h2>
+                <span>配置ブロック ＆ 会場X速報</span>
+                <svg class="w-3.5 h-3.5 text-gray-400 transition-transform duration-200" :class="showPcBlockPanel ? '' : 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+              </button>
               <button v-if="filterBlock" @click="selectBlockAndFocusMap(filterBlock)" class="text-[11px] text-blue-600 font-bold hover:underline cursor-pointer">
                 解除 ({{ filterBlock }})
               </button>
             </div>
+
+            <!-- 折りたたみ中も会場速報リンクへ即アクセス可能 -->
+            <div v-if="!showPcBlockPanel" class="flex items-center gap-1">
+              <a :href="getEventLiveSearchUrl('soldout')" target="_blank" class="px-1.5 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded text-[10px] font-bold">💔完売</a>
+              <a :href="getEventLiveSearchUrl('line')" target="_blank" class="px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded text-[10px] font-bold">🚶列</a>
+              <a :href="getEventLiveSearchUrl('all')" target="_blank" class="px-1.5 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded text-[10px] font-bold">📢速報</a>
+            </div>
+          </div>
+
+          <div v-show="showPcBlockPanel" class="space-y-2">
             <div class="flex flex-wrap gap-1">
               <button v-for="block in blocks" :key="'pc_b_'+block" @click="selectBlockAndFocusMap(block)"
                       class="min-w-[32px] h-7 px-2 rounded-lg text-xs font-extrabold transition-all active:scale-95 cursor-pointer"
@@ -197,25 +221,25 @@
                 {{ block }}
               </button>
             </div>
-          </div>
 
-          <div class="pt-2 border-t border-gray-200/70 flex items-center justify-between gap-2">
-            <span class="text-[11px] font-extrabold text-slate-700 flex items-center gap-1 shrink-0">
-              <span class="text-amber-500">⚡</span>会場X速報:
-            </span>
-            <div class="grid grid-cols-3 gap-1.5 flex-1">
-              <a :href="getEventLiveSearchUrl('soldout')" target="_blank" 
-                 class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition">
-                <span>💔 完売</span>
-              </a>
-              <a :href="getEventLiveSearchUrl('line')" target="_blank" 
-                 class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition">
-                <span>🚶 列情報</span>
-              </a>
-              <a :href="getEventLiveSearchUrl('all')" target="_blank" 
-                 class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition">
-                <span>📢 #VGGC12th</span>
-              </a>
+            <div class="pt-1.5 border-t border-gray-200/70 flex items-center justify-between gap-2">
+              <span class="text-[11px] font-extrabold text-slate-700 flex items-center gap-1 shrink-0">
+                <span class="text-amber-500">⚡</span>会場X速報:
+              </span>
+              <div class="grid grid-cols-3 gap-1.5 flex-1">
+                <a :href="getEventLiveSearchUrl('soldout')" target="_blank" 
+                   class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition">
+                  <span>💔 完売</span>
+                </a>
+                <a :href="getEventLiveSearchUrl('line')" target="_blank" 
+                   class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition">
+                  <span>🚶 列情報</span>
+                </a>
+                <a :href="getEventLiveSearchUrl('all')" target="_blank" 
+                   class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition">
+                  <span>📢 #VGGC12th</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -251,7 +275,7 @@
           <!-- =========================================
                [スマホ専用] マップ タブ
           ========================================== -->
-          <div v-show="activeTab === 'map'" class="md:hidden p-3 space-y-2.5 pb-20">
+          <div v-show="activeTab === 'map'" class="md:hidden p-2.5 space-y-2.5 pb-20">
             <div class="space-y-2">
               <div class="flex justify-between items-center gap-2">
                 <div class="flex items-center gap-1.5 min-w-0">
@@ -284,73 +308,80 @@
                 </button>
               </div>
 
-              <div class="map-container shadow-sm border-gray-200 relative max-h-[54vh]">
-                <div class="absolute bottom-3 right-3 flex flex-col gap-1.5 z-20">
-                  <button @click="mapScale = Math.min( +(mapScale + 0.25).toFixed(2), 2.5)" class="w-11 h-11 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-gray-800 font-bold border border-gray-200 active:bg-gray-100 transition" title="拡大">＋</button>
-                  <button @click="mapScale = 1.0" class="w-11 h-8 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-[10px] text-gray-600 font-bold border border-gray-200 active:bg-gray-100 transition" title="リセット">{{ Math.round(mapScale * 100) }}%</button>
-                  <button @click="mapScale = Math.max( +(mapScale - 0.25).toFixed(2), 0.5)" class="w-11 h-11 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-gray-800 font-bold border border-gray-200 active:bg-gray-100 transition" title="縮小">－</button>
+              <!-- スマホ用マップビューポートラッパー (ズームボタンとアクションバーを固定しガタつきゼロ化) -->
+              <div class="relative h-[58vh] min-h-[290px] max-h-[540px] flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <!-- 固定ズームコントロール (スクロールしても流れない・アクションバー表示時は上に自動退避) -->
+                <div class="absolute right-3 flex flex-col gap-1.5 z-20 transition-all duration-200"
+                     :class="focusedMapCircle ? 'bottom-16' : 'bottom-3'">
+                  <button @click="changeMapScale(0.25)" class="w-10 h-10 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-gray-800 font-bold border border-gray-200 active:bg-gray-100 transition" title="拡大">＋</button>
+                  <button @click="mapScale = 1.0" class="w-10 h-7 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-[10px] text-gray-600 font-bold border border-gray-200 active:bg-gray-100 transition" title="リセット">{{ Math.round(mapScale * 100) }}%</button>
+                  <button @click="changeMapScale(-0.25)" class="w-10 h-10 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-gray-800 font-bold border border-gray-200 active:bg-gray-100 transition" title="縮小">－</button>
                 </div>
-                <div class="map-inner"
-                     @mousedown="handleMapPointerDown"
-                     @touchstart.passive="handleMapPointerDown"
-                     @click="handleMapClick"
-                     @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
-                  <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
 
-                  <!-- ★ 買い物リストサークルの極小カラードット (4原色・pointer-events-none・近傍スナップ選択対応) -->
-                  <div v-for="item in activeListMapPins" :key="'mb_mp_'+item.circle_id"
-                       class="list-map-dot pointer-events-none select-none"
-                       :style="getListPinStyle(item)">
-                  </div>
+                <!-- スクロール領域本体 -->
+                <div class="map-container flex-1 w-full h-full">
+                  <div class="map-inner"
+                       @mousedown="handleMapPointerDown"
+                       @touchstart.passive="handleMapPointerDown"
+                       @click="handleMapClick"
+                       @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
+                    <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
 
-                  <!-- ターゲットピン (案B: targetSpace選択時のみ表示) -->
-                  <div v-if="targetSpace"
-                       class="draggable-pin select-none flex items-center justify-center"
-                       :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }"
-                       @mousedown.stop="startDrag"
-                       @touchstart.stop="startDrag">
-                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 bg-gray-900/95 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20 pointer-events-none">
-                      {{ targetSpace }}
+                    <!-- ★ 買い物リストサークルの極小カラードット (4原色・pointer-events-none・近傍スナップ選択対応) -->
+                    <div v-for="item in activeListMapPins" :key="'mb_mp_'+item.circle_id"
+                         class="list-map-dot pointer-events-none select-none"
+                         :style="getListPinStyle(item)">
                     </div>
-                    <span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3.5 h-3.5 rounded-full bg-rose-500/40 ring-2 ring-rose-600 animate-ping pointer-events-none"></span>
-                    <span class="text-2xl leading-none relative z-10">📍</span>
-                  </div>
-                </div>
-              </div>
 
-              <!-- ★ Step 2: マップ選択中サークルのクイックアクションバー (スマホ) -->
-              <div v-if="focusedMapCircle" class="bg-slate-900 text-white rounded-xl p-2.5 shadow-md flex items-center justify-between gap-2 border border-slate-700">
-                <div class="flex items-center gap-1.5 min-w-0 flex-1">
-                  <div v-if="spaceOrderedListPins.length > 1" class="flex items-center gap-1 shrink-0">
-                    <button @click="stepMapPin(-1)" class="w-7 h-7 rounded-lg bg-slate-800 active:bg-slate-700 text-slate-200 flex items-center justify-center text-xs font-bold">◀</button>
-                    <button @click="stepMapPin(1)" class="w-7 h-7 rounded-lg bg-slate-800 active:bg-slate-700 text-slate-200 flex items-center justify-center text-xs font-bold">▶</button>
-                  </div>
-                  <span class="px-1.5 py-0.5 rounded text-xs font-extrabold shrink-0" :class="getFocusedPinBadgeClass(focusedMapCircle.circle_id)">
-                    {{ focusedMapCircle.space_sym }}-{{ focusedMapCircle.space_num }}
-                  </span>
-                  <div class="min-w-0 flex-1">
-                    <div class="text-xs font-extrabold truncate">{{ focusedMapCircle.circle_name }}</div>
-                    <div v-if="savedList[focusedMapCircle.circle_id]" class="text-[10px] text-slate-300 truncate flex items-center gap-1.5">
-                      <span v-if="savedList[focusedMapCircle.circle_id].priority">優先:{{ savedList[focusedMapCircle.circle_id].priority }}</span>
-                      <span v-if="savedList[focusedMapCircle.circle_id].price">¥{{ Number(savedList[focusedMapCircle.circle_id].price).toLocaleString() }}</span>
-                      <span v-if="savedList[focusedMapCircle.circle_id].memo" class="text-amber-300 truncate">📝{{ savedList[focusedMapCircle.circle_id].memo }}</span>
+                    <!-- ターゲットピン (案B: targetSpace選択時のみ表示) -->
+                    <div v-if="targetSpace"
+                         class="draggable-pin select-none flex items-center justify-center"
+                         :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }"
+                         @mousedown.stop="startDrag"
+                         @touchstart.stop="startDrag">
+                      <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 bg-gray-900/95 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20 pointer-events-none">
+                        {{ targetSpace }}
+                      </div>
+                      <span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3.5 h-3.5 rounded-full bg-rose-500/40 ring-2 ring-rose-600 animate-ping pointer-events-none"></span>
+                      <span class="text-2xl leading-none relative z-10">📍</span>
                     </div>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-1.5 shrink-0">
-                  <button @click="openDetails(focusedMapCircle)"
-                          class="px-2.5 py-1.5 bg-amber-400 active:bg-amber-300 text-slate-950 rounded-lg text-xs font-extrabold flex items-center gap-1">
-                    <span>📸</span>
-                    <span>詳細</span>
-                  </button>
-                  <button v-if="!isReadOnly && savedList[focusedMapCircle.circle_id]"
-                          @click="toggleBought(focusedMapCircle.circle_id)"
-                          class="px-2.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1 border"
-                          :class="savedList[focusedMapCircle.circle_id].bought ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-slate-800 active:bg-slate-700 text-white border-slate-600'">
-                    <span>{{ savedList[focusedMapCircle.circle_id].bought ? '✓済' : '🛒済' }}</span>
-                  </button>
-                  <button @click="clearMapFocus" class="w-7 h-7 rounded-full text-slate-400 flex items-center justify-center text-sm">×</button>
+                <!-- ★ マップ選択中サークルのクイックアクションバー (スマホ: マップ下部オーバーレイ固定でガタつき防止) -->
+                <div v-if="focusedMapCircle" class="absolute bottom-2 inset-x-2 z-20 bg-slate-900/95 backdrop-blur-xs text-white rounded-xl p-2 shadow-lg flex items-center justify-between gap-1.5 border border-slate-700">
+                  <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                    <div v-if="spaceOrderedListPins.length > 1" class="flex items-center gap-0.5 shrink-0">
+                      <button @click="stepMapPin(-1)" class="w-7 h-7 rounded-lg bg-slate-800 active:bg-slate-700 text-slate-200 flex items-center justify-center text-xs font-bold">◀</button>
+                      <button @click="stepMapPin(1)" class="w-7 h-7 rounded-lg bg-slate-800 active:bg-slate-700 text-slate-200 flex items-center justify-center text-xs font-bold">▶</button>
+                    </div>
+                    <span class="px-1.5 py-0.5 rounded text-xs font-extrabold shrink-0" :class="getFocusedPinBadgeClass(focusedMapCircle.circle_id)">
+                      {{ focusedMapCircle.space_sym }}-{{ focusedMapCircle.space_num }}
+                    </span>
+                    <div class="min-w-0 flex-1">
+                      <div class="text-xs font-extrabold truncate">{{ focusedMapCircle.circle_name }}</div>
+                      <div v-if="savedList[focusedMapCircle.circle_id]" class="text-[10px] text-slate-300 truncate flex items-center gap-1.5">
+                        <span v-if="savedList[focusedMapCircle.circle_id].priority">優先:{{ savedList[focusedMapCircle.circle_id].priority }}</span>
+                        <span v-if="savedList[focusedMapCircle.circle_id].price">¥{{ Number(savedList[focusedMapCircle.circle_id].price).toLocaleString() }}</span>
+                        <span v-if="savedList[focusedMapCircle.circle_id].memo" class="text-amber-300 truncate">📝{{ savedList[focusedMapCircle.circle_id].memo }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-1 shrink-0">
+                    <button @click="openDetails(focusedMapCircle)"
+                            class="px-2.5 py-1.5 bg-amber-400 active:bg-amber-300 text-slate-950 rounded-lg text-xs font-extrabold flex items-center gap-1">
+                      <span>📸</span>
+                      <span>詳細</span>
+                    </button>
+                    <button v-if="!isReadOnly && savedList[focusedMapCircle.circle_id]"
+                            @click="toggleBought(focusedMapCircle.circle_id)"
+                            class="px-2.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1 border"
+                            :class="savedList[focusedMapCircle.circle_id].bought ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-slate-800 active:bg-slate-700 text-white border-slate-600'">
+                      <span>{{ savedList[focusedMapCircle.circle_id].bought ? '✓済' : '🛒済' }}</span>
+                    </button>
+                    <button @click="clearMapFocus" class="w-6 h-6 rounded-full text-slate-400 flex items-center justify-center text-sm">×</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -495,7 +526,7 @@
             </div>
 
             <!-- 検索タブのサークル一覧 (一覧性と視認性を両立したコンパクト3段カード) -->
-            <ul v-else class="px-2.5 md:px-4 mt-2.5 grid grid-cols-1 2xl:grid-cols-2 gap-2.5">
+            <ul v-else class="px-2.5 md:px-4 mt-2.5 grid grid-cols-1 xl:grid-cols-2 gap-2.5">
               <li v-for="circle in filteredCircles" :key="circle.circle_id" 
                   class="p-3 md:p-3.5 rounded-2xl shadow-xs border relative transition-all hover:shadow-md flex flex-col justify-between"
                   :class="[
@@ -617,46 +648,69 @@
           ========================================== -->
           <div v-show="activeTab === 'list'" class="flex flex-col min-h-full pb-24 md:pb-8 relative">
             
-            <div class="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-md p-3 md:p-4 border-b border-gray-200 shadow-sm">
-              <!-- 達成度プログレスバー -->
-              <div v-if="savedCount > 0" class="mb-2.5">
-                <div class="flex justify-between items-center mb-1 px-0.5">
-                  <span class="text-xs font-extrabold text-gray-700 flex items-center gap-1">
-                    <span>🎯 お買い物達成度</span>
-                  </span>
-                  <div class="text-xs font-extrabold flex items-center gap-1.5">
-                    <span class="text-blue-700 font-mono">{{ boughtCount }} / {{ activeTargetCount }} <span class="text-gray-500 text-[10px] font-sans">件</span> ({{ progressPercent }}%)</span>
-                    <span v-if="soldoutCount > 0" class="text-rose-700 bg-rose-100 border border-rose-200 px-1.5 py-0.5 rounded-md text-[10px] font-bold">
-                      💔 完売 {{ soldoutCount }}
+            <div class="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-md p-2.5 md:p-3.5 border-b border-gray-200 shadow-sm space-y-2">
+              <!-- 達成度プログレスバー ＆ スリムヘッダー切替 -->
+              <div v-if="savedCount > 0">
+                <div class="flex justify-between items-center mb-1 px-0.5 gap-2">
+                  <span class="text-xs font-extrabold text-gray-700 flex items-center gap-1 shrink-0">
+                    <span>🎯 達成度</span>
+                    <span class="text-blue-700 font-mono ml-0.5">{{ boughtCount }}/{{ activeTargetCount }}<span class="text-gray-500 text-[10px] font-sans">件</span> ({{ progressPercent }}%)</span>
+                    <span v-if="soldoutCount > 0" class="text-rose-700 bg-rose-100 border border-rose-200 px-1.5 py-0.2 rounded text-[10px] font-bold">
+                      💔{{ soldoutCount }}
                     </span>
+                  </span>
+
+                  <div class="flex items-center gap-1.5">
+                    <!-- スリムヘッダー時はここに金額サマリーを表示 -->
+                    <span v-if="isListHeaderSlim" class="text-[11px] font-extrabold text-pink-800 bg-pink-50 border border-pink-200 px-2 py-0.5 rounded-md font-mono">
+                      済:¥{{ spentPrice.toLocaleString() }} / 予:¥{{ totalPrice.toLocaleString() }}
+                    </span>
+                    <button @click="isListHeaderSlim = !isListHeaderSlim"
+                            class="text-[10px] font-bold text-gray-500 hover:text-gray-800 bg-white border border-gray-200 px-2 py-0.5 rounded-lg flex items-center gap-0.5 cursor-pointer shadow-2xs"
+                            :title="isListHeaderSlim ? '予算・シェア・速報パネルを展開' : 'ヘッダーをスリムに折りたたむ'">
+                      <span>{{ isListHeaderSlim ? '▼ 予算・速報' : '▲ スリム化' }}</span>
+                    </button>
                   </div>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
-                  <div class="bg-gradient-to-r from-blue-500 to-pink-500 h-2.5 rounded-full transition-all duration-500 ease-out" :style="{ width: progressPercent + '%' }"></div>
+                <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden shadow-inner">
+                  <div class="bg-gradient-to-r from-blue-500 to-pink-500 h-2 rounded-full transition-all duration-500 ease-out" :style="{ width: progressPercent + '%' }"></div>
                 </div>
               </div>
 
               <!-- ツールバー ＆ 予算サマリー -->
-              <div class="bg-white rounded-2xl shadow-sm border border-gray-200/90 p-2.5 md:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <!-- 左側: ソート ＆ 未購入フィルタ -->
-                <div class="flex items-center justify-between sm:justify-start gap-2">
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-xs font-bold text-gray-600">並び:</span>
-                    <select v-model="sortOrder" class="h-9 text-xs font-bold bg-gray-50 border border-gray-300 rounded-xl px-2.5 outline-none focus:ring-2 focus:ring-pink-500 text-gray-800 cursor-pointer">
+              <div class="bg-white rounded-2xl shadow-xs border border-gray-200/90 p-2 md:p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <!-- 左側: ソート ＆ 未購入フィルタ ＆ 当日コンパクト表示トグル -->
+                <div class="flex items-center justify-between sm:justify-start gap-1.5 flex-wrap">
+                  <div class="flex items-center gap-1">
+                    <span class="text-[11px] font-bold text-gray-500 hidden sm:inline">並び:</span>
+                    <select v-model="sortOrder" class="h-8 text-xs font-bold bg-gray-50 border border-gray-300 rounded-xl px-2 outline-none focus:ring-2 focus:ring-pink-500 text-gray-800 cursor-pointer">
                       <option value="default">追加順</option>
                       <option value="space">配置順 (A→N)</option>
                       <option value="priority">優先度順 (S→B)</option>
                     </select>
                   </div>
-                  <label class="h-9 flex items-center gap-1.5 cursor-pointer text-xs font-bold transition-colors px-3 rounded-xl border select-none"
-                         :class="hideBought ? 'bg-pink-100 border-pink-300 text-pink-900 ring-1 ring-pink-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
-                    <input type="checkbox" v-model="hideBought" class="accent-pink-600 w-3.5 h-3.5">
-                    <span>未購入のみ</span>
-                  </label>
+
+                  <div class="flex items-center gap-1.5">
+                    <label class="h-8 flex items-center gap-1 cursor-pointer text-xs font-bold transition-colors px-2.5 rounded-xl border select-none"
+                           :class="hideBought ? 'bg-pink-100 border-pink-300 text-pink-900 ring-1 ring-pink-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                      <input type="checkbox" v-model="hideBought" class="accent-pink-600 w-3.5 h-3.5">
+                      <span>未購入のみ</span>
+                    </label>
+
+                    <!-- ★ 当日買い回り用 コンパクト表示モード切替 -->
+                    <button @click="toggleListCompactMode"
+                            type="button"
+                            class="h-8 px-2.5 rounded-xl text-xs font-extrabold border transition flex items-center gap-1 cursor-pointer select-none shadow-2xs"
+                            :class="isListCompactMode ? 'bg-slate-800 text-white border-slate-900 ring-2 ring-slate-300' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'"
+                            title="入力欄をたたんで1画面に多くのサークルを表示する当日買い回り向けモード">
+                      <span>🏃</span>
+                      <span>コンパクト{{ isListCompactMode ? ':ON' : '' }}</span>
+                    </button>
+                  </div>
                 </div>
 
-                <!-- 右側: 予算・金額・シェア操作 -->
-                <div class="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                <!-- 右側: 予算・金額・シェア操作 (スリム化OFF時のみ表示) -->
+                <div v-show="!isListHeaderSlim" class="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
                   <div class="flex flex-col items-start sm:items-end gap-0.5">
                     <div class="flex items-center flex-wrap gap-1.5">
                       <button type="button" class="text-[11px] font-bold text-gray-700 hover:text-blue-700 transition flex items-center gap-1 bg-gray-100 hover:bg-blue-50 px-2 py-0.5 rounded-lg border border-gray-200 cursor-pointer" @click="openBudgetModal" title="予算を設定する">
@@ -690,8 +744,8 @@
                 </div>
               </div>
 
-              <!-- ★ 会場Xリアルタイム速報チップ (スマホ用：PCは左ペインに常設) -->
-              <div class="md:hidden mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs custom-scrollbar">
+              <!-- ★ 会場Xリアルタイム速報チップ (スマホ用・スリム化OFF時のみ表示) -->
+              <div v-show="!isListHeaderSlim" class="md:hidden flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs custom-scrollbar">
                 <span class="text-[10px] font-bold text-gray-600 shrink-0 flex items-center gap-1">
                   <span class="text-amber-500 font-black">⚡</span>会場速報:
                 </span>
@@ -725,7 +779,7 @@
                 </button>
               </div>
               
-              <ul v-else class="grid grid-cols-1 2xl:grid-cols-2 gap-3.5">
+              <ul v-else class="grid grid-cols-1 xl:grid-cols-2" :class="isListCompactMode ? 'gap-2' : 'gap-3.5'">
                 <li v-for="circle in sortedSavedCircles" :key="circle.circle_id" 
                     class="rounded-2xl shadow-sm border overflow-hidden relative transition-all duration-200 flex flex-col justify-between" 
                     :class="[
@@ -733,169 +787,272 @@
                       savedList[circle.circle_id].soldout ? 'opacity-70 bg-gray-100/90 border-dashed border-gray-300' : 
                       isCircleAbsent(circle.circle_id) ? 'bg-rose-50/50 border-rose-300' : 'bg-white border-gray-200/90 hover:border-pink-300'
                     ]">
-                  
-                  <!-- リストから削除ボタン -->
-                  <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" 
-                          title="買い物リストから削除"
-                          class="absolute top-3 right-3 w-9 h-9 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors z-10 cursor-pointer">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                  </button>
 
-                  <!-- 【第1段・第2段】サークル基本情報 ＆ 買うもの・リンク -->
-                  <div class="p-3.5 md:p-4 flex flex-col gap-2.5 relative">
-                    <!-- 配置番号とステータスバッジ -->
-                    <div class="flex items-center gap-1.5 flex-wrap pr-8">
-                      <button @click="jumpToMap(circle)"
-                              title="タップして会場マップで位置を確認"
-                              class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-extrabold rounded-lg border shadow-sm transition active:scale-95 cursor-pointer"
-                              :class="isCircleAbsent(circle.circle_id) ? 'bg-rose-100 text-rose-800 border-rose-300 line-through' : 'bg-pink-600 text-white border-pink-700 hover:bg-pink-700'">
-                        <span>📍</span>
-                        <span>{{ circle.space_sym }}-{{ circle.space_num }}</span>
-                      </button>
+                  <!-- =========================================================
+                       ★ パターンA: 当日コンパクト表示モード (1画面に多数収まる高密度・誤タップ防止設計)
+                  ========================================================== -->
+                  <div v-if="isListCompactMode && expandedCompactCircleId !== circle.circle_id" class="p-3 flex flex-col gap-2">
+                    <!-- 上段: 配置・優先度・サークル名・予定額・操作アイコン -->
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
+                        <button @click="jumpToMap(circle)"
+                                title="タップして会場マップで位置を確認"
+                                class="inline-flex items-center gap-0.5 px-2 py-0.5 text-xs font-extrabold rounded-lg border shadow-2xs transition active:scale-95 cursor-pointer shrink-0"
+                                :class="isCircleAbsent(circle.circle_id) ? 'bg-rose-100 text-rose-800 border-rose-300 line-through' : 'bg-pink-600 text-white border-pink-700'">
+                          <span>📍{{ circle.space_sym }}-{{ circle.space_num }}</span>
+                        </button>
 
-                      <span v-if="isCircleAbsent(circle.circle_id)" class="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-600 text-white text-xs font-bold rounded-md shadow-sm">
-                        <span>🚫 当日不参加</span>
-                      </span>
-                      <span v-if="savedList[circle.circle_id].soldout" class="inline-block px-2 py-0.5 bg-rose-100 text-rose-800 text-xs font-bold rounded-md border border-rose-300 shadow-sm">
-                        💔 完売・スキップ
-                      </span>
-                      <span v-else-if="savedList[circle.circle_id].bought" class="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-md border border-emerald-300 shadow-sm">
-                        ✓ 購入済
-                      </span>
-                    </div>
-
-                    <!-- サークル名・代表者 ＆ Xリンク -->
-                    <div class="pr-6">
-                      <h3 @click="openDetails(circle)" class="font-extrabold text-base md:text-lg leading-snug hover:text-pink-600 transition-colors cursor-pointer"
-                          :class="isCircleAbsent(circle.circle_id) ? 'text-gray-400 line-through decoration-rose-400' : 'text-gray-900'">
-                        {{ circle.circle_name }}
-                      </h3>
-                      <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
-                        <span v-if="circle.penname" class="text-xs text-gray-600 font-medium">代表: {{ circle.penname }}</span>
-
-                        <a v-for="acc in getCircleAuthorAccounts(circle, circleExtraInfo[circle.circle_id])" :key="'lst_au_'+circle.circle_id+'_'+acc.handle"
-                           :href="`https://x.com/${acc.handle}`" target="_blank" @click.stop
-                           class="inline-flex items-center gap-1 text-[11px] bg-gray-900 hover:bg-gray-700 text-white px-2 py-0.5 rounded-md font-bold transition shadow-xs active:scale-95"
-                           :title="acc.name ? `サークル主: ${acc.name} (@${acc.handle})` : `サークル主: @${acc.handle}`">
-                          <svg class="w-2.5 h-2.5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                          <span class="truncate max-w-[130px]">{{ acc.name || ('@' + acc.handle) }}</span>
-                        </a>
-
-                        <a v-for="acc in getCircleStaffAccounts(circleExtraInfo[circle.circle_id])" :key="'lst_st_'+circle.circle_id+'_'+acc.handle"
-                           :href="`https://x.com/${acc.handle}`" target="_blank" @click.stop
-                           class="inline-flex items-center gap-1 text-[11px] bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 px-2 py-0.5 rounded-md font-bold transition shadow-xs active:scale-95"
-                           :title="acc.name ? `売り子: ${acc.name} (@${acc.handle})` : `売り子: @${acc.handle}`">
-                          <span class="shrink-0">🤝</span>
-                          <span class="truncate max-w-[130px]">{{ acc.name || ('@' + acc.handle) }}</span>
-                        </a>
-                      </div>
-                    </div>
-
-                    <!-- メンバータグ ＆ 頒布物タグ -->
-                    <div v-if="circleExtraInfo[circle.circle_id]?.members?.length || circleExtraInfo[circle.circle_id]?.tags?.length" class="flex flex-wrap gap-1">
-                      <span v-for="member in (circleExtraInfo[circle.circle_id]?.members || [])" :key="'m_'+member" class="px-2 py-0.5 text-[11px] font-bold rounded-md border shadow-xs flex items-center gap-0.5" :style="getMemberStyle(member)">
-                        <span>{{ getMemberMark(member) }}</span>
-                        <span>{{ member }}</span>
-                      </span>
-                      <span v-for="tag in (circleExtraInfo[circle.circle_id]?.tags || [])" :key="tag" class="px-2 py-0.5 bg-gray-100 text-gray-700 text-[11px] font-bold rounded-md border border-gray-200">
-                        #{{ tag }}
-                      </span>
-                    </div>
-
-                    <!-- ★ 選択中のお品書き商品バッジ一覧 -->
-                    <div v-if="savedList[circle.circle_id].selectedItems?.length" 
-                         @click="openDetails(circle)"
-                         class="mt-0.5 p-2.5 bg-amber-50/70 hover:bg-amber-50 border border-amber-200 rounded-xl cursor-pointer transition space-y-1.5">
-                      <div class="text-[11px] font-extrabold text-amber-900 flex items-center justify-between">
-                        <span>📦 選択中の頒布物 ({{ savedList[circle.circle_id].selectedItems.length }}点):</span>
-                        <span class="text-[10px] text-amber-700 underline">変更する</span>
-                      </div>
-                      <div class="flex flex-wrap gap-1.5">
-                        <span v-for="itName in savedList[circle.circle_id].selectedItems" :key="itName" 
-                              class="text-xs bg-white text-amber-950 border border-amber-300 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 shadow-sm">
-                          <span class="text-amber-600 font-black">✓</span>{{ itName }}
+                        <!-- 優先度バッジ -->
+                        <span v-if="savedList[circle.circle_id].priority"
+                              class="px-1.5 py-0.5 text-[10px] font-extrabold rounded border shrink-0"
+                              :class="{
+                                'bg-red-500 text-white border-red-600': savedList[circle.circle_id].priority === 'S',
+                                'bg-yellow-400 text-slate-950 border-yellow-500': savedList[circle.circle_id].priority === 'A',
+                                'bg-blue-600 text-white border-blue-700': savedList[circle.circle_id].priority === 'B'
+                              }">
+                          優先:{{ savedList[circle.circle_id].priority }}
                         </span>
+
+                        <h3 @click="openDetails(circle)" class="font-extrabold text-sm md:text-base leading-tight hover:text-pink-600 transition-colors cursor-pointer truncate max-w-full"
+                            :class="isCircleAbsent(circle.circle_id) ? 'text-gray-400 line-through decoration-rose-400' : 'text-gray-900'">
+                          {{ circle.circle_name }}
+                        </h3>
+                      </div>
+
+                      <!-- 右上: 予定額 ＆ 個別編集展開ボタン -->
+                      <div class="flex items-center gap-1 shrink-0">
+                        <span v-if="savedList[circle.circle_id].price" class="px-2 py-0.5 bg-pink-50 text-pink-900 border border-pink-200 rounded-lg text-xs font-mono font-extrabold">
+                          ¥{{ Number(savedList[circle.circle_id].price).toLocaleString() }}
+                        </span>
+                        <span v-if="savedList[circle.circle_id].forWho" class="px-1.5 py-0.5 bg-purple-50 text-purple-800 border border-purple-200 rounded text-[10px] font-bold">
+                          {{ savedList[circle.circle_id].forWho }}
+                        </span>
+                        <button @click="expandedCompactCircleId = circle.circle_id"
+                                class="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-[11px] font-bold transition cursor-pointer"
+                                title="メモや金額・優先度を編集する">
+                          ✏️
+                        </button>
                       </div>
                     </div>
 
-                    <!-- 情報確認ボタンバー（お品書き・公式速報・目撃/列：押しやすいサイズに統一） -->
-                    <div class="grid grid-cols-3 gap-1.5 pt-1">
+                    <!-- 中段: 選択した頒布物 ＆ メモ表示 (ある場合のみ) -->
+                    <div v-if="savedList[circle.circle_id].selectedItems?.length || savedList[circle.circle_id].memo"
+                         class="flex flex-wrap items-center gap-1.5 text-xs bg-amber-50/60 border border-amber-200/80 rounded-xl px-2.5 py-1.5">
+                      <span v-for="itName in (savedList[circle.circle_id].selectedItems || [])" :key="'cmp_it_'+itName"
+                            class="bg-white text-amber-950 border border-amber-300 px-2 py-0.5 rounded-md text-[11px] font-bold flex items-center gap-0.5">
+                        <span class="text-amber-600 font-black">✓</span>{{ itName }}
+                      </span>
+                      <span v-if="savedList[circle.circle_id].memo" class="text-gray-800 text-[11px] font-medium break-all">
+                        📝 {{ savedList[circle.circle_id].memo }}
+                      </span>
+                    </div>
+
+                    <!-- 下段: お品書き確認 ＆ 購入済・完売 ワンタップバー -->
+                    <div class="grid grid-cols-12 gap-1.5 pt-0.5">
                       <button @click="openDetails(circle)"
-                              class="min-h-[38px] flex items-center justify-center gap-1 text-xs px-2 py-1.5 rounded-xl font-bold border transition shadow-sm active:scale-95 cursor-pointer"
+                              class="col-span-4 min-h-[38px] px-2 py-1.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1 border transition active:scale-95 cursor-pointer"
                               :class="(circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length)
                                 ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
                                 : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'">
                         <span>📸</span>
-                        <span class="truncate">{{ (circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length) ? 'お品書き' : '詳細/X' }}</span>
+                        <span class="truncate">{{ (circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length) ? 'お品書き' : '詳細' }}</span>
                       </button>
 
-                      <a :href="getCircleOfficialSearchUrl(circle, circleExtraInfo[circle.circle_id])" target="_blank"
-                         class="min-h-[38px] flex items-center justify-center gap-1 text-xs bg-blue-50 text-blue-800 hover:bg-blue-100 px-2 py-1.5 rounded-xl font-bold border border-blue-200 transition shadow-sm active:scale-95"
-                         title="サークル主・売り子の最新ツイートから完売・在庫・列情報を検索">
-                        <span class="text-amber-500">⚡</span>
-                        <span class="truncate">公式速報</span>
-                      </a>
+                      <template v-if="!isReadOnly">
+                        <button @click="toggleBought(circle.circle_id)"
+                                class="col-span-5 min-h-[38px] px-2 py-1.5 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-1 border select-none cursor-pointer"
+                                :class="savedList[circle.circle_id].bought 
+                                  ? 'bg-emerald-100 text-emerald-900 border-emerald-400' 
+                                  : 'bg-pink-600 text-white border-pink-700 shadow-xs hover:bg-pink-700 active:scale-95'">
+                          <span>{{ savedList[circle.circle_id].bought ? '✓ 購入済' : '🛒 済にする' }}</span>
+                        </button>
 
-                      <a :href="getCirclePublicSearchUrl(circle)" target="_blank"
-                         class="min-h-[38px] flex items-center justify-center gap-1 text-xs bg-gray-50 text-gray-700 hover:bg-gray-100 px-2 py-1.5 rounded-xl font-bold border border-gray-200 transition shadow-sm active:scale-95"
-                         title="参加者の目撃ツイートから完売や最後尾情報を検索">
-                        <span>👥</span>
-                        <span class="truncate">目撃/列</span>
-                      </a>
+                        <button @click="toggleSoldout(circle.circle_id)"
+                                class="col-span-3 min-h-[38px] px-1.5 py-1.5 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-0.5 border select-none cursor-pointer"
+                                :class="savedList[circle.circle_id].soldout 
+                                  ? 'bg-rose-100 text-rose-900 border-rose-400' 
+                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-rose-50'">
+                          <span>💔</span>
+                          <span class="truncate">{{ savedList[circle.circle_id].soldout ? '完売中' : '完売' }}</span>
+                        </button>
+                      </template>
                     </div>
                   </div>
-                  
-                  <!-- 【第3段】お買い物プラン入力 ＆ 現場ステータストグル (44pxタッチ対応) -->
-                  <div class="bg-gray-50/90 p-3 md:p-3.5 border-t border-gray-200/80 flex flex-col gap-2.5">
-                    <!-- 優先度・予算・誰用 (高コントラスト化) -->
-                    <div class="grid grid-cols-12 gap-2">
-                      <select v-model="savedList[circle.circle_id].priority" :disabled="isReadOnly" 
-                              class="col-span-5 h-9 text-xs border border-gray-300 rounded-xl px-2 bg-white focus:ring-2 focus:ring-pink-400 outline-none font-bold cursor-pointer" 
-                              :class="priorityColors[savedList[circle.circle_id].priority]">
-                        <option value="">優先度: 未設定</option>
-                        <option value="S">優先: S (最優先)</option>
-                        <option value="A">優先: A (買いたい)</option>
-                        <option value="B">優先: B (見に行く)</option>
-                      </select>
 
-                      <div class="col-span-4 h-9 flex items-center text-xs border border-gray-300 rounded-xl bg-white overflow-hidden focus-within:ring-2 focus-within:ring-pink-400">
-                        <span class="pl-2.5 pr-1 text-gray-500 font-bold">¥</span>
-                        <input type="number" v-model.number="savedList[circle.circle_id].price" :readonly="isReadOnly" placeholder="予定額" 
-                               class="w-full py-1 pr-2.5 bg-transparent outline-none text-right font-mono font-bold text-gray-900 placeholder-gray-400">
+                  <!-- =========================================================
+                       ★ パターンB: 通常フル表示モード (またはコンパクト中の個別編集展開時)
+                  ========================================================== -->
+                  <template v-else>
+                    <!-- リストから削除ボタン -->
+                    <div class="absolute top-3 right-3 flex items-center gap-1 z-10">
+                      <button v-if="isListCompactMode && expandedCompactCircleId === circle.circle_id"
+                              @click="expandedCompactCircleId = null"
+                              class="px-2.5 py-1 bg-slate-800 text-white text-[11px] font-bold rounded-lg shadow hover:bg-slate-700 cursor-pointer">
+                        ▲ 編集完了
+                      </button>
+                      <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" 
+                              title="買い物リストから削除"
+                              class="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors cursor-pointer">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                      </button>
+                    </div>
+
+                    <!-- 【第1段・第2段】サークル基本情報 ＆ 買うもの・リンク -->
+                    <div class="p-3.5 md:p-4 flex flex-col gap-2.5 relative">
+                      <!-- 配置番号とステータスバッジ -->
+                      <div class="flex items-center gap-1.5 flex-wrap pr-16">
+                        <button @click="jumpToMap(circle)"
+                                title="タップして会場マップで位置を確認"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-extrabold rounded-lg border shadow-sm transition active:scale-95 cursor-pointer"
+                                :class="isCircleAbsent(circle.circle_id) ? 'bg-rose-100 text-rose-800 border-rose-300 line-through' : 'bg-pink-600 text-white border-pink-700 hover:bg-pink-700'">
+                          <span>📍</span>
+                          <span>{{ circle.space_sym }}-{{ circle.space_num }}</span>
+                        </button>
+
+                        <span v-if="isCircleAbsent(circle.circle_id)" class="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-600 text-white text-xs font-bold rounded-md shadow-sm">
+                          <span>🚫 当日不参加</span>
+                        </span>
+                        <span v-if="savedList[circle.circle_id].soldout" class="inline-block px-2 py-0.5 bg-rose-100 text-rose-800 text-xs font-bold rounded-md border border-rose-300 shadow-sm">
+                          💔 完売・スキップ
+                        </span>
+                        <span v-else-if="savedList[circle.circle_id].bought" class="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-md border border-emerald-300 shadow-sm">
+                          ✓ 購入済
+                        </span>
                       </div>
 
-                      <input type="text" v-model="savedList[circle.circle_id].forWho" :readonly="isReadOnly" placeholder="誰用？" 
-                             class="col-span-3 h-9 text-xs border border-gray-300 rounded-xl px-2.5 bg-white outline-none focus:ring-2 focus:ring-pink-400 text-gray-800 placeholder-gray-400 font-medium">
-                    </div>
+                      <!-- サークル名・代表者 ＆ Xリンク -->
+                      <div class="pr-6">
+                        <h3 @click="openDetails(circle)" class="font-extrabold text-base md:text-lg leading-snug hover:text-pink-600 transition-colors cursor-pointer"
+                            :class="isCircleAbsent(circle.circle_id) ? 'text-gray-400 line-through decoration-rose-400' : 'text-gray-900'">
+                          {{ circle.circle_name }}
+                        </h3>
+                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                          <span v-if="circle.penname" class="text-xs text-gray-600 font-medium">代表: {{ circle.penname }}</span>
 
-                    <!-- メモ欄 (屋外でも見やすいコントラスト) -->
-                    <textarea v-model="savedList[circle.circle_id].memo" :readonly="isReadOnly" placeholder="メモを入力（例: 新刊セット、アクスタ、スケブお願いする）" 
-                              class="w-full px-3 py-2 text-xs md:text-sm rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-12 bg-white text-gray-900 placeholder-gray-400 leading-snug"></textarea>
+                          <a v-for="acc in getCircleAuthorAccounts(circle, circleExtraInfo[circle.circle_id])" :key="'lst_au_'+circle.circle_id+'_'+acc.handle"
+                             :href="`https://x.com/${acc.handle}`" target="_blank" @click.stop
+                             class="inline-flex items-center gap-1 text-[11px] bg-gray-900 hover:bg-gray-700 text-white px-2 py-0.5 rounded-md font-bold transition shadow-xs active:scale-95"
+                             :title="acc.name ? `サークル主: ${acc.name} (@${acc.handle})` : `サークル主: @${acc.handle}`">
+                            <svg class="w-2.5 h-2.5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                            <span class="truncate max-w-[130px]">{{ acc.name || ('@' + acc.handle) }}</span>
+                          </a>
+
+                          <a v-for="acc in getCircleStaffAccounts(circleExtraInfo[circle.circle_id])" :key="'lst_st_'+circle.circle_id+'_'+acc.handle"
+                             :href="`https://x.com/${acc.handle}`" target="_blank" @click.stop
+                             class="inline-flex items-center gap-1 text-[11px] bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 px-2 py-0.5 rounded-md font-bold transition shadow-xs active:scale-95"
+                             :title="acc.name ? `売り子: ${acc.name} (@${acc.handle})` : `売り子: @${acc.handle}`">
+                            <span class="shrink-0">🤝</span>
+                            <span class="truncate max-w-[130px]">{{ acc.name || ('@' + acc.handle) }}</span>
+                          </a>
+                        </div>
+                      </div>
+
+                      <!-- メンバータグ ＆ 頒布物タグ -->
+                      <div v-if="circleExtraInfo[circle.circle_id]?.members?.length || circleExtraInfo[circle.circle_id]?.tags?.length" class="flex flex-wrap gap-1">
+                        <span v-for="member in (circleExtraInfo[circle.circle_id]?.members || [])" :key="'m_'+member" class="px-2 py-0.5 text-[11px] font-bold rounded-md border shadow-xs flex items-center gap-0.5" :style="getMemberStyle(member)">
+                          <span>{{ getMemberMark(member) }}</span>
+                          <span>{{ member }}</span>
+                        </span>
+                        <span v-for="tag in (circleExtraInfo[circle.circle_id]?.tags || [])" :key="tag" class="px-2 py-0.5 bg-gray-100 text-gray-700 text-[11px] font-bold rounded-md border border-gray-200">
+                          #{{ tag }}
+                        </span>
+                      </div>
+
+                      <!-- ★ 選択中のお品書き商品バッジ一覧 -->
+                      <div v-if="savedList[circle.circle_id].selectedItems?.length" 
+                           @click="openDetails(circle)"
+                           class="mt-0.5 p-2.5 bg-amber-50/70 hover:bg-amber-50 border border-amber-200 rounded-xl cursor-pointer transition space-y-1.5">
+                        <div class="text-[11px] font-extrabold text-amber-900 flex items-center justify-between">
+                          <span>📦 選択中の頒布物 ({{ savedList[circle.circle_id].selectedItems.length }}点):</span>
+                          <span class="text-[10px] text-amber-700 underline">変更する</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                          <span v-for="itName in savedList[circle.circle_id].selectedItems" :key="itName" 
+                                class="text-xs bg-white text-amber-950 border border-amber-300 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 shadow-sm">
+                            <span class="text-amber-600 font-black">✓</span>{{ itName }}
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- 情報確認ボタンバー（お品書き・公式速報・目撃/列：押しやすいサイズに統一） -->
+                      <div class="grid grid-cols-3 gap-1.5 pt-1">
+                        <button @click="openDetails(circle)"
+                                class="min-h-[38px] flex items-center justify-center gap-1 text-xs px-2 py-1.5 rounded-xl font-bold border transition shadow-sm active:scale-95 cursor-pointer"
+                                :class="(circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length)
+                                  ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                                  : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'">
+                          <span>📸</span>
+                          <span class="truncate">{{ (circleExtraInfo[circle.circle_id]?.oshinagaki_url || circleExtraInfo[circle.circle_id]?.items?.length) ? 'お品書き' : '詳細/X' }}</span>
+                        </button>
+
+                        <a :href="getCircleOfficialSearchUrl(circle, circleExtraInfo[circle.circle_id])" target="_blank"
+                           class="min-h-[38px] flex items-center justify-center gap-1 text-xs bg-blue-50 text-blue-800 hover:bg-blue-100 px-2 py-1.5 rounded-xl font-bold border border-blue-200 transition shadow-sm active:scale-95"
+                           title="サークル主・売り子の最新ツイートから完売・在庫・列情報を検索">
+                          <span class="text-amber-500">⚡</span>
+                          <span class="truncate">公式速報</span>
+                        </a>
+
+                        <a :href="getCirclePublicSearchUrl(circle)" target="_blank"
+                           class="min-h-[38px] flex items-center justify-center gap-1 text-xs bg-gray-50 text-gray-700 hover:bg-gray-100 px-2 py-1.5 rounded-xl font-bold border border-gray-200 transition shadow-sm active:scale-95"
+                           title="参加者の目撃ツイートから完売や最後尾情報を検索">
+                          <span>👥</span>
+                          <span class="truncate">目撃/列</span>
+                        </a>
+                      </div>
+                    </div>
                     
-                    <!-- 現場用大型アクションボタン: 購入済み & 完売 (高さ44px確保) -->
-                    <div v-if="!isReadOnly" class="grid grid-cols-12 gap-2 pt-0.5">
-                      <!-- 購入済みトグル (8カラム) -->
-                      <button @click="toggleBought(circle.circle_id)"
-                              class="col-span-8 min-h-[44px] py-2.5 px-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 border select-none cursor-pointer"
-                              :class="savedList[circle.circle_id].bought 
-                                ? 'bg-emerald-100 text-emerald-900 border-emerald-400 ring-2 ring-emerald-300/60 shadow-inner' 
-                                : 'bg-pink-600 text-white border-pink-700 shadow-sm hover:bg-pink-700 active:scale-95'">
-                        <svg v-if="savedList[circle.circle_id].bought" class="w-4 h-4 text-emerald-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                        <svg v-else class="w-4 h-4 opacity-95 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                        <span class="truncate">{{ savedList[circle.circle_id].bought ? '✓ 購入済 (タップで戻す)' : '🛒 購入済みにする' }}</span>
-                      </button>
+                    <!-- 【第3段】お買い物プラン入力 ＆ 現場ステータストグル (44pxタッチ対応) -->
+                    <div class="bg-gray-50/90 p-3 md:p-3.5 border-t border-gray-200/80 flex flex-col gap-2.5">
+                      <!-- 優先度・予算・誰用 (高コントラスト化) -->
+                      <div class="grid grid-cols-12 gap-2">
+                        <select v-model="savedList[circle.circle_id].priority" :disabled="isReadOnly" 
+                                class="col-span-5 h-9 text-xs border border-gray-300 rounded-xl px-2 bg-white focus:ring-2 focus:ring-pink-400 outline-none font-bold cursor-pointer" 
+                                :class="priorityColors[savedList[circle.circle_id].priority]">
+                          <option value="">優先度: 未設定</option>
+                          <option value="S">優先: S (最優先)</option>
+                          <option value="A">優先: A (買いたい)</option>
+                          <option value="B">優先: B (見に行く)</option>
+                        </select>
 
-                      <!-- 完売・スキップトグル (4カラム) -->
-                      <button @click="toggleSoldout(circle.circle_id)"
-                              class="col-span-4 min-h-[44px] py-2.5 px-2 rounded-xl font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-1 border select-none cursor-pointer"
-                              :class="savedList[circle.circle_id].soldout 
-                                ? 'bg-rose-100 text-rose-900 border-rose-400 ring-2 ring-rose-300/60 shadow-inner' 
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-300 active:scale-95 shadow-sm'">
-                        <span>💔</span>
-                        <span class="truncate">{{ savedList[circle.circle_id].soldout ? '完売中' : '完売' }}</span>
-                      </button>
+                        <div class="col-span-4 h-9 flex items-center text-xs border border-gray-300 rounded-xl bg-white overflow-hidden focus-within:ring-2 focus-within:ring-pink-400">
+                          <span class="pl-2.5 pr-1 text-gray-500 font-bold">¥</span>
+                          <input type="number" v-model.number="savedList[circle.circle_id].price" :readonly="isReadOnly" placeholder="予定額" 
+                                 class="w-full py-1 pr-2.5 bg-transparent outline-none text-right font-mono font-bold text-gray-900 placeholder-gray-400">
+                        </div>
+
+                        <input type="text" v-model="savedList[circle.circle_id].forWho" :readonly="isReadOnly" placeholder="誰用？" 
+                               class="col-span-3 h-9 text-xs border border-gray-300 rounded-xl px-2.5 bg-white outline-none focus:ring-2 focus:ring-pink-400 text-gray-800 placeholder-gray-400 font-medium">
+                      </div>
+
+                      <!-- メモ欄 (屋外でも見やすいコントラスト) -->
+                      <textarea v-model="savedList[circle.circle_id].memo" :readonly="isReadOnly" placeholder="メモを入力（例: 新刊セット、アクスタ、スケブお願いする）" 
+                                class="w-full px-3 py-2 text-xs md:text-sm rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none h-12 bg-white text-gray-900 placeholder-gray-400 leading-snug"></textarea>
+                      
+                      <!-- 現場用大型アクションボタン: 購入済み & 完売 (高さ44px確保) -->
+                      <div v-if="!isReadOnly" class="grid grid-cols-12 gap-2 pt-0.5">
+                        <!-- 購入済みトグル (8カラム) -->
+                        <button @click="toggleBought(circle.circle_id)"
+                                class="col-span-8 min-h-[44px] py-2.5 px-3 rounded-xl font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 border select-none cursor-pointer"
+                                :class="savedList[circle.circle_id].bought 
+                                  ? 'bg-emerald-100 text-emerald-900 border-emerald-400 ring-2 ring-emerald-300/60 shadow-inner' 
+                                  : 'bg-pink-600 text-white border-pink-700 shadow-sm hover:bg-pink-700 active:scale-95'">
+                          <svg v-if="savedList[circle.circle_id].bought" class="w-4 h-4 text-emerald-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                          <svg v-else class="w-4 h-4 opacity-95 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                          <span class="truncate">{{ savedList[circle.circle_id].bought ? '✓ 購入済 (タップで戻す)' : '🛒 購入済みにする' }}</span>
+                        </button>
+
+                        <!-- 完売・スキップトグル (4カラム) -->
+                        <button @click="toggleSoldout(circle.circle_id)"
+                                class="col-span-4 min-h-[44px] py-2.5 px-2 rounded-xl font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-1 border select-none cursor-pointer"
+                                :class="savedList[circle.circle_id].soldout 
+                                  ? 'bg-rose-100 text-rose-900 border-rose-400 ring-2 ring-rose-300/60 shadow-inner' 
+                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-300 active:scale-95 shadow-sm'">
+                          <span>💔</span>
+                          <span class="truncate">{{ savedList[circle.circle_id].soldout ? '完売中' : '完売' }}</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  </template>
                 </li>
               </ul>
             </div>
@@ -1030,7 +1187,86 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         const focusedMapCircle = ref(null);
         const showListPins = ref(true);
         const showCompletedPins = ref(false);
+        const showPcBlockPanel = ref(true);
+        const isListCompactMode = ref(localStorage.getItem('vggc12th_list_compact') === 'true');
+        const expandedCompactCircleId = ref(null);
+        const isListHeaderSlim = ref(false);
+        const isPanningMap = ref(false);
         const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.default : (mapCoordsData || {}));
+
+        const toggleListCompactMode = () => {
+          isListCompactMode.value = !isListCompactMode.value;
+          expandedCompactCircleId.value = null;
+          try {
+            localStorage.setItem('vggc12th_list_compact', String(isListCompactMode.value));
+          } catch (e) {}
+        };
+
+        const changeMapScale = (delta) => {
+          const oldScale = mapScale.value;
+          const newScale = Math.max(0.5, Math.min(2.5, +(oldScale + delta).toFixed(2)));
+          if (newScale === oldScale) return;
+
+          // 現在の表示中心座標を記録してズーム後も中心を維持する
+          const containers = document.querySelectorAll('.map-container');
+          const centers = [];
+          containers.forEach(c => {
+            if (c.clientWidth > 0) {
+              centers.push({
+                el: c,
+                cx: (c.scrollLeft + c.clientWidth / 2) / oldScale,
+                cy: (c.scrollTop + c.clientHeight / 2) / oldScale
+              });
+            }
+          });
+
+          mapScale.value = newScale;
+          nextTick(() => {
+            centers.forEach(({ el, cx, cy }) => {
+              el.scrollLeft = Math.max(0, cx * newScale - el.clientWidth / 2);
+              el.scrollTop = Math.max(0, cy * newScale - el.clientHeight / 2);
+            });
+          });
+        };
+
+        const handleMapWheel = (e) => {
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            changeMapScale(e.deltaY < 0 ? 0.15 : -0.15);
+          }
+        };
+
+        let mapPanState = null;
+        const startMapPan = (e) => {
+          if (e.button !== 0 || isDraggingPin) return;
+          const container = e.currentTarget;
+          mapPanState = {
+            container,
+            startX: e.clientX,
+            startY: e.clientY,
+            scrollLeft: container.scrollLeft,
+            scrollTop: container.scrollTop
+          };
+        };
+
+        const moveMapPan = (e) => {
+          if (!mapPanState || isDraggingPin) return;
+          const dx = e.clientX - mapPanState.startX;
+          const dy = e.clientY - mapPanState.startY;
+          if (!isPanningMap.value && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+            isPanningMap.value = true;
+          }
+          if (isPanningMap.value) {
+            e.preventDefault();
+            mapPanState.container.scrollLeft = mapPanState.scrollLeft - dx;
+            mapPanState.container.scrollTop = mapPanState.scrollTop - dy;
+          }
+        };
+
+        const endMapPan = () => {
+          mapPanState = null;
+          isPanningMap.value = false;
+        };
 
         const clearMapFocus = () => {
           targetSpace.value = null;
@@ -1922,9 +2158,8 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
     .map-container { 
       position: relative; 
       width: 100%; 
+      height: 100%;
       overflow: auto; 
-      border: 1px solid #e5e7eb; 
-      border-radius: 0.75rem; 
       background: #fff; 
       -webkit-overflow-scrolling: touch; 
     }
