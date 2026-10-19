@@ -1203,42 +1203,43 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
         const toasts = ref([]);
 
         // =========================================
-        // ★ ぶいすぽっ！全メンバー ＆ 頻出タグ 1クリック選択パレット
+        // ★ ぶいすぽっ！全メンバー ＆ 頻出タグ 1クリック選択パレット (src/constants.js の vspoDict と完全統一)
         // =========================================
         const vspoMembersPalette = [
           { name: 'オールキャラ', mark: '🌈' },
           { name: '花芽すみれ', mark: '👾💤' },
           { name: '花芽なずな', mark: '🍣' },
-          { name: '小雀とと', mark: '🐤' },
+          { name: '小雀とと', mark: '🔫🐥' },
           { name: '一ノ瀬うるは', mark: '🌠' },
           { name: '胡桃のあ', mark: '🧸♔' },
           { name: '兎咲ミミ', mark: '🐰🍭' },
-          { name: '空澄セナ', mark: '🗝♠︎' },
+          { name: '空澄セナ', mark: '🗝♠' },
           { name: '橘ひなの', mark: '🍫💘' },
           { name: '英リサ', mark: '💐' },
-          { name: '如月れん', mark: '🥀' },
+          { name: '如月れん', mark: '⏰' },
           { name: '神成きゅぴ', mark: '🌩' },
           { name: '八雲べに', mark: '💄💚' },
           { name: '藍沢エマ', mark: '🥞💫' },
           { name: '紫宮るな', mark: '☪🐾' },
           { name: '猫汰つな', mark: '🍒✨' },
-          { name: '白波らむね', mark: '🐻‍❄️🏖' },
+          { name: '白波らむね', mark: '🐻❄️🏖️' },
           { name: '小森めと', mark: '🪐' },
-          { name: '夢野あかり', mark: '🍼🐾' },
+          { name: '夢野あかり', mark: '🍼' },
           { name: '夜乃くろむ', mark: '💀⛓' },
           { name: '紡木こかげ', mark: '📘💧' },
-          { name: '千燈ゆうひ', mark: '🟠🏮' },
-          { name: '蝶屋はなび', mark: '🎆🦋' },
-          { name: '甘結もか', mark: '🕹️🔖' },
-          { name: '銀城サイネ', mark: '🦊⚔️' },
-          { name: '龍巻ちせ', mark: '🐉🌪️' },
-          { name: '青月レミア', mark: '🌙🪽' },
-          { name: '黒刃アリヤ', mark: '🗡️🖤' },
-          { name: 'ジール・クリスタル', mark: '💎⚡' },
-          { name: '美暮ナリン', mark: '🦊🌸' },
-          { name: 'ソラ・リコ', mark: '☁️🎀' },
-          { name: 'エリ・コニファー', mark: '🌲🦌' },
-          { name: 'カミラ・ルナ', mark: '🦇🌙' }
+          { name: '千燈ゆうひ', mark: '🫠' },
+          { name: '蝶屋はなび', mark: '🦋🎆' },
+          { name: '甘結もか', mark: '🕹🔖' },
+          { name: '銀城サイネ', mark: '🎈' },
+          { name: '龍巻ちせ', mark: '🐉🌪' },
+          // ぶいすぽEN
+          { name: '青月レミア', mark: '🔋🔭' },
+          { name: '黒刃アリヤ', mark: '♦️🔪' },
+          { name: '地崎ジラ', mark: '⛰️' },
+          { name: '美暮ナリン', mark: '🌃🌷' },
+          { name: 'ソラリリコ', mark: '👩‍🚀💜' },
+          { name: '涼上エリス', mark: '🎣☁️' },
+          { name: '梅園ジュノ', mark: '😈🍬' }
         ];
 
         const presetTags = [
