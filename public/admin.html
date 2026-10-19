@@ -66,6 +66,16 @@
           <span class="text-[10px] bg-slate-950/20 px-1 rounded font-mono">Ctrl+S</span>
         </button>
 
+        <!-- ★ BGMプレイヤー開閉ボタン -->
+        <button @click="showBgmPlayer = !showBgmPlayer"
+                class="text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 font-bold shadow-sm border cursor-pointer active:scale-95"
+                :class="showBgmPlayer ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400 ring-2 ring-emerald-400/30' : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-emerald-400'"
+                title="作業用BGMプレイヤー (Spotify / YouTube 対応) を開閉します">
+          <span>🎵</span>
+          <span>BGM</span>
+          <span v-if="spotifyUser" class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" title="Spotify API連携中"></span>
+        </button>
+
         <!-- ショートカットヘルプボタン -->
         <button @click="showShortcutsHelp = true" 
                 class="text-xs bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 font-bold shadow-sm"
@@ -782,6 +792,198 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           </button>
         </div>
 
+      </div>
+    </div>
+
+    <!-- ★ ハイブリッド作業用BGMプレイヤー (Spotify 埋め込み & Spotify OAuth PKCE API & YouTube 両対応) -->
+    <!-- v-show を使用することで、最小化やパネル非表示時も再生中の音楽が途切れません -->
+    <div v-show="showBgmPlayer"
+         class="fixed bottom-4 left-4 z-40 bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700 overflow-hidden transition-all duration-200"
+         :class="isBgmMinimized ? 'w-[310px] sm:w-[340px]' : 'w-[340px] sm:w-[390px]'">
+      
+      <!-- プレイヤーヘッダー -->
+      <div class="bg-slate-950 px-3.5 py-2.5 flex items-center justify-between border-b border-slate-800 select-none">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-emerald-400 text-sm">🎵</span>
+          <span class="font-extrabold text-xs tracking-wide truncate">{{ activeBgmTitle || '作業用 BGM プレイヤー' }}</span>
+          <span v-if="spotifyUser" class="px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded text-[9px] font-bold shrink-0">
+            Spotify連携済
+          </span>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button @click="isBgmMinimized = !isBgmMinimized"
+                  class="px-2 py-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white text-[11px] font-bold transition cursor-pointer"
+                  :title="isBgmMinimized ? '設定・プレイリストを展開' : 'スリムバーに最小化（音楽は止まりません）'">
+            {{ isBgmMinimized ? '🔼 展開' : '🔽 最小化' }}
+          </button>
+          <button @click="showBgmPlayer = false"
+                  class="w-6 h-6 rounded hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs transition cursor-pointer"
+                  title="パネルを隠す（バックグラウンド再生継続）">
+            ×
+          </button>
+        </div>
+      </div>
+
+      <!-- 展開時のみ表示: モード切替タブ ＆ 選曲・API連携エリア -->
+      <div v-show="!isBgmMinimized" class="bg-slate-900 border-b border-slate-800">
+        <!-- モードタブ -->
+        <div class="flex border-b border-slate-800 text-[11px] font-bold bg-slate-950/50">
+          <button @click="bgmTab = 'bookmarks'"
+                  class="flex-1 py-2 text-center border-b-2 transition cursor-pointer flex items-center justify-center gap-1"
+                  :class="bgmTab === 'bookmarks' ? 'border-emerald-500 text-emerald-400 bg-slate-900' : 'border-transparent text-slate-400 hover:text-slate-200'">
+            <span>🎧</span>
+            <span>URL再生 / ブックマーク</span>
+          </button>
+          <button @click="bgmTab = 'spotify_api'"
+                  class="flex-1 py-2 text-center border-b-2 transition cursor-pointer flex items-center justify-center gap-1"
+                  :class="bgmTab === 'spotify_api' ? 'border-emerald-500 text-emerald-400 bg-slate-900' : 'border-transparent text-slate-400 hover:text-slate-200'">
+            <span>🟢</span>
+            <span>Spotify API マイリスト</span>
+          </button>
+        </div>
+
+        <!-- タブ1: URL入力 & マイBGMブックマーク -->
+        <div v-if="bgmTab === 'bookmarks'" class="p-3 space-y-2.5 text-xs">
+          <!-- URL直接入力 -->
+          <div class="space-y-1.5">
+            <div class="flex gap-1.5">
+              <input type="text" v-model="bgmUrlInput"
+                     @keydown.enter.prevent="applyBgmUrlInput"
+                     placeholder="Spotifyのプレイリスト/曲URL または YouTube URL..."
+                     class="flex-1 px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-[11px] outline-none focus:border-emerald-500 font-mono">
+              <button @click="applyBgmUrlInput"
+                      class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-lg text-[11px] shrink-0 transition cursor-pointer">
+                ▶ 読込
+              </button>
+            </div>
+            <!-- 現在のURLをブックマーク登録 -->
+            <div class="flex gap-1.5">
+              <input type="text" v-model="bgmTitleInput"
+                     @keydown.enter.prevent="addBgmBookmark"
+                     placeholder="ブックマーク名 (例: ぶいすぽ歌枠 / 作業用Lo-Fi)"
+                     class="flex-1 px-2.5 py-1 bg-slate-800/70 border border-slate-700/80 rounded-lg text-white placeholder-slate-500 text-[11px] outline-none focus:border-emerald-500">
+              <button @click="addBgmBookmark"
+                      class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 font-bold rounded-lg text-[11px] shrink-0 transition cursor-pointer">
+                ＋ 保存
+              </button>
+            </div>
+          </div>
+
+          <!-- 保存済みブックマーク一覧 -->
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-[10px] font-bold text-slate-400">🔖 マイBGMブックマーク (クリックで切替):</span>
+              <a href="https://open.spotify.com" target="_blank" class="text-[10px] text-emerald-400 hover:underline flex items-center gap-0.5" title="ブラウザでSpotifyにログインしておくとフル尺で再生されます">
+                <span>🔑 Spotify Webログイン確認</span>
+                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              </a>
+            </div>
+            <div class="max-h-28 overflow-y-auto custom-scrollbar flex flex-wrap gap-1.5 pt-0.5">
+              <div v-for="(bm, idx) in bgmBookmarks" :key="'bm_'+idx"
+                   class="inline-flex items-center rounded-lg border text-[11px] font-bold overflow-hidden transition"
+                   :class="currentBgmRawUrl === bm.url ? 'bg-emerald-950/90 border-emerald-500 text-emerald-200' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'">
+                <button @click="selectBgmBookmark(bm)" class="px-2 py-1 flex items-center gap-1 cursor-pointer truncate max-w-[180px]" :title="bm.url">
+                  <span>{{ bm.url.includes('youtube') || bm.url.includes('youtu.be') ? '📺' : '🎵' }}</span>
+                  <span class="truncate">{{ bm.title }}</span>
+                </button>
+                <button @click.stop="removeBgmBookmark(idx)" class="px-1.5 py-1 text-slate-500 hover:text-rose-400 hover:bg-slate-900/50 cursor-pointer" title="削除">×</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- タブ2: Spotify OAuth PKCE API連携 (自分のプレイリスト一覧を自動取得) -->
+        <div v-else class="p-3 space-y-2.5 text-xs">
+          <!-- 未ログイン時: Client ID 設定 ＆ OAuth PKCE ログイン -->
+          <div v-if="!spotifyAccessToken" class="space-y-2">
+            <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-2.5 space-y-1.5 text-[11px] text-slate-300">
+              <div class="font-bold text-emerald-400 flex items-center justify-between">
+                <span>🟢 Spotify アカウント連携 (OAuth 2.0 PKCE)</span>
+                <a href="https://developer.spotify.com/dashboard" target="_blank" class="underline text-[10px] text-emerald-300 hover:text-white">Developer Dashboard ↗</a>
+              </div>
+              <p class="text-[10px] text-slate-400 leading-relaxed">
+                ご自身のSpotifyの非公開・保存済みプレイリスト一覧をAPIで直接読み込む場合、Dashboardで作成したアプリの <b>Client ID</b> を入力し、Redirect URIに以下を登録してください。
+              </p>
+              <div class="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded border border-slate-800 font-mono text-[10px] text-slate-300">
+                <span class="truncate flex-1">{{ spotifyRedirectUri }}</span>
+                <button @click="copySpotifyRedirectUri" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded text-[9px] font-sans font-bold shrink-0 cursor-pointer">コピー</button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 mb-1">Spotify Client ID:</label>
+              <input type="text" v-model="spotifyClientId" @input="saveSpotifyClientId"
+                     placeholder="例: 1a2b3c4d5e6f7g8h9i0j..."
+                     class="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-[11px] font-mono outline-none focus:border-emerald-500">
+            </div>
+
+            <button @click="startSpotifyLogin"
+                    :disabled="!spotifyClientId.trim()"
+                    class="w-full py-2 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                    :class="spotifyClientId.trim() ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950' : 'bg-slate-800 text-slate-500 cursor-not-allowed'">
+              <span>🟢 Spotifyでログインしてマイリストを取得</span>
+            </button>
+          </div>
+
+          <!-- ログイン済み時: マイプレイリスト一覧 -->
+          <div v-else class="space-y-2">
+            <div class="flex items-center justify-between bg-slate-800/70 px-2.5 py-1.5 rounded-lg border border-slate-700">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span class="text-[11px] font-bold text-white truncate">
+                  {{ spotifyUser?.display_name || 'Spotify 連携中' }}
+                </span>
+                <span class="text-[10px] text-slate-400">({{ spotifyPlaylists.length }}件)</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button @click="fetchSpotifyPlaylists" :disabled="isLoadingSpotify" class="px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-[10px] font-bold text-slate-200 cursor-pointer" title="プレイリストを再取得">
+                  {{ isLoadingSpotify ? '読込中...' : '🔄 更新' }}
+                </button>
+                <button @click="logoutSpotify" class="px-2 py-0.5 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 rounded text-[10px] font-bold cursor-pointer">
+                  解除
+                </button>
+              </div>
+            </div>
+
+            <!-- プレイリスト選択リスト -->
+            <div v-if="spotifyPlaylists.length > 0" class="max-h-40 overflow-y-auto custom-scrollbar space-y-1 pr-0.5">
+              <div v-for="pl in spotifyPlaylists" :key="pl.id"
+                   class="flex items-center justify-between gap-2 p-1.5 rounded-lg border transition cursor-pointer"
+                   :class="currentBgmRawUrl.includes(pl.id) ? 'bg-emerald-950/80 border-emerald-500/80 text-white' : 'bg-slate-800/60 hover:bg-slate-800 border-slate-700/70 text-slate-200'"
+                   @click="playSpotifyPlaylist(pl)">
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                  <img v-if="pl.images && pl.images[0]?.url" :src="pl.images[0].url" class="w-7 h-7 rounded object-cover shrink-0 bg-slate-700">
+                  <div v-else class="w-7 h-7 rounded bg-slate-700 flex items-center justify-center text-xs shrink-0">🎵</div>
+                  <div class="min-w-0 flex-1">
+                    <div class="text-[11px] font-bold truncate">{{ pl.name }}</div>
+                    <div class="text-[9px] text-slate-400">{{ pl.tracks?.total || 0 }}曲 ・ {{ pl.owner?.display_name || '' }}</div>
+                  </div>
+                </div>
+                <button @click.stop="bookmarkSpotifyPlaylist(pl)"
+                        class="px-1.5 py-1 bg-slate-900/80 hover:bg-emerald-700 text-slate-300 hover:text-white rounded text-[10px] font-bold shrink-0"
+                        title="マイBGMブックマークに保存">
+                  🔖
+                </button>
+              </div>
+            </div>
+            <div v-else-if="!isLoadingSpotify" class="text-center py-4 text-slate-400 text-[11px]">
+              プレイリストが見つかりませんでした
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 埋め込みプレイヤー本体 (Spotify / YouTube 自動切替・最小化時は高さ80pxのスリムバー) -->
+      <div class="bg-slate-950 relative">
+        <iframe v-if="currentBgmEmbedUrl"
+                :src="currentBgmEmbedUrl"
+                width="100%"
+                :height="isBgmMinimized ? '80' : (currentBgmType === 'youtube' ? '200' : '152')"
+                frameborder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+                class="block w-full transition-all duration-200">
+        </iframe>
       </div>
     </div>
 
@@ -1539,6 +1741,324 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           }
         };
 
+        // =========================================
+        // ★ ハイブリッド BGM プレイヤー (Spotify埋め込み / OAuth PKCE API / YouTube対応)
+        // =========================================
+        const BGM_STORAGE_KEY = 'vggc_admin_bgm_bookmarks_v1';
+        const BGM_LAST_URL_KEY = 'vggc_admin_bgm_last_url_v1';
+        const SPOTIFY_CLIENT_ID_KEY = 'vggc_spotify_client_id';
+        const SPOTIFY_TOKEN_KEY = 'vggc_spotify_token_data';
+        const SPOTIFY_VERIFIER_KEY = 'vggc_spotify_pkce_verifier';
+
+        const defaultBookmarks = [
+          { title: 'Lo-Fi Beats (作業用定番)', url: 'https://open.spotify.com/playlist/37i9dQZF1DWWQRwui0ExPn' },
+          { title: 'Anime Now (アニソン)', url: 'https://open.spotify.com/playlist/37i9dQZF1DX0hAXqBDwvwI' },
+          { title: 'Tokyo Super Hits (J-Pop)', url: 'https://open.spotify.com/playlist/37i9dQZF1DXdbRLJPSmnyq' }
+        ];
+
+        const showBgmPlayer = ref(false);
+        const isBgmMinimized = ref(false);
+        const bgmTab = ref('bookmarks'); // 'bookmarks' | 'spotify_api'
+        const bgmBookmarks = ref([...defaultBookmarks]);
+        const currentBgmRawUrl = ref(defaultBookmarks[0].url);
+        const activeBgmTitle = ref(defaultBookmarks[0].title);
+        const bgmUrlInput = ref('');
+        const bgmTitleInput = ref('');
+
+        // Spotify OAuth PKCE ステート
+        const spotifyClientId = ref(localStorage.getItem(SPOTIFY_CLIENT_ID_KEY) || '');
+        const spotifyAccessToken = ref('');
+        const spotifyUser = ref(null);
+        const spotifyPlaylists = ref([]);
+        const isLoadingSpotify = ref(false);
+
+        const spotifyRedirectUri = computed(() => {
+          return window.location.origin + window.location.pathname;
+        });
+
+        // URLを解析して Spotify / YouTube の埋め込み用URLに変換
+        const parseBgmEmbed = (raw) => {
+          const s = (raw || '').trim();
+          if (!s) return { type: 'spotify', embedUrl: '' };
+
+          // 1. Spotify URL: https://open.spotify.com/(intl-ja/)?(playlist|album|track|artist|episode|show)/{id}
+          const spWebMatch = s.match(/open\.spotify\.com\/(?:intl-[a-zA-Z-]+\/)?(?:embed\/)?(playlist|album|track|artist|episode|show)\/([a-zA-Z0-9]+)/i);
+          if (spWebMatch) {
+            return {
+              type: 'spotify',
+              embedUrl: `https://open.spotify.com/embed/${spWebMatch[1].toLowerCase()}/${spWebMatch[2]}?utm_source=generator&theme=0`
+            };
+          }
+
+          // 2. Spotify URI: spotify:playlist:{id}
+          const spUriMatch = s.match(/^spotify:(playlist|album|track|artist|episode|show):([a-zA-Z0-9]+)$/i);
+          if (spUriMatch) {
+            return {
+              type: 'spotify',
+              embedUrl: `https://open.spotify.com/embed/${spUriMatch[1].toLowerCase()}/${spUriMatch[2]}?utm_source=generator&theme=0`
+            };
+          }
+
+          // 3. YouTube URL (動画 / 歌枠ライブ配信 / 短縮URL)
+          const ytMatch = s.match(/(?:youtube\.com\/(?:watch\?v=|live\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
+          if (ytMatch) {
+            return {
+              type: 'youtube',
+              embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?rel=0`
+            };
+          }
+
+          return { type: 'unknown', embedUrl: '' };
+        };
+
+        const currentBgmType = computed(() => parseBgmEmbed(currentBgmRawUrl.value).type);
+        const currentBgmEmbedUrl = computed(() => parseBgmEmbed(currentBgmRawUrl.value).embedUrl);
+
+        const saveBgmState = () => {
+          try {
+            localStorage.setItem(BGM_STORAGE_KEY, JSON.stringify(bgmBookmarks.value));
+            localStorage.setItem(BGM_LAST_URL_KEY, JSON.stringify({
+              url: currentBgmRawUrl.value,
+              title: activeBgmTitle.value
+            }));
+          } catch (e) {}
+        };
+
+        const applyBgmUrlInput = () => {
+          const raw = bgmUrlInput.value.trim();
+          if (!raw) return;
+          const parsed = parseBgmEmbed(raw);
+          if (!parsed.embedUrl) {
+            showToast('⚠️ 有効な Spotify URL または YouTube URL を入力してください', 'warning');
+            return;
+          }
+          currentBgmRawUrl.value = raw;
+          activeBgmTitle.value = bgmTitleInput.value.trim() || (parsed.type === 'youtube' ? 'YouTube BGM' : 'Spotify BGM');
+          saveBgmState();
+          showToast('🎵 プレイヤーに読み込みました！', 'success', 2000);
+        };
+
+        const addBgmBookmark = () => {
+          const raw = (bgmUrlInput.value.trim() || currentBgmRawUrl.value).trim();
+          const parsed = parseBgmEmbed(raw);
+          if (!parsed.embedUrl) {
+            showToast('⚠️ 保存する Spotify / YouTube URL を入力してください', 'warning');
+            return;
+          }
+          const title = bgmTitleInput.value.trim() || `マイBGM #${bgmBookmarks.value.length + 1}`;
+          bgmBookmarks.value.unshift({ title, url: raw });
+          currentBgmRawUrl.value = raw;
+          activeBgmTitle.value = title;
+          bgmUrlInput.value = '';
+          bgmTitleInput.value = '';
+          saveBgmState();
+          showToast(`🔖 「${title}」をブックマークに保存しました`, 'success', 2500);
+        };
+
+        const selectBgmBookmark = (bm) => {
+          currentBgmRawUrl.value = bm.url;
+          activeBgmTitle.value = bm.title;
+          saveBgmState();
+        };
+
+        const removeBgmBookmark = (idx) => {
+          bgmBookmarks.value.splice(idx, 1);
+          saveBgmState();
+        };
+
+        // Spotify OAuth 2.0 PKCE ヘルパー
+        const saveSpotifyClientId = () => {
+          localStorage.setItem(SPOTIFY_CLIENT_ID_KEY, spotifyClientId.value.trim());
+        };
+
+        const copySpotifyRedirectUri = async () => {
+          try {
+            await navigator.clipboard.writeText(spotifyRedirectUri.value);
+            showToast('📋 Redirect URI をコピーしました！Spotify Dashboard に登録してください', 'success');
+          } catch (e) {
+            prompt('以下の Redirect URI をコピーしてください:', spotifyRedirectUri.value);
+          }
+        };
+
+        const generateRandomString = (length) => {
+          const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+          const values = crypto.getRandomValues(new Uint8Array(length));
+          return Array.from(values).map(x => possible[x % possible.length]).join('');
+        };
+
+        const sha256Base64Url = async (plain) => {
+          const encoder = new TextEncoder();
+          const data = encoder.encode(plain);
+          const digest = await crypto.subtle.digest('SHA-256', data);
+          return btoa(String.fromCharCode(...new Uint8Array(digest)))
+            .replace(/=/g, '')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_');
+        };
+
+        const startSpotifyLogin = async () => {
+          const clientId = spotifyClientId.value.trim();
+          if (!clientId) {
+            showToast('⚠️ Spotify Client ID を入力してください', 'warning');
+            return;
+          }
+          saveSpotifyClientId();
+          saveDraftToStorage(); // 編集中のデータを確実に保護
+
+          const verifier = generateRandomString(64);
+          const challenge = await sha256Base64Url(verifier);
+          localStorage.setItem(SPOTIFY_VERIFIER_KEY, verifier);
+
+          const params = new URLSearchParams({
+            client_id: clientId,
+            response_type: 'code',
+            redirect_uri: spotifyRedirectUri.value,
+            scope: 'playlist-read-private playlist-read-collaborative',
+            code_challenge_method: 'S256',
+            code_challenge: challenge
+          });
+          window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+        };
+
+        const fetchSpotifyPlaylists = async () => {
+          if (!spotifyAccessToken.value) return;
+          isLoadingSpotify.value = true;
+          try {
+            const [meRes, plRes] = await Promise.all([
+              fetch('https://api.spotify.com/v1/me', {
+                headers: { Authorization: `Bearer ${spotifyAccessToken.value}` }
+              }),
+              fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
+                headers: { Authorization: `Bearer ${spotifyAccessToken.value}` }
+              })
+            ]);
+
+            if (meRes.status === 401 || plRes.status === 401) {
+              logoutSpotify(true);
+              showToast('⚠️ Spotifyのセッション期限が切れました。再度ログインしてください。', 'warning');
+              return;
+            }
+
+            if (meRes.ok) {
+              spotifyUser.value = await meRes.json();
+            }
+            if (plRes.ok) {
+              const plData = await plRes.json();
+              spotifyPlaylists.value = plData.items || [];
+            }
+          } catch (err) {
+            console.error('Spotify API error:', err);
+            showToast('❌ Spotify プレイリストの取得に失敗しました', 'error');
+          } finally {
+            isLoadingSpotify.value = false;
+          }
+        };
+
+        const playSpotifyPlaylist = (pl) => {
+          if (!pl || !pl.id) return;
+          const url = `https://open.spotify.com/playlist/${pl.id}`;
+          currentBgmRawUrl.value = url;
+          activeBgmTitle.value = pl.name;
+          saveBgmState();
+        };
+
+        const bookmarkSpotifyPlaylist = (pl) => {
+          if (!pl || !pl.id) return;
+          const url = `https://open.spotify.com/playlist/${pl.id}`;
+          if (!bgmBookmarks.value.some(b => b.url === url)) {
+            bgmBookmarks.value.unshift({ title: pl.name, url });
+            saveBgmState();
+            showToast(`🔖 「${pl.name}」をマイブックマークに追加しました！`, 'success', 2500);
+          } else {
+            showToast('ℹ️ すでにブックマークに登録されています', 'info', 2000);
+          }
+        };
+
+        const logoutSpotify = (silent = false) => {
+          spotifyAccessToken.value = '';
+          spotifyUser.value = null;
+          spotifyPlaylists.value = [];
+          localStorage.removeItem(SPOTIFY_TOKEN_KEY);
+          if (!silent) {
+            showToast('Spotify 連携を解除しました', 'info', 2000);
+          }
+        };
+
+        // 初期BGM設定復元 ＆ Spotify OAuth コールバック処理
+        const initBgmAndSpotify = async () => {
+          try {
+            const savedBm = localStorage.getItem(BGM_STORAGE_KEY);
+            if (savedBm) {
+              const parsed = JSON.parse(savedBm);
+              if (Array.isArray(parsed) && parsed.length > 0) bgmBookmarks.value = parsed;
+            }
+            const savedLast = localStorage.getItem(BGM_LAST_URL_KEY);
+            if (savedLast) {
+              const parsedLast = JSON.parse(savedLast);
+              if (parsedLast.url) currentBgmRawUrl.value = parsedLast.url;
+              if (parsedLast.title) activeBgmTitle.value = parsedLast.title;
+            }
+          } catch (e) {}
+
+          // Spotify OAuth リダイレクト復帰時の code 交換
+          const urlParams = new URLSearchParams(window.location.search);
+          const code = urlParams.get('code');
+          const verifier = localStorage.getItem(SPOTIFY_VERIFIER_KEY);
+          const clientId = spotifyClientId.value.trim();
+
+          if (code && verifier && clientId) {
+            try {
+              // URLから ?code=... を除去してクリーンに保つ
+              window.history.replaceState({}, document.title, window.location.pathname);
+              localStorage.removeItem(SPOTIFY_VERIFIER_KEY);
+
+              const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                  client_id: clientId,
+                  grant_type: 'authorization_code',
+                  code,
+                  redirect_uri: spotifyRedirectUri.value,
+                  code_verifier: verifier
+                })
+              });
+
+              if (tokenRes.ok) {
+                const tokenData = await tokenRes.json();
+                spotifyAccessToken.value = tokenData.access_token;
+                localStorage.setItem(SPOTIFY_TOKEN_KEY, JSON.stringify({
+                  access_token: tokenData.access_token,
+                  expires_at: Date.now() + ((tokenData.expires_in || 3600) * 1000)
+                }));
+                showBgmPlayer.value = true;
+                bgmTab.value = 'spotify_api';
+                showToast('🟢 Spotify アカウントと連携しました！', 'success');
+                await fetchSpotifyPlaylists();
+                return;
+              }
+            } catch (e) {
+              console.error('Spotify token exchange error:', e);
+            }
+          }
+
+          // 保存済みトークンの復元
+          try {
+            const rawToken = localStorage.getItem(SPOTIFY_TOKEN_KEY);
+            if (rawToken) {
+              const parsedToken = JSON.parse(rawToken);
+              if (parsedToken.access_token && parsedToken.expires_at > Date.now()) {
+                spotifyAccessToken.value = parsedToken.access_token;
+                fetchSpotifyPlaylists();
+              } else {
+                localStorage.removeItem(SPOTIFY_TOKEN_KEY);
+              }
+            }
+          } catch (e) {}
+        };
+
+        initBgmAndSpotify();
+
         return {
           user, authId, authPassword, authMode, authError, handleAuth, signOut,
           loading, circles, editData, saveStatus, searchQuery, selectedBlock,
@@ -1550,7 +2070,14 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           extractTwitterIdFromUrl, extractAllTwitterIds, saveAllDirty,
           activeCircleForItems, itemInputMode, tempItems, bulkText, isSavingItems,
           openItemsModal, closeItemsModal, addItemRow, removeItemRow,
-          parseAndApplyBulkText, saveItemsAndClose, saveCircle
+          parseAndApplyBulkText, saveItemsAndClose, saveCircle,
+          // BGM & Spotify API
+          showBgmPlayer, isBgmMinimized, bgmTab, bgmBookmarks,
+          currentBgmRawUrl, currentBgmType, currentBgmEmbedUrl, activeBgmTitle,
+          bgmUrlInput, bgmTitleInput, applyBgmUrlInput, addBgmBookmark, selectBgmBookmark, removeBgmBookmark,
+          spotifyClientId, spotifyRedirectUri, spotifyAccessToken, spotifyUser, spotifyPlaylists, isLoadingSpotify,
+          saveSpotifyClientId, copySpotifyRedirectUri, startSpotifyLogin, fetchSpotifyPlaylists,
+          playSpotifyPlaylist, bookmarkSpotifyPlaylist, logoutSpotify
         };
       }
     }).mount('#app');
