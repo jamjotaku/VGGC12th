@@ -449,15 +449,36 @@
                     <span>#{{ filterItemTag }}</span>
                     <span>×</span>
                   </button>
+                  <button v-if="filterRecentOnly" @click="filterRecentOnly = false"
+                          class="text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 px-2 py-0.5 rounded-full flex items-center gap-1 hover:bg-rose-200 transition cursor-pointer">
+                    <span>🆕 48h新着のみ</span>
+                    <span>×</span>
+                  </button>
 
-                  <button v-if="searchQuery || filterBlock || filterMember || filterItemTag || filterHasOshinagaki"
+                  <button v-if="searchQuery || filterBlock || filterMember || filterItemTag || filterHasOshinagaki || filterRecentOnly || searchSortOrder !== 'space'"
                           @click="resetAllFilters"
                           class="text-[11px] font-bold text-rose-600 hover:underline px-1 py-0.5 cursor-pointer">
                     クリア
                   </button>
                 </div>
 
-                <div class="flex items-center gap-1.5 ml-auto">
+                <div class="flex items-center gap-1.5 ml-auto flex-wrap">
+                  <!-- ★ 新着お品書き順ソート切替ボタン -->
+                  <button @click="searchSortOrder = searchSortOrder === 'recent' ? 'space' : 'recent'"
+                          type="button"
+                          class="px-2.5 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1 shadow-xs shrink-0 cursor-pointer select-none"
+                          :class="searchSortOrder === 'recent'
+                            ? 'bg-gradient-to-r from-rose-500 to-orange-500 border-rose-500 text-white ring-1 ring-rose-300'
+                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'"
+                          title="直近でお品書きや頒布物が登録・更新されたサークルを新しい順に表示します">
+                    <span>{{ searchSortOrder === 'recent' ? '🆕 新着順:ON' : '🆕 新着順' }}</span>
+                    <span v-if="recentOshinagakiCount > 0"
+                          class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-extrabold"
+                          :class="searchSortOrder === 'recent' ? 'bg-white text-rose-600' : 'bg-rose-100 text-rose-700'">
+                      {{ recentOshinagakiCount }}
+                    </span>
+                  </button>
+
                   <!-- お品書き公開済みのみ 絞り込みトグル -->
                   <label class="flex items-center gap-1 cursor-pointer text-xs font-bold transition select-none px-2.5 py-1 rounded-xl border shadow-xs shrink-0"
                          :class="filterHasOshinagaki ? 'bg-amber-100 border-amber-400 text-amber-950 ring-1 ring-amber-300' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
@@ -468,15 +489,28 @@
                   <!-- フィルター開閉トグル -->
                   <button @click="showSearchFilters = !showSearchFilters"
                           class="px-2.5 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1 shadow-xs cursor-pointer"
-                          :class="(showSearchFilters || filterBlock || filterMember || filterItemTag) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
+                          :class="(showSearchFilters || filterBlock || filterMember || filterItemTag || filterRecentOnly) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
                     <span>🌪️ 絞り込み</span>
                     <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="showSearchFilters ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                   </button>
                 </div>
               </div>
               
-              <!-- ★ 絞り込みフィルター群 (ブロック / メンバー / タグ クロス検索対応) -->
+              <!-- ★ 絞り込みフィルター群 (ブロック / メンバー / タグ / 新着 クロス検索対応) -->
               <div v-show="showSearchFilters" class="mt-2 pt-2 border-t border-gray-200/80 space-y-1.5 px-0.5">
+                <!-- 更新状況クイック絞り込み -->
+                <div class="flex items-center gap-2">
+                  <span class="text-[11px] font-bold text-gray-500 w-12 shrink-0">お品書き</span>
+                  <div class="flex gap-1.5 overflow-x-auto pb-1 custom-scrollbar flex-1">
+                    <button @click="filterRecentOnly = !filterRecentOnly"
+                            type="button"
+                            class="px-2.5 py-0.5 text-xs font-bold rounded-full whitespace-nowrap border transition flex items-center gap-1 cursor-pointer"
+                            :class="filterRecentOnly ? 'bg-gradient-to-r from-rose-500 to-orange-500 text-white border-rose-500 shadow-2xs' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
+                      <span>🆕 直近48時間以内の更新のみ ({{ recentOshinagakiCount }}件)</span>
+                    </button>
+                  </div>
+                </div>
+
                 <!-- ブロック横スクロール -->
                 <div class="flex items-center gap-2">
                   <span class="text-[11px] font-bold text-gray-500 w-12 shrink-0">配置</span>
@@ -555,6 +589,13 @@
                       <span>📍</span>
                       <span>{{ circle.space_sym }}-{{ circle.space_num }}</span>
                     </button>
+
+                    <!-- ★ 直近48時間以内にお品書きURLまたは頒布物が更新されたサークルのNEWバッジ -->
+                    <span v-if="isRecentOshinagakiUpdate(circle.circle_id)"
+                          :title="`お品書き・頒布物情報（${getRelativeUpdateLabel(circle.circle_id)}）`"
+                          class="inline-flex items-center gap-0.5 px-2 py-0.5 bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[10px] font-extrabold rounded-md shadow-2xs">
+                      <span>🆕 新着</span>
+                    </span>
 
                     <span v-if="isCircleAbsent(circle.circle_id)" class="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-600 text-white text-[11px] font-bold rounded-md shadow-xs">
                       <span>🚫 当日不参加</span>
@@ -687,6 +728,7 @@
                       <option value="default">追加順</option>
                       <option value="space">配置順 (A→N)</option>
                       <option value="priority">優先度順 (S→B)</option>
+                      <option value="recent">🆕 お品書き新着順</option>
                     </select>
                   </div>
 
@@ -802,6 +844,13 @@
                           <span>📍{{ circle.space_sym }}-{{ circle.space_num }}</span>
                         </button>
 
+                        <!-- 直近更新バッジ -->
+                        <span v-if="isRecentOshinagakiUpdate(circle.circle_id)"
+                              :title="`お品書き・頒布物情報（${getRelativeUpdateLabel(circle.circle_id)}）`"
+                              class="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[10px] font-extrabold rounded shadow-2xs shrink-0">
+                          <span>🆕新着</span>
+                        </span>
+
                         <!-- 優先度バッジ -->
                         <span v-if="savedList[circle.circle_id].priority"
                               class="px-1.5 py-0.5 text-[10px] font-extrabold rounded border shrink-0"
@@ -908,6 +957,13 @@
                           <span>📍</span>
                           <span>{{ circle.space_sym }}-{{ circle.space_num }}</span>
                         </button>
+
+                        <!-- 直近更新バッジ -->
+                        <span v-if="isRecentOshinagakiUpdate(circle.circle_id)"
+                              :title="`お品書き・頒布物情報（${getRelativeUpdateLabel(circle.circle_id)}）`"
+                              class="inline-flex items-center gap-0.5 px-2 py-0.5 bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[10px] font-extrabold rounded-md shadow-2xs">
+                          <span>🆕 新着</span>
+                        </span>
 
                         <span v-if="isCircleAbsent(circle.circle_id)" class="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-600 text-white text-xs font-bold rounded-md shadow-sm">
                           <span>🚫 当日不参加</span>
@@ -1459,6 +1515,8 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
           filterMember.value = '';
           filterItemTag.value = '';
           filterHasOshinagaki.value = false;
+          filterRecentOnly.value = false;
+          searchSortOrder.value = 'space';
         };
 
         const scrollMapToPin = (x, y) => {
@@ -1518,8 +1576,11 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
 
         const sortOrder = ref('default'); 
         const hideBought = ref(false);
+        const searchSortOrder = ref('space'); // 'space' | 'recent'
+        const filterRecentOnly = ref(false);
+        const RECENT_UPDATE_WINDOW_MS = 48 * 60 * 60 * 1000; // 直近48時間
         
-        // ★ Supabaseから取得した追加情報（タグ・お品書きURL）を保持するステート
+        // ★ Supabaseから取得した追加情報（タグ・お品書きURL・updated_at）を保持するステート
         const circleExtraInfo = ref({});
         
         // 詳細モーダルのステートと、X(Twitter)埋め込みの監視処理
@@ -1540,6 +1601,36 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         setInterval(() => {
           currentTime.value = new Date();
         }, 60000);
+
+        // ★ 直近48時間以内にお品書きURLまたは頒布物が登録・更新されたか判定
+        const isRecentOshinagakiUpdate = (circleId) => {
+          const extra = circleExtraInfo.value[circleId];
+          if (!extra || !extra.updated_at) return false;
+          const hasOshinagakiOrItems = Boolean((extra.oshinagaki_url || '').trim()) || (Array.isArray(extra.items) && extra.items.length > 0);
+          if (!hasOshinagakiOrItems) return false;
+          const updatedMs = Date.parse(extra.updated_at);
+          if (isNaN(updatedMs)) return false;
+          const diffMs = currentTime.value.getTime() - updatedMs;
+          return diffMs >= -60000 && diffMs <= RECENT_UPDATE_WINDOW_MS;
+        };
+
+        const getRelativeUpdateLabel = (circleId) => {
+          const extra = circleExtraInfo.value[circleId];
+          if (!extra || !extra.updated_at) return '';
+          const updatedMs = Date.parse(extra.updated_at);
+          if (isNaN(updatedMs)) return '';
+          const diffMs = Math.max(0, currentTime.value.getTime() - updatedMs);
+          const diffMin = Math.floor(diffMs / 60000);
+          if (diffMin < 60) return `${Math.max(1, diffMin)}分前に更新`;
+          const diffHours = Math.floor(diffMin / 60);
+          if (diffHours < 24) return `${diffHours}時間前に更新`;
+          const diffDays = Math.floor(diffHours / 24);
+          return `${diffDays}日前に更新`;
+        };
+
+        const recentOshinagakiCount = computed(() => {
+          return circles.value.filter(c => isRecentOshinagakiUpdate(c.circle_id)).length;
+        });
 
         const eventCountdown = computed(() => getEventCountdown(currentTime.value));
         const isCurrentSchedule = (timeKey) => checkScheduleActive(timeKey, currentTime.value);
@@ -1785,7 +1876,8 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
                   items: Array.isArray(info.items) ? info.items : [],
                   twitter_id: info.twitter_id || '',
                   staff_twitter: info.staff_twitter || '',
-                  is_absent: isAbsent
+                  is_absent: isAbsent,
+                  updated_at: info.updated_at || null
                 };
               });
               circleExtraInfo.value = infoMap;
@@ -1809,8 +1901,12 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
                     items: Array.isArray(payload.new.items) ? payload.new.items : [],
                     twitter_id: payload.new.twitter_id || '',
                     staff_twitter: payload.new.staff_twitter || '',
-                    is_absent: isAbsent
+                    is_absent: isAbsent,
+                    updated_at: payload.new.updated_at || null
                   };
+                  try {
+                    localStorage.setItem('vggc12th_circle_info_cache', JSON.stringify(circleExtraInfo.value));
+                  } catch (e) {}
                 }
               })
               .subscribe();
@@ -2048,6 +2144,19 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
               if (wa !== wb) return wb - wa;
               return 0; 
             });
+          } else if (sortOrder.value === 'recent') {
+            list.sort((a, b) => {
+              const extraA = circleExtraInfo.value[a.circle_id] || {};
+              const extraB = circleExtraInfo.value[b.circle_id] || {};
+              const hasOshiA = Boolean((extraA.oshinagaki_url || '').trim()) || ((extraA.items || []).length > 0);
+              const hasOshiB = Boolean((extraB.oshinagaki_url || '').trim()) || ((extraB.items || []).length > 0);
+              if (hasOshiA !== hasOshiB) return hasOshiA ? -1 : 1;
+              const timeA = extraA.updated_at ? (Date.parse(extraA.updated_at) || 0) : 0;
+              const timeB = extraB.updated_at ? (Date.parse(extraB.updated_at) || 0) : 0;
+              if (timeA !== timeB) return timeB - timeA;
+              if (a.space_sym !== b.space_sym) return (a.space_sym || '').localeCompare(b.space_sym || '');
+              return (parseInt(a.space_num) || 0) - (parseInt(b.space_num) || 0);
+            });
           }
 
           // ★ 完売・スキップ（soldout）および購入済み（bought）を最下部に退避
@@ -2088,7 +2197,7 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
 
         const filteredCircles = computed(() => {
           const q = (searchQuery.value || '').trim().toLowerCase();
-          return circles.value.filter(circle => {
+          const result = circles.value.filter(circle => {
             const extra = circleExtraInfo.value[circle.circle_id] || {};
             
             // ★ 商品名での部分一致
@@ -2113,9 +2222,27 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
             const matchItemTag = !filterItemTag.value || (extra.tags || []).includes(filterItemTag.value);
               
             const matchOshinagaki = !filterHasOshinagaki.value || Boolean(extra.oshinagaki_url) || ((extra.items || []).length > 0);
+            const matchRecent = !filterRecentOnly.value || isRecentOshinagakiUpdate(circle.circle_id);
               
-            return matchQuery && matchBlock && matchMember && matchItemTag && matchOshinagaki;
+            return matchQuery && matchBlock && matchMember && matchItemTag && matchOshinagaki && matchRecent;
           });
+
+          if (searchSortOrder.value === 'recent') {
+            return [...result].sort((a, b) => {
+              const extraA = circleExtraInfo.value[a.circle_id] || {};
+              const extraB = circleExtraInfo.value[b.circle_id] || {};
+              const hasOshiA = Boolean((extraA.oshinagaki_url || '').trim()) || ((extraA.items || []).length > 0);
+              const hasOshiB = Boolean((extraB.oshinagaki_url || '').trim()) || ((extraB.items || []).length > 0);
+              if (hasOshiA !== hasOshiB) return hasOshiA ? -1 : 1;
+              const timeA = extraA.updated_at ? (Date.parse(extraA.updated_at) || 0) : 0;
+              const timeB = extraB.updated_at ? (Date.parse(extraB.updated_at) || 0) : 0;
+              if (timeA !== timeB) return timeB - timeA;
+              if (a.space_sym !== b.space_sym) return (a.space_sym || '').localeCompare(b.space_sym || '');
+              return (parseInt(a.space_num) || 0) - (parseInt(b.space_num) || 0);
+            });
+          }
+
+          return result;
         });
 
         const onTogglePublic = async (newVal) => {
