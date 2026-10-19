@@ -9,6 +9,8 @@
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- X (Twitter) 埋め込みウィジェット (商品登録モーダル内のお品書きライブプレビュー用) -->
+  <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
   
   <style>
     body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif; }
@@ -43,7 +45,7 @@
         <div class="flex items-center gap-2.5 flex-wrap">
           <span class="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
             <span>🛡️ VGGC 12th</span>
-            <span class="text-xs font-bold bg-blue-600 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider">Admin v2.1 Pro</span>
+            <span class="text-xs font-bold bg-blue-600 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider">Admin v2.2 Pro</span>
           </span>
           <span class="text-xs bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-md font-mono hidden sm:inline-block">
             PC大画面特化・リアルタイム同期
@@ -128,7 +130,7 @@
     </div>
 
     <!-- ログイン済みコンテンツ -->
-    <main v-else class="p-3 sm:p-5 md:p-6 space-y-4">
+    <main v-else class="p-3 sm:p-5 md:p-6 pb-36 space-y-4">
       
       <!-- ローディング -->
       <div v-if="loading" class="text-center py-20 text-slate-500 font-bold space-y-3">
@@ -486,40 +488,95 @@
               <!-- 右ブロック (6カラム): 検索タグ ＆ メンバー設定 ＆ 管理者用備考欄 -->
               <div class="md:col-span-6 space-y-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
                 <div class="space-y-2">
-                  <!-- メンバー設定 -->
+                  <!-- メンバー設定 ＆ ワンクリック選択パレット -->
                   <div>
                     <div class="flex justify-between items-center mb-1">
                       <label class="font-bold text-slate-700 flex items-center gap-1">
                         <span>🎀</span>
                         <span>扱うメンバー (カンマ区切り):</span>
                       </label>
-                      <span class="text-[10px] text-slate-400">例: 花芽すみれ, 青月レミア</span>
+                      <button type="button"
+                              @click="togglePalette(circle.circle_id, 'members')"
+                              class="px-2 py-0.5 rounded-md text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer"
+                              :class="(activePaletteCircleId === circle.circle_id && activePaletteType === 'members') ? 'bg-pink-600 text-white border-pink-700 shadow-xs' : 'bg-white text-pink-700 border-pink-200 hover:bg-pink-50'">
+                        <span>✨ メンバー選択パレット</span>
+                        <span>{{ (activePaletteCircleId === circle.circle_id && activePaletteType === 'members') ? '▲' : '▼' }}</span>
+                      </button>
                     </div>
                     <input type="text" 
                            v-model="editData[circle.circle_id].membersInput" 
+                           @focus="openPalette(circle.circle_id, 'members')"
                            @input="markDirty(circle.circle_id)"
                            @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
                            @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
-                           placeholder="花芽すみれ, 一ノ瀬うるは, 青月レミア" 
-                           class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 text-xs">
+                           placeholder="花芽すみれ, 一ノ瀬うるは, 青月レミア (パレットから1クリック追加可)" 
+                           class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-pink-400 text-xs">
+
+                    <!-- ★ ぶいすぽっ！全メンバー ワンクリック選択パレット -->
+                    <div v-if="activePaletteCircleId === circle.circle_id && activePaletteType === 'members'"
+                         class="mt-1.5 p-2 bg-white border border-pink-200 rounded-xl shadow-md space-y-1.5">
+                      <div class="flex justify-between items-center border-b border-slate-100 pb-1">
+                        <span class="text-[10px] font-bold text-slate-500">クリックで追加 / もう一度クリックで解除（表記ゆれ防止）</span>
+                        <button type="button" @click="closePalette" class="text-[10px] text-slate-400 hover:text-slate-700 font-bold px-1.5 py-0.2 rounded hover:bg-slate-100 cursor-pointer">× 閉じる</button>
+                      </div>
+                      <div class="flex flex-wrap gap-1 max-h-36 overflow-y-auto custom-scrollbar pr-0.5">
+                        <button v-for="m in vspoMembersPalette" :key="'mp_'+circle.circle_id+'_'+m.name"
+                                type="button"
+                                @click="toggleMemberToken(circle.circle_id, m.name)"
+                                class="px-2 py-0.5 rounded-full text-[11px] font-bold border transition flex items-center gap-0.5 cursor-pointer select-none active:scale-95"
+                                :class="isTokenSelected(editData[circle.circle_id]?.membersInput, m.name)
+                                  ? 'bg-pink-600 text-white border-pink-700 shadow-xs ring-1 ring-pink-300'
+                                  : 'bg-slate-50 hover:bg-pink-50 text-slate-700 border-slate-200'">
+                          <span>{{ m.mark }}</span>
+                          <span>{{ m.name }}</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
-                  <!-- 頒布物タグ設定 -->
+                  <!-- 頒布物タグ設定 ＆ ワンクリック選択パレット -->
                   <div>
                     <div class="flex justify-between items-center mb-1">
                       <label class="font-bold text-slate-700 flex items-center gap-1">
                         <span>🏷️</span>
                         <span>検索タグ (カンマ区切り):</span>
                       </label>
-                      <span class="text-[10px] text-slate-400">例: 新刊, アクスタ, チェキ</span>
+                      <button type="button"
+                              @click="togglePalette(circle.circle_id, 'tags')"
+                              class="px-2 py-0.5 rounded-md text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer"
+                              :class="(activePaletteCircleId === circle.circle_id && activePaletteType === 'tags') ? 'bg-blue-600 text-white border-blue-700 shadow-xs' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'">
+                        <span>✨ 頻出タグ選択パレット</span>
+                        <span>{{ (activePaletteCircleId === circle.circle_id && activePaletteType === 'tags') ? '▲' : '▼' }}</span>
+                      </button>
                     </div>
                     <input type="text" 
                            v-model="editData[circle.circle_id].tagsInput" 
+                           @focus="openPalette(circle.circle_id, 'tags')"
                            @input="markDirty(circle.circle_id)"
                            @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
                            @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
-                           placeholder="新刊, 既刊, アクスタ, ポストカード" 
+                           placeholder="新刊, 既刊, アクスタ, ステッカー (パレットから1クリック追加可)" 
                            class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 text-xs">
+
+                    <!-- ★ 頻出タグ ワンクリック選択パレット -->
+                    <div v-if="activePaletteCircleId === circle.circle_id && activePaletteType === 'tags'"
+                         class="mt-1.5 p-2 bg-white border border-blue-200 rounded-xl shadow-md space-y-1.5">
+                      <div class="flex justify-between items-center border-b border-slate-100 pb-1">
+                        <span class="text-[10px] font-bold text-slate-500">クリックでタグ追加 / 解除（他サークルで使用中のタグも自動統合）</span>
+                        <button type="button" @click="closePalette" class="text-[10px] text-slate-400 hover:text-slate-700 font-bold px-1.5 py-0.2 rounded hover:bg-slate-100 cursor-pointer">× 閉じる</button>
+                      </div>
+                      <div class="flex flex-wrap gap-1 max-h-32 overflow-y-auto custom-scrollbar pr-0.5">
+                        <button v-for="t in allPaletteTags" :key="'tp_'+circle.circle_id+'_'+t"
+                                type="button"
+                                @click="toggleTagToken(circle.circle_id, t)"
+                                class="px-2 py-0.5 rounded-full text-[11px] font-bold border transition flex items-center gap-0.5 cursor-pointer select-none active:scale-95"
+                                :class="isTokenSelected(editData[circle.circle_id]?.tagsInput, t)
+                                  ? 'bg-blue-600 text-white border-blue-700 shadow-xs ring-1 ring-blue-300'
+                                  : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'">
+                          <span>#{{ t }}</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <!-- ★ 管理者用備考・作業メモ (アプリ側には非表示) -->
@@ -551,17 +608,25 @@
                   </div>
                 </div>
 
-                <!-- プレビューバッジ表示 -->
+                <!-- プレビューバッジ表示 (クリックで即座に外すことも可能) -->
                 <div class="pt-2 border-t border-slate-200/80 flex flex-wrap gap-1 items-center min-h-[26px]">
                   <span class="text-[10px] text-slate-400 font-bold mr-0.5">タグ確認:</span>
-                  <span v-for="m in (editData[circle.circle_id]?.membersInput || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="'m_'+m" 
-                        class="px-1.5 py-0.5 bg-pink-50 text-pink-700 border border-pink-200 rounded text-[10px] font-bold">
-                    {{ m }}
-                  </span>
-                  <span v-for="t in (editData[circle.circle_id]?.tagsInput || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="'t_'+t" 
-                        class="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-bold">
-                    {{ t }}
-                  </span>
+                  <button v-for="m in (editData[circle.circle_id]?.membersInput || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="'m_'+m" 
+                          type="button"
+                          @click="toggleMemberToken(circle.circle_id, m)"
+                          title="クリックで解除"
+                          class="px-1.5 py-0.5 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded text-[10px] font-bold flex items-center gap-0.5 cursor-pointer">
+                    <span>{{ m }}</span>
+                    <span class="text-pink-400">×</span>
+                  </button>
+                  <button v-for="t in (editData[circle.circle_id]?.tagsInput || '').split(',').map(s=>s.trim()).filter(Boolean)" :key="'t_'+t" 
+                          type="button"
+                          @click="toggleTagToken(circle.circle_id, t)"
+                          title="クリックで解除"
+                          class="px-1.5 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold flex items-center gap-0.5 cursor-pointer">
+                    <span>#{{ t }}</span>
+                    <span class="text-slate-400">×</span>
+                  </button>
                   <span v-if="!(editData[circle.circle_id]?.membersInput) && !(editData[circle.circle_id]?.tagsInput)" class="text-[10px] text-slate-300 italic">
                     未登録
                   </span>
@@ -576,90 +641,192 @@
       </div>
     </main>
 
-    <!-- ★ 商品登録モーダル (リスト入力 / 一括コピペ入力) -->
-    <div v-if="activeCircleForItems" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-      <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+    <!-- ★ 商品登録モーダル (PC 2カラム対応：左でお品書き画像を見ながら右で商品・価格を入力可能！) -->
+    <div v-if="activeCircleForItems" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4" @click.self="closeItemsModal">
+      <div class="bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[92vh]">
         
         <!-- モーダルヘッダー -->
-        <div class="bg-slate-900 text-white p-4 flex justify-between items-center">
+        <div class="bg-slate-900 text-white px-4 py-3.5 flex justify-between items-center shrink-0">
           <div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <span class="px-2 py-0.5 bg-blue-600 text-white text-xs font-black rounded">{{ activeCircleForItems.space_sym }}-{{ activeCircleForItems.space_num }}</span>
               <h3 class="font-bold text-base text-white">{{ activeCircleForItems.circle_name }}</h3>
+              <span class="text-xs text-slate-400">（代表: {{ activeCircleForItems.penname }}）</span>
             </div>
-            <p class="text-xs text-slate-400 mt-0.5">頒布物メニュー・価格の登録</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">左側でお品書き画像を確認しながら、右側で頒布物メニュー・価格を登録できます（Ctrl+Enterで保存）</p>
           </div>
-          <button @click="closeItemsModal" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <button @click="closeItemsModal" class="text-slate-400 hover:text-white p-1.5 rounded-lg cursor-pointer">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
 
-        <!-- 入力モードタブ -->
-        <div class="flex border-b border-slate-200 bg-slate-50 text-xs font-bold">
-          <button @click="itemInputMode = 'list'" 
-                  class="flex-1 py-2.5 text-center border-b-2 transition"
-                  :class="itemInputMode === 'list' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-slate-500 hover:text-slate-800'">
-            📝 1件ずつ入力
-          </button>
-          <button @click="itemInputMode = 'bulk'" 
-                  class="flex-1 py-2.5 text-center border-b-2 transition"
-                  :class="itemInputMode === 'bulk' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-slate-500 hover:text-slate-800'">
-            📋 テキスト一括コピペ
-          </button>
-        </div>
+        <!-- モーダル本体 (PC 2カラム分割) -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 bg-slate-50/60">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
-        <!-- モーダル本体 -->
-        <div class="p-4 overflow-y-auto flex-1 custom-scrollbar">
-          
-          <!-- モード1: 1件ずつ入力 -->
-          <div v-if="itemInputMode === 'list'" class="space-y-2.5">
-            <div v-for="(it, idx) in tempItems" :key="'it_'+idx" class="flex items-center gap-2">
-              <input type="text" v-model="it.name" placeholder="商品名 (例: 新刊セット、アクリルスタンド)" 
-                     class="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-400">
-              
-              <div class="flex items-center w-28 bg-slate-50 border border-slate-300 rounded-lg overflow-hidden shrink-0">
-                <span class="px-2 text-xs font-bold text-slate-400">¥</span>
-                <input type="number" v-model.number="it.price" placeholder="価格" 
-                       class="w-full py-2 pr-2 bg-transparent text-right text-xs outline-none font-mono font-bold">
+            <!-- ==========================================
+                 左カラム (6カラム): 📸 お品書きライブプレビュー ＆ URL編集
+            =========================================== -->
+            <div class="lg:col-span-6 bg-white border border-slate-200 rounded-xl p-3 shadow-xs space-y-2.5">
+              <div class="flex items-center justify-between gap-2">
+                <label class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                  <span>📸 お品書きプレビュー (X / Pixiv)</span>
+                  <span v-if="modalPixivArtworkId" class="px-1.5 py-0.2 bg-blue-600 text-white text-[9px] font-black rounded">pixiv</span>
+                </label>
+                <div class="flex items-center gap-1.5">
+                  <button v-if="modalPixivArtworkId"
+                          type="button"
+                          @click="isModalPreviewZoomed = !isModalPreviewZoomed"
+                          class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold cursor-pointer">
+                    {{ isModalPreviewZoomed ? '🔍 全体表示に戻す' : '🔍 画像を大きく表示' }}
+                  </button>
+                  <a v-if="editData[activeCircleForItems.circle_id]?.url"
+                     :href="editData[activeCircleForItems.circle_id].url"
+                     target="_blank"
+                     class="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-0.5">
+                    <span>元ページを開く</span>
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                  </a>
+                </div>
               </div>
 
-              <button @click="removeItemRow(idx)" class="p-2 text-slate-400 hover:text-rose-600 transition shrink-0" title="削除">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-              </button>
+              <!-- モーダル内でも直接お品書きURLを貼り付け・修正可能 -->
+              <div class="flex gap-1.5">
+                <input type="text"
+                       v-model="editData[activeCircleForItems.circle_id].url"
+                       @input="onModalUrlInput(activeCircleForItems.circle_id)"
+                       placeholder="お品書きURL (https://x.com/.../status/... または pixiv.net/artworks/...)"
+                       class="flex-1 px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono outline-none focus:ring-2 focus:ring-blue-400">
+                <button type="button"
+                        @click="renderModalOshinagakiPreview"
+                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 shrink-0 cursor-pointer"
+                        title="プレビューを再読み込み">
+                  🔄
+                </button>
+              </div>
+
+              <!-- プレビュー表示枠 -->
+              <div class="border border-slate-200 rounded-xl bg-slate-50 p-2.5 min-h-[260px] max-h-[58vh] overflow-y-auto custom-scrollbar flex flex-col items-center justify-center relative">
+                <!-- パターン1: Pixiv お品書き画像 -->
+                <div v-if="modalPixivArtworkId" class="w-full flex flex-col items-center gap-2">
+                  <img v-if="!modalPixivError"
+                       :src="`https://embed.pixiv.net/decorate.php?illust_id=${modalPixivArtworkId}`"
+                       referrerpolicy="no-referrer"
+                       @error="modalPixivError = true"
+                       class="rounded-lg border border-slate-200 bg-white transition-all"
+                       :class="isModalPreviewZoomed ? 'w-[140%] max-w-none cursor-zoom-out' : 'w-full h-auto max-h-[50vh] object-contain cursor-zoom-in'"
+                       @click="isModalPreviewZoomed = !isModalPreviewZoomed"
+                       title="クリックで拡大/縮小" />
+                  <iframe v-else
+                          :src="`https://embed.pixiv.net/oembed_iframe.php?type=illust&id=${modalPixivArtworkId}`"
+                          class="w-full h-[360px] border-0 rounded-lg bg-white"></iframe>
+                </div>
+
+                <!-- パターン2: X (Twitter) 埋め込みポスト -->
+                <div v-else-if="editData[activeCircleForItems.circle_id]?.url" class="w-full">
+                  <div v-if="isModalTweetLoading" class="py-12 text-center space-y-2">
+                    <div class="w-7 h-7 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <p class="text-xs text-slate-500 font-bold">Xポストを読み込み中...</p>
+                  </div>
+                  <div id="admin-modal-tweet-container" class="w-full flex justify-center"></div>
+                </div>
+
+                <!-- パターン3: お品書きURL未登録時 -->
+                <div v-else class="text-center py-8 px-4 space-y-2.5">
+                  <div class="text-2xl">🔍</div>
+                  <p class="text-xs font-bold text-slate-600">お品書きURLがまだ入力されていません</p>
+                  <p class="text-[11px] text-slate-400">上の入力欄にXポストまたはPixivのURLを貼り付けると、ここにプレビューが表示されます。</p>
+                </div>
+              </div>
             </div>
 
-            <button @click="addItemRow" class="w-full py-2 border-2 border-dashed border-slate-300 hover:border-blue-400 hover:text-blue-600 rounded-xl text-xs font-bold text-slate-500 transition flex items-center justify-center gap-1 mt-2">
-              <span>＋ 項目を追加</span>
-            </button>
-          </div>
+            <!-- ==========================================
+                 右カラム (6カラム): 📦 頒布物メニュー・価格の登録
+            =========================================== -->
+            <div class="lg:col-span-6 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs flex flex-col">
+              <!-- 入力モードタブ -->
+              <div class="flex border-b border-slate-200 bg-slate-50 text-xs font-bold">
+                <button @click="itemInputMode = 'list'" 
+                        class="flex-1 py-2.5 text-center border-b-2 transition cursor-pointer"
+                        :class="itemInputMode === 'list' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-slate-500 hover:text-slate-800'">
+                  📝 1件ずつ入力
+                </button>
+                <button @click="itemInputMode = 'bulk'" 
+                        class="flex-1 py-2.5 text-center border-b-2 transition cursor-pointer"
+                        :class="itemInputMode === 'bulk' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-slate-500 hover:text-slate-800'">
+                  📋 テキスト一括コピペ
+                </button>
+              </div>
 
-          <!-- モード2: テキスト一括コピペ -->
-          <div v-else class="space-y-3">
-            <p class="text-xs text-slate-500 leading-relaxed">
-              Xの告知ツイートやお品書きテキストをそのまま貼り付けてください。<br>
-              <code class="bg-slate-100 text-slate-700 px-1 py-0.5 rounded font-mono">商品名 1000円</code> や 
-              <code class="bg-slate-100 text-slate-700 px-1 py-0.5 rounded font-mono">新刊: ¥500</code> を自動認識して抽出します。
-            </p>
-            <textarea v-model="bulkText" rows="8" placeholder="新刊セット 1,500円&#10;アクリルキーホルダー 800円&#10;イラストカード 200円" 
-                      class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-400 font-mono leading-relaxed"></textarea>
-            
-            <button @click="parseAndApplyBulkText" class="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition shadow-sm">
-              ⚡ 解析してリストに反映
-            </button>
-          </div>
+              <div class="p-3.5 space-y-3">
+                <!-- ★ 定番アイテム ワンクリック追加バー -->
+                <div v-if="itemInputMode === 'list'" class="bg-blue-50/50 border border-blue-100 rounded-xl p-2 space-y-1.5">
+                  <div class="text-[10px] font-bold text-blue-900 flex items-center justify-between">
+                    <span>⚡ 定番アイテムをワンクリック追加:</span>
+                    <span class="text-slate-400 font-normal">追加後に価格変更可能</span>
+                  </div>
+                  <div class="flex flex-wrap gap-1">
+                    <button v-for="preset in quickItemPresets" :key="'qp_'+preset.name"
+                            type="button"
+                            @click="addQuickPresetItem(preset)"
+                            class="px-2 py-1 bg-white hover:bg-blue-600 hover:text-white text-slate-700 border border-blue-200 rounded-lg text-[11px] font-bold transition shadow-2xs cursor-pointer active:scale-95">
+                      ＋ {{ preset.name }} <span class="font-mono opacity-75">¥{{ preset.price }}</span>
+                    </button>
+                  </div>
+                </div>
 
+                <!-- モード1: 1件ずつ入力 -->
+                <div v-if="itemInputMode === 'list'" class="space-y-2 max-h-[42vh] overflow-y-auto custom-scrollbar pr-0.5">
+                  <div v-for="(it, idx) in tempItems" :key="'it_'+idx" class="flex items-center gap-1.5">
+                    <input type="text" v-model="it.name" placeholder="商品名 (例: 新刊セット、アクリルスタンド)" 
+                           class="flex-1 px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-400">
+                    
+                    <div class="flex items-center w-28 bg-slate-50 border border-slate-300 rounded-lg overflow-hidden shrink-0 focus-within:ring-2 focus-within:ring-blue-400">
+                      <span class="px-2 text-xs font-bold text-slate-400">¥</span>
+                      <input type="number" step="100" v-model.number="it.price" placeholder="価格" 
+                             class="w-full py-2 pr-2 bg-transparent text-right text-xs outline-none font-mono font-bold">
+                    </div>
+
+                    <button @click="removeItemRow(idx)" class="p-1.5 text-slate-400 hover:text-rose-600 transition shrink-0 cursor-pointer" title="削除">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                  </div>
+
+                  <button @click="addItemRow" class="w-full py-2 border-2 border-dashed border-slate-300 hover:border-blue-400 hover:text-blue-600 rounded-xl text-xs font-bold text-slate-500 transition flex items-center justify-center gap-1 mt-1 cursor-pointer">
+                    <span>＋ 空の行を追加</span>
+                  </button>
+                </div>
+
+                <!-- モード2: テキスト一括コピペ -->
+                <div v-else class="space-y-3">
+                  <p class="text-xs text-slate-500 leading-relaxed">
+                    Xの告知ツイートやお品書きテキストをそのまま貼り付けてください。<br>
+                    <code class="bg-slate-100 text-slate-700 px-1 py-0.5 rounded font-mono">商品名 1000円</code> や 
+                    <code class="bg-slate-100 text-slate-700 px-1 py-0.5 rounded font-mono">新刊: ¥500</code> を自動認識して抽出します。
+                  </p>
+                  <textarea v-model="bulkText" rows="8" placeholder="新刊セット 1,500円&#10;アクリルキーホルダー 800円&#10;イラストカード 200円" 
+                            class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-400 font-mono leading-relaxed"></textarea>
+                  
+                  <button @click="parseAndApplyBulkText" class="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition shadow-sm cursor-pointer">
+                    ⚡ 解析してリストに反映
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
 
         <!-- モーダルフッター -->
-        <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
-          <button @click="closeItemsModal" class="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 transition">
-            キャンセル
+        <div class="p-3.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center shrink-0">
+          <button @click="closeItemsModal" class="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 transition cursor-pointer">
+            キャンセル (Esc)
           </button>
           
-          <button @click="saveItemsAndClose" :disabled="isSavingItems" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold rounded-xl text-xs transition shadow-md flex items-center gap-1.5">
+          <button @click="saveItemsAndClose" :disabled="isSavingItems" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold rounded-xl text-xs transition shadow-md flex items-center gap-1.5 cursor-pointer">
             <span v-if="isSavingItems" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             <span v-else>💾</span>
-            <span>商品リストを保存して閉じる</span>
+            <span>お品書きURL・商品リストを保存して閉じる (Ctrl+Enter)</span>
           </button>
         </div>
 
@@ -798,8 +965,8 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
     <!-- ★ ハイブリッド作業用BGMプレイヤー (Spotify 埋め込み & Spotify OAuth PKCE API & YouTube 両対応) -->
     <!-- v-show を使用することで、最小化やパネル非表示時も再生中の音楽が途切れません -->
     <div v-show="showBgmPlayer"
-         class="fixed bottom-4 left-4 z-40 bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700 overflow-hidden transition-all duration-200"
-         :class="isBgmMinimized ? 'w-[310px] sm:w-[340px]' : 'w-[340px] sm:w-[390px]'">
+         class="fixed bottom-4 z-40 bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700 overflow-hidden transition-all duration-200"
+         :class="[bgmPosition === 'right' ? 'right-4' : 'left-4', isBgmMinimized ? 'w-[310px] sm:w-[340px]' : 'w-[340px] sm:w-[390px]']">
       
       <!-- プレイヤーヘッダー -->
       <div class="bg-slate-950 px-3.5 py-2.5 flex items-center justify-between border-b border-slate-800 select-none">
@@ -811,6 +978,11 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           </span>
         </div>
         <div class="flex items-center gap-1 shrink-0">
+          <button @click="toggleBgmPosition"
+                  class="px-1.5 py-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white text-[11px] font-bold transition cursor-pointer"
+                  :title="bgmPosition === 'right' ? '左下へ移動' : '右下へ移動'">
+            ⇄
+          </button>
           <button @click="isBgmMinimized = !isBgmMinimized"
                   class="px-2 py-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white text-[11px] font-bold transition cursor-pointer"
                   :title="isBgmMinimized ? '設定・プレイリストを展開' : 'スリムバーに最小化（音楽は止まりません）'">
@@ -987,8 +1159,9 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
       </div>
     </div>
 
-    <!-- ★ トースト通知 (画面右下固定) -->
-    <div class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm">
+    <!-- ★ トースト通知 (BGMプレイヤーと重ならないよう位置自動連動) -->
+    <div class="fixed bottom-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm"
+         :class="(showBgmPlayer && bgmPosition === 'right') ? 'left-5' : 'right-5'">
       <div v-for="t in toasts" :key="t.id"
            class="pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-bold transition-all shadow-slate-950/20"
            :class="t.type === 'error' ? 'bg-rose-900 text-white border-rose-700' : (t.type === 'warning' ? 'bg-amber-800 text-white border-amber-600' : (t.type === 'info' ? 'bg-slate-800 text-white border-slate-600' : 'bg-slate-900 text-white border-slate-700'))">
@@ -1000,7 +1173,7 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
   </div>
 
   <script>
-    const { createApp, ref, computed, onMounted } = Vue;
+    const { createApp, ref, computed, onMounted, nextTick } = Vue;
 
     // Supabase初期化
     const SUPABASE_URL = 'https://lgcwzlzrovdcjaywvmdk.supabase.co';
@@ -1028,6 +1201,124 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
         const isBulkSaving = ref(false);
         const showShortcutsHelp = ref(false);
         const toasts = ref([]);
+
+        // =========================================
+        // ★ ぶいすぽっ！全メンバー ＆ 頻出タグ 1クリック選択パレット
+        // =========================================
+        const vspoMembersPalette = [
+          { name: 'オールキャラ', mark: '🌈' },
+          { name: '花芽すみれ', mark: '👾💤' },
+          { name: '花芽なずな', mark: '🍣' },
+          { name: '小雀とと', mark: '🐤' },
+          { name: '一ノ瀬うるは', mark: '🌠' },
+          { name: '胡桃のあ', mark: '🧸♔' },
+          { name: '兎咲ミミ', mark: '🐰🍭' },
+          { name: '空澄セナ', mark: '🗝♠︎' },
+          { name: '橘ひなの', mark: '🍫💘' },
+          { name: '英リサ', mark: '💐' },
+          { name: '如月れん', mark: '🥀' },
+          { name: '神成きゅぴ', mark: '🌩' },
+          { name: '八雲べに', mark: '💄💚' },
+          { name: '藍沢エマ', mark: '🥞💫' },
+          { name: '紫宮るな', mark: '☪🐾' },
+          { name: '猫汰つな', mark: '🍒✨' },
+          { name: '白波らむね', mark: '🐻‍❄️🏖' },
+          { name: '小森めと', mark: '🪐' },
+          { name: '夢野あかり', mark: '🍼🐾' },
+          { name: '夜乃くろむ', mark: '💀⛓' },
+          { name: '紡木こかげ', mark: '📘💧' },
+          { name: '千燈ゆうひ', mark: '🟠🏮' },
+          { name: '蝶屋はなび', mark: '🎆🦋' },
+          { name: '甘結もか', mark: '🕹️🔖' },
+          { name: '銀城サイネ', mark: '🦊⚔️' },
+          { name: '龍巻ちせ', mark: '🐉🌪️' },
+          { name: '青月レミア', mark: '🌙🪽' },
+          { name: '黒刃アリヤ', mark: '🗡️🖤' },
+          { name: 'ジール・クリスタル', mark: '💎⚡' },
+          { name: '美暮ナリン', mark: '🦊🌸' },
+          { name: 'ソラ・リコ', mark: '☁️🎀' },
+          { name: 'エリ・コニファー', mark: '🌲🦌' },
+          { name: 'カミラ・ルナ', mark: '🦇🌙' }
+        ];
+
+        const presetTags = [
+          '新刊', '既刊', 'イラスト本', '漫画', '小説', '合同誌', '新刊セット', 'グッズセット',
+          'アクスタ', 'アクキー', 'ステッカー', '缶バッジ', 'タペストリー', '色紙', 'ポストカード',
+          'クリアファイル', 'チェキ風カード', 'Tシャツ', 'トートバッグ', 'プレイマット', 'スリーブ',
+          'キーキャップ', 'デスクマット', 'ぬいぐるみ', 'コースター', 'グラス'
+        ];
+
+        const activePaletteCircleId = ref(null);
+        const activePaletteType = ref(null); // 'members' | 'tags'
+
+        const openPalette = (circleId, type) => {
+          activePaletteCircleId.value = circleId;
+          activePaletteType.value = type;
+        };
+
+        const togglePalette = (circleId, type) => {
+          if (activePaletteCircleId.value === circleId && activePaletteType.value === type) {
+            activePaletteCircleId.value = null;
+            activePaletteType.value = null;
+          } else {
+            activePaletteCircleId.value = circleId;
+            activePaletteType.value = type;
+          }
+        };
+
+        const closePalette = () => {
+          activePaletteCircleId.value = null;
+          activePaletteType.value = null;
+        };
+
+        const parseCommaTokens = (str) => {
+          if (!str) return [];
+          return String(str).split(/[,、]+/).map(s => s.trim()).filter(Boolean);
+        };
+
+        const isTokenSelected = (inputStr, token) => {
+          return parseCommaTokens(inputStr).includes(token);
+        };
+
+        const toggleMemberToken = (circleId, memberName) => {
+          const item = editData.value[circleId];
+          if (!item) return;
+          const current = parseCommaTokens(item.membersInput);
+          const idx = current.indexOf(memberName);
+          if (idx >= 0) {
+            current.splice(idx, 1);
+          } else {
+            current.push(memberName);
+          }
+          item.membersInput = current.join(', ');
+          markDirty(circleId);
+        };
+
+        const toggleTagToken = (circleId, tagName) => {
+          const item = editData.value[circleId];
+          if (!item) return;
+          const current = parseCommaTokens(item.tagsInput);
+          const idx = current.indexOf(tagName);
+          if (idx >= 0) {
+            current.splice(idx, 1);
+          } else {
+            current.push(tagName);
+          }
+          item.tagsInput = current.join(', ');
+          markDirty(circleId);
+        };
+
+        const allPaletteTags = computed(() => {
+          const set = new Set(presetTags);
+          Object.values(editData.value).forEach(d => {
+            if (d && d.tagsInput) {
+              parseCommaTokens(d.tagsInput).forEach(t => {
+                if (t && !t.startsWith('__')) set.add(t);
+              });
+            }
+          });
+          return Array.from(set);
+        });
 
         const showToast = (message, type = 'success', duration = 3000) => {
           const id = Date.now() + Math.random();
@@ -1069,6 +1360,39 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
         const tempItems = ref([]);
         const bulkText = ref('');
         const isSavingItems = ref(false);
+        const modalPixivError = ref(false);
+        const isModalPreviewZoomed = ref(false);
+        const isModalTweetLoading = ref(false);
+
+        const quickItemPresets = [
+          { name: '新刊', price: 500 },
+          { name: '新刊（フルカラーイラスト本）', price: 1000 },
+          { name: '新刊セット', price: 2000 },
+          { name: '既刊', price: 500 },
+          { name: 'アクリルスタンド', price: 1500 },
+          { name: 'アクリルキーホルダー', price: 800 },
+          { name: 'ステッカー', price: 300 },
+          { name: '缶バッジ', price: 500 },
+          { name: 'タペストリー', price: 3000 },
+          { name: 'チェキ風カード', price: 300 }
+        ];
+
+        const addQuickPresetItem = (preset) => {
+          if (!preset) return;
+          const lastIdx = tempItems.value.length - 1;
+          if (lastIdx >= 0 && !String(tempItems.value[lastIdx].name || '').trim() && !Number(tempItems.value[lastIdx].price)) {
+            tempItems.value[lastIdx] = { name: preset.name, price: preset.price };
+          } else {
+            tempItems.value.push({ name: preset.name, price: preset.price });
+          }
+        };
+
+        const modalPixivArtworkId = computed(() => {
+          if (!activeCircleForItems.value) return null;
+          const url = editData.value[activeCircleForItems.value.circle_id]?.url || '';
+          const m = url.match(/pixiv\.net\/(?:en\/)?(?:artworks\/|member_illust\.php\?(?:.*&)?illust_id=)(\d+)/i);
+          return m ? m[1] : null;
+        });
 
         const cleanTwitterId = (id) => {
           if (!id) return '';
@@ -1229,7 +1553,7 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
               return;
             }
 
-            // Esc キー (モーダル閉じる、検索クリア、フォーカス解除)
+            // Esc キー (モーダル閉じる、パレット閉じる、検索クリア、フォーカス解除)
             if (e.key === 'Escape') {
               if (showShortcutsHelp.value) {
                 e.preventDefault();
@@ -1240,6 +1564,9 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
                 e.preventDefault();
                 closeItemsModal();
                 return;
+              }
+              if (activePaletteCircleId.value) {
+                closePalette();
               }
               if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
                 document.activeElement.blur();
@@ -1585,6 +1912,67 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           });
         });
 
+        // モーダル内のお品書きライブプレビュー描画 (X埋め込み / Pixiv画像)
+        let modalUrlDebounceTimer = null;
+        const renderModalOshinagakiPreview = async () => {
+          modalPixivError.value = false;
+          isModalPreviewZoomed.value = false;
+          if (!activeCircleForItems.value) return;
+          const url = (editData.value[activeCircleForItems.value.circle_id]?.url || '').trim();
+          if (!url || modalPixivArtworkId.value) {
+            isModalTweetLoading.value = false;
+            return;
+          }
+
+          const tweetMatch = url.match(/(?:twitter\.com|x\.com)\/(?:[^/]+)\/status\/(\d+)/i);
+          if (!tweetMatch || !tweetMatch[1]) {
+            isModalTweetLoading.value = false;
+            await nextTick();
+            const container = document.getElementById('admin-modal-tweet-container');
+            if (container) {
+              container.innerHTML = `<div class="p-4 text-center text-xs text-slate-500">埋め込み非対応のURLです。右上の「元ページを開く」から確認してください。</div>`;
+            }
+            return;
+          }
+
+          const tweetId = tweetMatch[1];
+          isModalTweetLoading.value = true;
+          await nextTick();
+          const container = document.getElementById('admin-modal-tweet-container');
+          if (!container) {
+            isModalTweetLoading.value = false;
+            return;
+          }
+          container.innerHTML = '';
+
+          if (window.twttr && window.twttr.widgets && window.twttr.widgets.createTweet) {
+            try {
+              const el = await window.twttr.widgets.createTweet(tweetId, container, {
+                align: 'center',
+                conversation: 'all',
+                dnt: true
+              });
+              isModalTweetLoading.value = false;
+              if (!el && container.children.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-xs text-slate-500">ポストの埋め込み表示に失敗しました。「元ページを開く」からご確認ください。</div>`;
+              }
+            } catch (e) {
+              isModalTweetLoading.value = false;
+            }
+          } else {
+            isModalTweetLoading.value = false;
+            container.innerHTML = `<div class="p-4 text-center text-xs text-slate-500">Xウィジェットを読み込めませんでした。「元ページを開く」からご確認ください。</div>`;
+          }
+        };
+
+        const onModalUrlInput = (circleId) => {
+          onUrlInput(circleId);
+          if (modalUrlDebounceTimer) clearTimeout(modalUrlDebounceTimer);
+          modalUrlDebounceTimer = setTimeout(() => {
+            renderModalOshinagakiPreview();
+          }, 450);
+        };
+
         // 商品モーダルのオープン
         const openItemsModal = (circle) => {
           activeCircleForItems.value = circle;
@@ -1595,6 +1983,7 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           if (tempItems.value.length === 0) {
             tempItems.value.push({ name: '', price: 0 });
           }
+          renderModalOshinagakiPreview();
         };
 
         const closeItemsModal = () => {
@@ -1746,6 +2135,7 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
         // =========================================
         const BGM_STORAGE_KEY = 'vggc_admin_bgm_bookmarks_v1';
         const BGM_LAST_URL_KEY = 'vggc_admin_bgm_last_url_v1';
+        const BGM_POS_KEY = 'vggc_admin_bgm_pos_v1';
         const SPOTIFY_CLIENT_ID_KEY = 'vggc_spotify_client_id';
         const SPOTIFY_TOKEN_KEY = 'vggc_spotify_token_data';
         const SPOTIFY_VERIFIER_KEY = 'vggc_spotify_pkce_verifier';
@@ -1758,12 +2148,20 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
 
         const showBgmPlayer = ref(false);
         const isBgmMinimized = ref(false);
+        const bgmPosition = ref(localStorage.getItem(BGM_POS_KEY) === 'right' ? 'right' : 'left');
         const bgmTab = ref('bookmarks'); // 'bookmarks' | 'spotify_api'
         const bgmBookmarks = ref([...defaultBookmarks]);
         const currentBgmRawUrl = ref(defaultBookmarks[0].url);
         const activeBgmTitle = ref(defaultBookmarks[0].title);
         const bgmUrlInput = ref('');
         const bgmTitleInput = ref('');
+
+        const toggleBgmPosition = () => {
+          bgmPosition.value = bgmPosition.value === 'left' ? 'right' : 'left';
+          try {
+            localStorage.setItem(BGM_POS_KEY, bgmPosition.value);
+          } catch (e) {}
+        };
 
         // Spotify OAuth PKCE ステート
         const spotifyClientId = ref(localStorage.getItem(SPOTIFY_CLIENT_ID_KEY) || '');
@@ -2064,15 +2462,21 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           loading, circles, editData, saveStatus, searchQuery, selectedBlock,
           availableBlocks, activeFilter, unsavedSet, hasUnsavedChanges, isBulkSaving,
           showShortcutsHelp, toasts, showToast, copySqlToClipboard, navigateCircles,
+          // ワンクリック選択パレット (メンバー & 頻出タグ)
+          vspoMembersPalette, allPaletteTags, activePaletteCircleId, activePaletteType,
+          openPalette, togglePalette, closePalette, isTokenSelected, toggleMemberToken, toggleTagToken,
           countHasAuthorTwitter, countHasStaffTwitter, countHasUrl, percentUrl, percentItems,
           countNeedsItems, circlesWithItemsCount, countAbsent, countHasAdminMemo, toggleAbsent,
           filteredCircles, cleanTwitterId, parseAccounts, parseHandles, markDirty, onUrlInput, 
           extractTwitterIdFromUrl, extractAllTwitterIds, saveAllDirty,
+          // 商品登録モーダル & お品書きライブプレビュー & 定番プリセット
           activeCircleForItems, itemInputMode, tempItems, bulkText, isSavingItems,
+          modalPixivArtworkId, modalPixivError, isModalPreviewZoomed, isModalTweetLoading,
+          renderModalOshinagakiPreview, onModalUrlInput, quickItemPresets, addQuickPresetItem,
           openItemsModal, closeItemsModal, addItemRow, removeItemRow,
           parseAndApplyBulkText, saveItemsAndClose, saveCircle,
           // BGM & Spotify API
-          showBgmPlayer, isBgmMinimized, bgmTab, bgmBookmarks,
+          showBgmPlayer, isBgmMinimized, bgmPosition, toggleBgmPosition, bgmTab, bgmBookmarks,
           currentBgmRawUrl, currentBgmType, currentBgmEmbedUrl, activeBgmTitle,
           bgmUrlInput, bgmTitleInput, applyBgmUrlInput, addBgmBookmark, selectBgmBookmark, removeBgmBookmark,
           spotifyClientId, spotifyRedirectUri, spotifyAccessToken, spotifyUser, spotifyPlaylists, isLoadingSpotify,
