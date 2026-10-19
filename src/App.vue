@@ -67,9 +67,9 @@
       <!-- =========================================
            左側：マップ ＆ クイックナビエリア (PC専用・マップ表示領域最大化)
       ========================================== -->
-      <div class="hidden md:flex w-5/12 lg:w-[44%] xl:w-[42%] flex-col bg-white border-r border-gray-200 shadow-sm h-full overflow-hidden p-4 gap-3">
+      <div class="hidden md:flex w-5/12 lg:w-[44%] xl:w-[42%] flex-col bg-white border-r border-gray-200 shadow-sm h-full overflow-hidden p-4 gap-2.5">
         <!-- マップヘッダー -->
-        <div class="flex justify-between items-center shrink-0">
+        <div class="flex justify-between items-center gap-2 shrink-0">
           <div class="flex items-center gap-2 min-w-0">
             <h1 class="text-base font-extrabold text-gray-800 flex items-center gap-1.5 shrink-0">
               <span>🗺️</span>
@@ -77,10 +77,28 @@
             </h1>
             <span v-if="targetSpace" class="text-xs font-bold bg-pink-100 text-pink-800 border border-pink-200 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs truncate">
               <span class="truncate">📍 {{ targetSpace }}</span>
-              <button @click="targetSpace = null" class="hover:text-pink-950 ml-0.5 cursor-pointer">×</button>
+              <button @click="targetSpace = null" class="hover:text-pink-950 ml-0.5 cursor-pointer" title="ターゲットピンを消す">×</button>
             </span>
           </div>
-          <span class="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md font-medium shrink-0">📍ドラッグで現在地</span>
+
+          <!-- 買い物リストプロット ON/OFF トグル -->
+          <button @click="showListPins = !showListPins"
+                  class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                  :class="showListPins ? 'bg-slate-800 text-white border-slate-900' : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'">
+            <span>🛒 リスト表示: {{ showListPins ? 'ON' : 'OFF' }}</span>
+            <span v-if="showListPins" class="px-1.5 py-0.2 bg-white/20 rounded text-[10px] font-mono">{{ activeListMapPins.length }}</span>
+          </button>
+        </div>
+
+        <!-- 4原色カラー凡例バー (リスト表示ON時) -->
+        <div v-if="showListPins" class="flex items-center justify-between px-2.5 py-1 bg-slate-50 border border-slate-200/80 rounded-lg text-[11px] font-bold text-slate-700 shrink-0">
+          <div class="flex items-center gap-3 flex-wrap">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block ring-1 ring-red-900"></span>S:最優先</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block ring-1 ring-yellow-800"></span>A:買いたい</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block ring-1 ring-blue-900"></span>B:見に行く</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block ring-1 ring-emerald-900"></span>未設定</span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-medium hidden xl:inline">※購入済・完売は自動消去</span>
         </div>
 
         <!-- PC用マップコンテナ (flex-1で残り高さを最大限活用) -->
@@ -92,15 +110,23 @@
           </div>
           <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
             <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
-            <!-- 現在地・ターゲットピン (先端が正確に座標を指すよう吹き出しはabsolute配置) -->
-            <div class="draggable-pin select-none flex items-center justify-center"
+
+            <!-- ★ Step 1: 買い物リスト未購入サークルの極小カラードット (4原色・pointer-events-none) -->
+            <div v-for="item in activeListMapPins" :key="'pc_mp_'+item.circle_id"
+                 class="list-map-dot pointer-events-none select-none"
+                 :style="getListPinStyle(item)">
+            </div>
+
+            <!-- ターゲットピン (案B: targetSpace選択時のみ表示) -->
+            <div v-if="targetSpace"
+                 class="draggable-pin select-none flex items-center justify-center"
                  :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }"
                  @mousedown.stop="startDrag"
                  @touchstart.stop="startDrag">
-              <div v-if="targetSpace" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 bg-gray-900/95 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20 pointer-events-none">
+              <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 bg-gray-900/95 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20 pointer-events-none">
                 {{ targetSpace }}
               </div>
-              <span v-if="targetSpace" class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3.5 h-3.5 rounded-full bg-rose-500/40 ring-2 ring-rose-600 animate-ping pointer-events-none"></span>
+              <span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3.5 h-3.5 rounded-full bg-rose-500/40 ring-2 ring-rose-600 animate-ping pointer-events-none"></span>
               <span class="text-2xl leading-none relative z-10">📍</span>
             </div>
           </div>
@@ -179,18 +205,34 @@
           <!-- =========================================
                [スマホ専用] マップ タブ
           ========================================== -->
-          <div v-show="activeTab === 'map'" class="md:hidden p-3 space-y-3 pb-20">
-            <div>
-              <div class="flex justify-between items-center mb-2">
-                <div class="flex items-center gap-2 min-w-0">
-                  <h1 class="text-base font-extrabold text-gray-800 px-1 shrink-0">🗺️ 会場マップ</h1>
+          <div v-show="activeTab === 'map'" class="md:hidden p-3 space-y-2.5 pb-20">
+            <div class="space-y-2">
+              <div class="flex justify-between items-center gap-2">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <h1 class="text-base font-extrabold text-gray-800 px-0.5 shrink-0">🗺️ 会場マップ</h1>
                   <span v-if="targetSpace" class="text-[11px] font-bold bg-pink-100 text-pink-800 border border-pink-200 px-2 py-0.5 rounded-full flex items-center gap-1 truncate">
                     <span class="truncate">📍 {{ targetSpace }}</span>
                     <button @click="targetSpace = null" class="ml-0.5">×</button>
                   </span>
                 </div>
-                <span class="text-[10px] text-gray-600 bg-gray-200/80 px-2 py-1 rounded-md font-bold shrink-0">📍ピンをドラッグ</span>
+                <button @click="showListPins = !showListPins"
+                        class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition flex items-center gap-1 shrink-0"
+                        :class="showListPins ? 'bg-slate-800 text-white border-slate-900' : 'bg-gray-200/80 text-gray-700 border-gray-300'">
+                  <span>🛒 リスト表示: {{ showListPins ? 'ON' : 'OFF' }}</span>
+                  <span v-if="showListPins" class="px-1 bg-white/20 rounded text-[10px] font-mono">{{ activeListMapPins.length }}</span>
+                </button>
               </div>
+
+              <!-- スマホ用 4原色カラー凡例バー -->
+              <div v-if="showListPins" class="flex items-center justify-between px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-slate-700 shadow-2xs">
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block ring-1 ring-red-900"></span>S:最優先</span>
+                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block ring-1 ring-yellow-800"></span>A:買いたい</span>
+                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block ring-1 ring-blue-900"></span>B:見に行く</span>
+                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block ring-1 ring-emerald-900"></span>未設定</span>
+                </div>
+              </div>
+
               <div class="map-container shadow-sm border-gray-200 relative max-h-[58vh]">
                 <div class="absolute bottom-3 right-3 flex flex-col gap-1.5 z-20">
                   <button @click="mapScale = Math.min( +(mapScale + 0.25).toFixed(2), 2.5)" class="w-11 h-11 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-gray-800 font-bold border border-gray-200 active:bg-gray-100 transition" title="拡大">＋</button>
@@ -199,15 +241,23 @@
                 </div>
                 <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
                   <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
-                  <!-- 現在地・ターゲットピン (先端が正確に座標を指すよう吹き出しはabsolute配置) -->
-                  <div class="draggable-pin select-none flex items-center justify-center"
+
+                  <!-- ★ Step 1: 買い物リスト未購入サークルの極小カラードット (4原色・pointer-events-none) -->
+                  <div v-for="item in activeListMapPins" :key="'mb_mp_'+item.circle_id"
+                       class="list-map-dot pointer-events-none select-none"
+                       :style="getListPinStyle(item)">
+                  </div>
+
+                  <!-- ターゲットピン (案B: targetSpace選択時のみ表示) -->
+                  <div v-if="targetSpace"
+                       class="draggable-pin select-none flex items-center justify-center"
                        :style="{ left: (pinX * mapScale) + 'px', top: (pinY * mapScale) + 'px' }"
                        @mousedown.stop="startDrag"
                        @touchstart.stop="startDrag">
-                    <div v-if="targetSpace" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 bg-gray-900/95 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20 pointer-events-none">
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 bg-gray-900/95 text-white text-[10px] font-bold rounded-md whitespace-nowrap shadow-md border border-white/20 pointer-events-none">
                       {{ targetSpace }}
                     </div>
-                    <span v-if="targetSpace" class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3.5 h-3.5 rounded-full bg-rose-500/40 ring-2 ring-rose-600 animate-ping pointer-events-none"></span>
+                    <span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3.5 h-3.5 rounded-full bg-rose-500/40 ring-2 ring-rose-600 animate-ping pointer-events-none"></span>
                     <span class="text-2xl leading-none relative z-10">📍</span>
                   </div>
                 </div>
@@ -886,7 +936,82 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         const showShareModal = ref(false);
         const showHelpModal = ref(false);
         const targetSpace = ref(null);
+        const showListPins = ref(true);
         const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.default : (mapCoordsData || {}));
+
+        const getCircleMapPos = (circle) => {
+          if (!circle) return null;
+          const spaceId = `${circle.space_sym}-${circle.space_num}`;
+          if (mapCoords.value[spaceId]) return mapCoords.value[spaceId];
+          if (circle.space_num && circle.space_num.includes('-')) {
+            const baseSpace = `${circle.space_sym}-${circle.space_num.split('-')[0]}`;
+            if (mapCoords.value[baseSpace]) return mapCoords.value[baseSpace];
+          }
+          if (mapCoords.value[circle.space_sym]) return mapCoords.value[circle.space_sym];
+          return null;
+        };
+
+        const activeListMapPins = computed(() => {
+          if (!showListPins.value) return [];
+          const result = [];
+          circles.value.forEach(c => {
+            const saved = savedList.value[c.circle_id];
+            if (!saved) return;
+            // 購入済・完売・当日不参加は未完了プロットから除外（買い回るほどスッキリする設計）
+            if (saved.bought || saved.soldout || isCircleAbsent(c.circle_id)) return;
+            const pos = getCircleMapPos(c);
+            if (!pos) return;
+            const priority = saved.priority || '';
+            result.push({
+              circle: c,
+              circle_id: c.circle_id,
+              spaceLabel: `${c.space_sym}-${c.space_num}`,
+              x: pos.x,
+              y: pos.y,
+              priority
+            });
+          });
+          // 描画順：未設定 -> B -> A -> S の順にし、Sが必ず最前面に来るようにする
+          const order = { '': 1, 'B': 2, 'A': 3, 'S': 4 };
+          result.sort((a, b) => (order[a.priority] || 0) - (order[b.priority] || 0));
+          return result;
+        });
+
+        const getListPinStyle = (item) => {
+          const scale = mapScale.value;
+          const isS = item.priority === 'S';
+          const size = isS
+            ? Math.max(6, Math.round(7.5 * scale))
+            : Math.max(5, Math.round(6 * scale));
+
+          let bg = '#10b981'; // 🟢 未設定: Emerald Green
+          let ring = '#065f46';
+          let zIndex = 5;
+
+          if (item.priority === 'S') {
+            bg = '#ef4444'; // 🔴 S: Vivid Red
+            ring = '#991b1b';
+            zIndex = 8;
+          } else if (item.priority === 'A') {
+            bg = '#facc15'; // 🟡 A: Vivid Yellow
+            ring = '#854d0e';
+            zIndex = 7;
+          } else if (item.priority === 'B') {
+            bg = '#2563eb'; // 🔵 B: Royal Blue
+            ring = '#1e3a8a';
+            zIndex = 6;
+          }
+
+          return {
+            left: (item.x * scale) + 'px',
+            top: (item.y * scale) + 'px',
+            width: size + 'px',
+            height: size + 'px',
+            backgroundColor: bg,
+            boxShadow: `0 0 0 1px ${ring}, 0 1px 2px rgba(0,0,0,0.35)`,
+            zIndex
+          };
+        };
 
         const resetAllFilters = () => {
           searchQuery.value = '';
@@ -932,7 +1057,6 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
 
         const jumpToMap = (circle) => {
           const spaceId = circle.space_sym + '-' + circle.space_num;
-          const blockId = circle.space_sym;
           targetSpace.value = spaceId + ' (' + circle.circle_name + ')';
           
           // モバイル表示のときのみマップタブへ切り替え（PCでは左ペインに常時マップがあるため現在のタブを維持）
@@ -941,14 +1065,7 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
           
-          let targetPos = mapCoords.value[spaceId];
-          if (!targetPos && circle.space_num && circle.space_num.includes('-')) {
-            const baseSpace = circle.space_sym + '-' + circle.space_num.split('-')[0];
-            targetPos = mapCoords.value[baseSpace];
-          }
-          if (!targetPos && mapCoords.value[blockId]) {
-            targetPos = mapCoords.value[blockId]; // フォールバック (ブロック単位)
-          }
+          const targetPos = getCircleMapPos(circle);
           if (targetPos) {
             pinX.value = targetPos.x;
             pinY.value = targetPos.y;
@@ -1614,14 +1731,23 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
 
     .map-image {  
       width: 900px; 
-      max-width: none; 
+      max-width: none !important; 
       display: block; 
       user-select: none;
       -webkit-user-drag: none;
       pointer-events: none; 
       transform: translateZ(0);
-      transition: width 0.2s ease-out;
-     max-width: none !important; }
+    }
+
+    .list-map-dot {
+      position: absolute;
+      border-radius: 9999px;
+      border: 1px solid #ffffff;
+      box-sizing: border-box;
+      transform: translate3d(-50%, -50%, 0);
+      will-change: left, top, width, height;
+      backface-visibility: hidden;
+    }
     
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -1640,12 +1766,11 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
       height: 32px; 
       transform: translate3d(-50%, -100%, 0); 
       cursor: grab; 
-      z-index: 10; 
+      z-index: 15; 
       filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
       will-change: left, top;
       backface-visibility: hidden;
-      transition: left 0.2s ease-out, top 0.2s ease-out;
     }
-    .draggable-pin:active { cursor: grabbing; transition: none; }
+    .draggable-pin:active { cursor: grabbing; }
   
 </style>
