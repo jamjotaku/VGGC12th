@@ -262,6 +262,13 @@
               <span class="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-full text-[10px]">{{ circles.length - countHasAuthorTwitter }}</span>
             </button>
 
+            <button @click="activeFilter = 'no_url'" 
+                    class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 shadow-sm"
+                    :class="activeFilter === 'no_url' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'">
+              <span>📸 お品書き未登録</span>
+              <span class="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-full text-[10px]">{{ circles.length - countHasUrl }}</span>
+            </button>
+
             <button @click="activeFilter = 'needs_items'" 
                     class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 shadow-sm"
                     :class="activeFilter === 'needs_items' ? 'bg-amber-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'">
@@ -274,6 +281,13 @@
                     :class="activeFilter === 'has_items' ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'">
               <span>📦 商品登録済</span>
               <span class="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-full text-[10px]">{{ circlesWithItemsCount }}</span>
+            </button>
+
+            <button @click="activeFilter = 'has_memo'" 
+                    class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 shadow-sm"
+                    :class="activeFilter === 'has_memo' ? 'bg-yellow-500 text-slate-950 font-black' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'">
+              <span>📝 備考メモあり</span>
+              <span class="px-1.5 py-0.2 rounded-full text-[10px]" :class="activeFilter === 'has_memo' ? 'bg-slate-900 text-white' : 'bg-yellow-100 text-yellow-800'">{{ countHasAdminMemo }}</span>
             </button>
 
             <button @click="activeFilter = 'absent'" 
@@ -316,6 +330,9 @@
                     </h3>
                     <span v-if="editData[circle.circle_id]?.isAbsent" class="px-2 py-0.5 bg-rose-600 text-white text-[10px] font-black rounded-md shadow-sm shrink-0">
                       🚫 当日不参加
+                    </span>
+                    <span v-if="(editData[circle.circle_id]?.adminMemo || '').trim()" class="px-2 py-0.5 bg-yellow-100 text-yellow-900 border border-yellow-300 text-[10px] font-bold rounded-md shrink-0">
+                      📝 備考あり
                     </span>
                   </div>
                   <p class="text-[11px] text-slate-500 truncate">代表: {{ circle.penname }}</p>
@@ -456,11 +473,11 @@
 
               </div>
 
-              <!-- 右ブロック (6カラム): 検索タグ ＆ メンバー設定 -->
-              <div class="md:col-span-6 space-y-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-                <div>
+              <!-- 右ブロック (6カラム): 検索タグ ＆ メンバー設定 ＆ 管理者用備考欄 -->
+              <div class="md:col-span-6 space-y-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
+                <div class="space-y-2">
                   <!-- メンバー設定 -->
-                  <div class="mb-2.5">
+                  <div>
                     <div class="flex justify-between items-center mb-1">
                       <label class="font-bold text-slate-700 flex items-center gap-1">
                         <span>🎀</span>
@@ -493,6 +510,34 @@
                            @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
                            placeholder="新刊, 既刊, アクスタ, ポストカード" 
                            class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 text-xs">
+                  </div>
+
+                  <!-- ★ 管理者用備考・作業メモ (アプリ側には非表示) -->
+                  <div>
+                    <div class="flex justify-between items-center mb-1">
+                      <label class="font-bold text-slate-700 flex items-center gap-1">
+                        <span>📝</span>
+                        <span>管理者用 備考・作業メモ:</span>
+                      </label>
+                      <span class="text-[10px] text-amber-700 bg-amber-100/80 px-1.5 py-0.2 rounded font-bold">アプリ非公開</span>
+                    </div>
+                    <div class="relative">
+                      <input type="text"
+                             v-model="editData[circle.circle_id].adminMemo"
+                             @input="markDirty(circle.circle_id)"
+                             @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
+                             @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
+                             placeholder="データ追加時のメモ（例: 11/10お品書き公開予定、要再確認、委託あり等）"
+                             class="w-full pl-2.5 pr-7 py-1.5 border rounded-lg outline-none focus:ring-2 focus:ring-amber-400 text-xs transition"
+                             :class="(editData[circle.circle_id]?.adminMemo || '').trim() ? 'bg-yellow-50/90 border-yellow-400 text-slate-900 font-bold' : 'bg-white border-slate-300 text-slate-700'">
+                      <button v-if="editData[circle.circle_id]?.adminMemo"
+                              @click="editData[circle.circle_id].adminMemo = ''; markDirty(circle.circle_id)"
+                              type="button"
+                              title="備考メモをクリア"
+                              class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                        ×
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1118,7 +1163,8 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
                 membersInput: '', 
                 url: '', 
                 items: [],
-                isAbsent: false
+                isAbsent: false,
+                adminMemo: ''
               };
             });
 
@@ -1129,8 +1175,11 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
                 if (initialEditData[info.circle_id]) {
                   const rawTags = Array.isArray(info.tags) ? info.tags : [];
                   const isAbsent = Boolean(info.is_absent) || rawTags.includes('__ABSENT__') || rawTags.includes('不参加') || rawTags.includes('欠席');
-                  const cleanTags = rawTags.filter(t => t !== '__ABSENT__');
+                  const memoTag = rawTags.find(t => String(t).startsWith('__ADMIN_MEMO__:'));
+                  const extractedMemo = memoTag ? String(memoTag).slice('__ADMIN_MEMO__:'.length) : (info.admin_memo || '');
+                  const cleanTags = rawTags.filter(t => t !== '__ABSENT__' && !String(t).startsWith('__ADMIN_MEMO__:'));
                   initialEditData[info.circle_id].isAbsent = isAbsent;
+                  initialEditData[info.circle_id].adminMemo = extractedMemo;
                   initialEditData[info.circle_id].tagsInput = cleanTags.join(', ');
                   initialEditData[info.circle_id].membersInput = (info.members || []).join(', ');
                   initialEditData[info.circle_id].url = info.oshinagaki_url || '';
@@ -1275,6 +1324,10 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           return Object.values(editData.value).filter(d => d && d.isAbsent).length;
         });
 
+        const countHasAdminMemo = computed(() => {
+          return Object.values(editData.value).filter(d => d && (d.adminMemo || '').trim().length > 0).length;
+        });
+
         const toggleAbsent = (circleId) => {
           if (!editData.value[circleId]) return;
           editData.value[circleId].isAbsent = !editData.value[circleId].isAbsent;
@@ -1296,10 +1349,14 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
               if (!unsavedSet.value.has(c.circle_id)) return false;
             } else if (activeFilter.value === 'no_author_twitter') {
               if (cleanTwitterId(d.twitterId)) return false;
+            } else if (activeFilter.value === 'no_url') {
+              if (d.url && d.url.trim().length > 0) return false;
             } else if (activeFilter.value === 'needs_items') {
               if (!d.url || (d.items && d.items.length > 0)) return false;
             } else if (activeFilter.value === 'has_items') {
               if (!d.items || d.items.length === 0) return false;
+            } else if (activeFilter.value === 'has_memo') {
+              if (!(d.adminMemo || '').trim()) return false;
             } else if (activeFilter.value === 'absent') {
               if (!d.isAbsent) return false;
             }
@@ -1312,6 +1369,7 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
             const penname = (c.penname || '').toLowerCase();
             const authorId = (d.twitterId || '').toLowerCase();
             const staffId = (d.staffTwitter || '').toLowerCase();
+            const memoText = (d.adminMemo || '').toLowerCase();
 
             return (
               circleName.includes(q) ||
@@ -1319,7 +1377,8 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
               fullSpace.includes(q) ||
               compactSpace.includes(q) ||
               authorId.includes(q) ||
-              staffId.includes(q)
+              staffId.includes(q) ||
+              memoText.includes(q)
             );
           });
         });
@@ -1411,9 +1470,13 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
         // サークル情報のSupabase保存
         const saveCircle = async (circleId, silent = false) => {
           const input = editData.value[circleId];
-          const tagsArray = (input.tagsInput || '').split(',').map(s => s.trim()).filter(s => s.length > 0 && s !== '__ABSENT__');
+          const tagsArray = (input.tagsInput || '').split(',').map(s => s.trim()).filter(s => s.length > 0 && !s.startsWith('__'));
           if (input.isAbsent) {
             tagsArray.push('__ABSENT__');
+          }
+          const cleanMemo = (input.adminMemo || '').trim();
+          if (cleanMemo) {
+            tagsArray.push('__ADMIN_MEMO__:' + cleanMemo);
           }
           const membersArray = (input.membersInput || '').split(',').map(s => s.trim()).filter(s => s.length > 0);
           const currentItems = input.items || [];
@@ -1482,7 +1545,7 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           availableBlocks, activeFilter, unsavedSet, hasUnsavedChanges, isBulkSaving,
           showShortcutsHelp, toasts, showToast, copySqlToClipboard, navigateCircles,
           countHasAuthorTwitter, countHasStaffTwitter, countHasUrl, percentUrl, percentItems,
-          countNeedsItems, circlesWithItemsCount, countAbsent, toggleAbsent,
+          countNeedsItems, circlesWithItemsCount, countAbsent, countHasAdminMemo, toggleAbsent,
           filteredCircles, cleanTwitterId, parseAccounts, parseHandles, markDirty, onUrlInput, 
           extractTwitterIdFromUrl, extractAllTwitterIds, saveAllDirty,
           activeCircleForItems, itemInputMode, tempItems, bulkText, isSavingItems,

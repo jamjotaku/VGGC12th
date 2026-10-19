@@ -1541,7 +1541,7 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
               supabaseRes.data.forEach(info => {
                 const rawTags = Array.isArray(info.tags) ? info.tags : [];
                 const isAbsent = Boolean(info.is_absent) || rawTags.includes('__ABSENT__') || rawTags.includes('不参加') || rawTags.includes('欠席');
-                const cleanTags = rawTags.filter(t => t !== '__ABSENT__');
+                const cleanTags = rawTags.filter(t => !String(t).startsWith('__'));
                 infoMap[info.circle_id] = {
                   tags: cleanTags,
                   members: info.members || [],
@@ -1565,7 +1565,7 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
                 if (payload.new && payload.new.circle_id) {
                   const rawTags = Array.isArray(payload.new.tags) ? payload.new.tags : [];
                   const isAbsent = Boolean(payload.new.is_absent) || rawTags.includes('__ABSENT__') || rawTags.includes('不参加') || rawTags.includes('欠席');
-                  const cleanTags = rawTags.filter(t => t !== '__ABSENT__');
+                  const cleanTags = rawTags.filter(t => !String(t).startsWith('__'));
                   circleExtraInfo.value[payload.new.circle_id] = {
                     tags: cleanTags,
                     members: payload.new.members || [],
@@ -1832,7 +1832,7 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
           const members = new Set();
           Object.values(circleExtraInfo.value).forEach(info => {
             (info.tags || []).forEach(t => {
-              if (t !== '__ABSENT__') tags.add(t);
+              if (!String(t).startsWith('__')) tags.add(t);
             });
             (info.members || []).forEach(m => members.add(m));
           });
