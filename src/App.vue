@@ -1036,9 +1036,14 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
 
         watch(selectedCircle, async (newVal) => {
           if (newVal && circleExtraInfo.value[newVal.circle_id]?.oshinagaki_url) {
-            isTweetLoading.value = true;
             const url = circleExtraInfo.value[newVal.circle_id].oshinagaki_url;
-            
+            // Pixiv作品URLの場合はCircleDetailModal内のネイティブPixivビューアで表示するためスキップ
+            if (/(?:pixiv\.net\/(?:[a-z]{2}\/)?artworks\/|illust_id=)(\d+)/i.test(url)) {
+              isTweetLoading.value = false;
+              return;
+            }
+
+            isTweetLoading.value = true;
             // DOMの描画完了を待機
             await nextTick();
             const container = document.getElementById('tweet-container');
@@ -1058,8 +1063,10 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
                 });
               } else {
                 isTweetLoading.value = false;
-                container.innerHTML = `<a href="${url}" target="_blank" class="text-blue-500 underline font-bold mt-4 block">お品書きを見る (Xへ移動)</a>`;
+                container.innerHTML = `<a href="${url}" target="_blank" class="text-blue-500 underline font-bold mt-4 block">お品書きを見る (外部サイトへ移動)</a>`;
               }
+            } else {
+              isTweetLoading.value = false;
             }
           } else {
             isTweetLoading.value = false;

@@ -422,14 +422,16 @@
                          class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-400 font-mono text-xs">
                 </div>
 
-                <!-- お品書きURL ＆ ID自動抽出ボタン -->
+                <!-- お品書きURL (Xポスト / Pixiv作品対応) ＆ ID自動抽出ボタン -->
                 <div>
                   <div class="flex justify-between items-center mb-1">
                     <label class="font-bold text-slate-700 flex items-center gap-1">
                       <span>📸</span>
-                      <span>お品書き (Xポスト) URL:</span>
+                      <span>お品書き URL (Xポスト / Pixiv作品):</span>
+                      <span v-if="editData[circle.circle_id]?.url && /pixiv\.net/i.test(editData[circle.circle_id].url)"
+                            class="px-1.5 py-0.2 bg-blue-600 text-white text-[9px] font-extrabold rounded">pixiv</span>
                     </label>
-                    <button v-if="editData[circle.circle_id]?.url" 
+                    <button v-if="editData[circle.circle_id]?.url && !/pixiv\.net/i.test(editData[circle.circle_id].url)" 
                             @click="extractTwitterIdFromUrl(circle.circle_id)"
                             class="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-0.5 rounded font-bold transition flex items-center gap-0.5"
                             title="URL内のユーザー名からサークル主X IDを自動入力します">
@@ -442,11 +444,11 @@
                            @input="onUrlInput(circle.circle_id)"
                            @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
                            @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
-                           placeholder="https://x.com/username/status/..." 
+                           placeholder="https://x.com/.../status/... または https://www.pixiv.net/artworks/..." 
                            class="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 font-mono text-xs">
                     <a v-if="editData[circle.circle_id]?.url" :href="editData[circle.circle_id].url" target="_blank" 
                        class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-slate-600 font-bold transition flex items-center" 
-                       title="別タブでお品書きポストを開く">
+                       title="別タブでお品書きを開く">
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                     </a>
                   </div>
