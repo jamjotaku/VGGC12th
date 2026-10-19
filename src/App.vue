@@ -67,7 +67,7 @@
       <!-- =========================================
            左側：マップ ＆ クイックナビエリア (PC専用・マップ表示領域最大化)
       ========================================== -->
-      <div class="hidden md:flex w-5/12 lg:w-[44%] xl:w-[42%] flex-col bg-white border-r border-gray-200 shadow-sm h-full overflow-hidden p-4 gap-2.5">
+      <div class="hidden md:flex w-5/12 lg:w-[44%] xl:w-[42%] flex-col bg-white border-r border-gray-200 shadow-sm h-full overflow-hidden p-4 gap-2">
         <!-- マップヘッダー -->
         <div class="flex justify-between items-center gap-2 shrink-0">
           <div class="flex items-center gap-2 min-w-0">
@@ -75,9 +75,9 @@
               <span>🗺️</span>
               <span>会場マップ</span>
             </h1>
-            <span v-if="targetSpace" class="text-xs font-bold bg-pink-100 text-pink-800 border border-pink-200 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs truncate">
+            <span v-if="targetSpace && !focusedMapCircle" class="text-xs font-bold bg-pink-100 text-pink-800 border border-pink-200 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs truncate">
               <span class="truncate">📍 {{ targetSpace }}</span>
-              <button @click="targetSpace = null" class="hover:text-pink-950 ml-0.5 cursor-pointer" title="ターゲットピンを消す">×</button>
+              <button @click="clearMapFocus" class="hover:text-pink-950 ml-0.5 cursor-pointer" title="ターゲットピンを消す">×</button>
             </span>
           </div>
 
@@ -91,27 +91,36 @@
         </div>
 
         <!-- 4原色カラー凡例バー (リスト表示ON時) -->
-        <div v-if="showListPins" class="flex items-center justify-between px-2.5 py-1 bg-slate-50 border border-slate-200/80 rounded-lg text-[11px] font-bold text-slate-700 shrink-0">
-          <div class="flex items-center gap-3 flex-wrap">
+        <div v-if="showListPins" class="flex items-center justify-between px-2.5 py-1 bg-slate-50 border border-slate-200/80 rounded-lg text-[11px] font-bold text-slate-700 shrink-0 gap-2">
+          <div class="flex items-center gap-2.5 flex-wrap">
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block ring-1 ring-red-900"></span>S:最優先</span>
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block ring-1 ring-yellow-800"></span>A:買いたい</span>
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block ring-1 ring-blue-900"></span>B:見に行く</span>
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block ring-1 ring-emerald-900"></span>未設定</span>
           </div>
-          <span class="text-[10px] text-slate-400 font-medium hidden xl:inline">※購入済・完売は自動消去</span>
+          <button @click="showCompletedPins = !showCompletedPins"
+                  class="text-[10px] px-1.5 py-0.5 rounded border transition shrink-0 cursor-pointer"
+                  :class="showCompletedPins ? 'bg-slate-200 text-slate-800 border-slate-300 font-bold' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'"
+                  title="購入済・完売サークルのドット表示切り替え">
+            {{ showCompletedPins ? '✓ 済も薄く表示中' : '済・完売は自動消去' }}
+          </button>
         </div>
 
         <!-- PC用マップコンテナ (flex-1で残り高さを最大限活用) -->
-        <div class="map-container shadow-inner relative flex-1 min-h-[260px]">
+        <div class="map-container shadow-inner relative flex-1 min-h-[240px]">
           <div class="absolute bottom-3 right-3 flex flex-col gap-1.5 z-20">
             <button @click="mapScale = Math.min( +(mapScale + 0.25).toFixed(2), 2.5)" class="w-9 h-9 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="拡大">＋</button>
             <button @click="mapScale = 1.0" class="w-9 h-7 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-[10px] text-gray-600 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="リセット">{{ Math.round(mapScale * 100) }}%</button>
             <button @click="mapScale = Math.max( +(mapScale - 0.25).toFixed(2), 0.5)" class="w-9 h-9 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="縮小">－</button>
           </div>
-          <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
+          <div class="map-inner cursor-pointer"
+               @mousedown="handleMapPointerDown"
+               @touchstart.passive="handleMapPointerDown"
+               @click="handleMapClick"
+               @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
             <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
 
-            <!-- ★ Step 1: 買い物リスト未購入サークルの極小カラードット (4原色・pointer-events-none) -->
+            <!-- ★ 買い物リストサークルの極小カラードット (4原色・pointer-events-none・近傍スナップ選択対応) -->
             <div v-for="item in activeListMapPins" :key="'pc_mp_'+item.circle_id"
                  class="list-map-dot pointer-events-none select-none"
                  :style="getListPinStyle(item)">
@@ -132,8 +141,45 @@
           </div>
         </div>
 
+        <!-- ★ Step 2: マップ選択中サークルのクイックアクションバー (PC) -->
+        <div v-if="focusedMapCircle" class="bg-slate-900 text-white rounded-xl px-3 py-2 shadow-md flex items-center justify-between gap-2 shrink-0 border border-slate-700">
+          <div class="flex items-center gap-2 min-w-0 flex-1">
+            <!-- 前後サークル順送りボタン (リスト複数登録時) -->
+            <div v-if="spaceOrderedListPins.length > 1" class="flex items-center gap-0.5 shrink-0">
+              <button @click="stepMapPin(-1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center text-xs font-bold cursor-pointer" title="前の配置のリストサークルへ">◀</button>
+              <button @click="stepMapPin(1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center text-xs font-bold cursor-pointer" title="次の配置のリストサークルへ">▶</button>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[11px] font-extrabold shrink-0" :class="getFocusedPinBadgeClass(focusedMapCircle.circle_id)">
+              {{ focusedMapCircle.space_sym }}-{{ focusedMapCircle.space_num }}
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="text-xs font-extrabold truncate">{{ focusedMapCircle.circle_name }}</div>
+              <div v-if="savedList[focusedMapCircle.circle_id]" class="text-[10px] text-slate-300 truncate flex items-center gap-1.5">
+                <span v-if="savedList[focusedMapCircle.circle_id].priority">優先:{{ savedList[focusedMapCircle.circle_id].priority }}</span>
+                <span v-if="savedList[focusedMapCircle.circle_id].price">¥{{ Number(savedList[focusedMapCircle.circle_id].price).toLocaleString() }}</span>
+                <span v-if="savedList[focusedMapCircle.circle_id].memo" class="text-amber-300 truncate">📝{{ savedList[focusedMapCircle.circle_id].memo }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button @click="openDetails(focusedMapCircle)"
+                    class="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center gap-1 shadow-xs">
+              <span>📸</span>
+              <span>詳細</span>
+            </button>
+            <button v-if="!isReadOnly && savedList[focusedMapCircle.circle_id]"
+                    @click="toggleBought(focusedMapCircle.circle_id)"
+                    class="px-2.5 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center gap-1 border"
+                    :class="savedList[focusedMapCircle.circle_id].bought ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'">
+              <span>{{ savedList[focusedMapCircle.circle_id].bought ? '✓ 済' : '🛒 済にする' }}</span>
+            </button>
+            <button @click="clearMapFocus" class="w-6 h-6 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm cursor-pointer" title="閉じる">×</button>
+          </div>
+        </div>
+
         <!-- PC用 配置ブロック絞り込み ＆ 会場速報 (コンパクト統合パネル) -->
-        <div class="bg-gray-50 rounded-xl p-3 border border-gray-200/80 shrink-0 space-y-2.5">
+        <div class="bg-gray-50 rounded-xl p-3 border border-gray-200/80 shrink-0 space-y-2">
           <div>
             <div class="flex justify-between items-center mb-1.5">
               <h2 class="text-[11px] font-extrabold text-gray-700 flex items-center gap-1">
@@ -210,9 +256,9 @@
               <div class="flex justify-between items-center gap-2">
                 <div class="flex items-center gap-1.5 min-w-0">
                   <h1 class="text-base font-extrabold text-gray-800 px-0.5 shrink-0">🗺️ 会場マップ</h1>
-                  <span v-if="targetSpace" class="text-[11px] font-bold bg-pink-100 text-pink-800 border border-pink-200 px-2 py-0.5 rounded-full flex items-center gap-1 truncate">
+                  <span v-if="targetSpace && !focusedMapCircle" class="text-[11px] font-bold bg-pink-100 text-pink-800 border border-pink-200 px-2 py-0.5 rounded-full flex items-center gap-1 truncate">
                     <span class="truncate">📍 {{ targetSpace }}</span>
-                    <button @click="targetSpace = null" class="ml-0.5">×</button>
+                    <button @click="clearMapFocus" class="ml-0.5">×</button>
                   </span>
                 </div>
                 <button @click="showListPins = !showListPins"
@@ -224,25 +270,34 @@
               </div>
 
               <!-- スマホ用 4原色カラー凡例バー -->
-              <div v-if="showListPins" class="flex items-center justify-between px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-slate-700 shadow-2xs">
-                <div class="flex items-center gap-2.5 flex-wrap">
+              <div v-if="showListPins" class="flex items-center justify-between px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-slate-700 shadow-2xs gap-1">
+                <div class="flex items-center gap-2 flex-wrap">
                   <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block ring-1 ring-red-900"></span>S:最優先</span>
                   <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block ring-1 ring-yellow-800"></span>A:買いたい</span>
                   <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block ring-1 ring-blue-900"></span>B:見に行く</span>
-                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block ring-1 ring-emerald-900"></span>未設定</span>
+                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block ring-1 ring-emerald-900"></span>未</span>
                 </div>
+                <button @click="showCompletedPins = !showCompletedPins"
+                        class="text-[10px] px-1.5 py-0.5 rounded border transition shrink-0"
+                        :class="showCompletedPins ? 'bg-slate-200 text-slate-800 border-slate-300 font-bold' : 'bg-gray-50 text-slate-500 border-gray-200'">
+                  {{ showCompletedPins ? '✓済表示中' : '済は消去' }}
+                </button>
               </div>
 
-              <div class="map-container shadow-sm border-gray-200 relative max-h-[58vh]">
+              <div class="map-container shadow-sm border-gray-200 relative max-h-[54vh]">
                 <div class="absolute bottom-3 right-3 flex flex-col gap-1.5 z-20">
                   <button @click="mapScale = Math.min( +(mapScale + 0.25).toFixed(2), 2.5)" class="w-11 h-11 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-gray-800 font-bold border border-gray-200 active:bg-gray-100 transition" title="拡大">＋</button>
                   <button @click="mapScale = 1.0" class="w-11 h-8 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-[10px] text-gray-600 font-bold border border-gray-200 active:bg-gray-100 transition" title="リセット">{{ Math.round(mapScale * 100) }}%</button>
                   <button @click="mapScale = Math.max( +(mapScale - 0.25).toFixed(2), 0.5)" class="w-11 h-11 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-gray-800 font-bold border border-gray-200 active:bg-gray-100 transition" title="縮小">－</button>
                 </div>
-                <div class="map-inner" @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
+                <div class="map-inner"
+                     @mousedown="handleMapPointerDown"
+                     @touchstart.passive="handleMapPointerDown"
+                     @click="handleMapClick"
+                     @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
                   <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
 
-                  <!-- ★ Step 1: 買い物リスト未購入サークルの極小カラードット (4原色・pointer-events-none) -->
+                  <!-- ★ 買い物リストサークルの極小カラードット (4原色・pointer-events-none・近傍スナップ選択対応) -->
                   <div v-for="item in activeListMapPins" :key="'mb_mp_'+item.circle_id"
                        class="list-map-dot pointer-events-none select-none"
                        :style="getListPinStyle(item)">
@@ -260,6 +315,42 @@
                     <span class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3.5 h-3.5 rounded-full bg-rose-500/40 ring-2 ring-rose-600 animate-ping pointer-events-none"></span>
                     <span class="text-2xl leading-none relative z-10">📍</span>
                   </div>
+                </div>
+              </div>
+
+              <!-- ★ Step 2: マップ選択中サークルのクイックアクションバー (スマホ) -->
+              <div v-if="focusedMapCircle" class="bg-slate-900 text-white rounded-xl p-2.5 shadow-md flex items-center justify-between gap-2 border border-slate-700">
+                <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                  <div v-if="spaceOrderedListPins.length > 1" class="flex items-center gap-1 shrink-0">
+                    <button @click="stepMapPin(-1)" class="w-7 h-7 rounded-lg bg-slate-800 active:bg-slate-700 text-slate-200 flex items-center justify-center text-xs font-bold">◀</button>
+                    <button @click="stepMapPin(1)" class="w-7 h-7 rounded-lg bg-slate-800 active:bg-slate-700 text-slate-200 flex items-center justify-center text-xs font-bold">▶</button>
+                  </div>
+                  <span class="px-1.5 py-0.5 rounded text-xs font-extrabold shrink-0" :class="getFocusedPinBadgeClass(focusedMapCircle.circle_id)">
+                    {{ focusedMapCircle.space_sym }}-{{ focusedMapCircle.space_num }}
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <div class="text-xs font-extrabold truncate">{{ focusedMapCircle.circle_name }}</div>
+                    <div v-if="savedList[focusedMapCircle.circle_id]" class="text-[10px] text-slate-300 truncate flex items-center gap-1.5">
+                      <span v-if="savedList[focusedMapCircle.circle_id].priority">優先:{{ savedList[focusedMapCircle.circle_id].priority }}</span>
+                      <span v-if="savedList[focusedMapCircle.circle_id].price">¥{{ Number(savedList[focusedMapCircle.circle_id].price).toLocaleString() }}</span>
+                      <span v-if="savedList[focusedMapCircle.circle_id].memo" class="text-amber-300 truncate">📝{{ savedList[focusedMapCircle.circle_id].memo }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <button @click="openDetails(focusedMapCircle)"
+                          class="px-2.5 py-1.5 bg-amber-400 active:bg-amber-300 text-slate-950 rounded-lg text-xs font-extrabold flex items-center gap-1">
+                    <span>📸</span>
+                    <span>詳細</span>
+                  </button>
+                  <button v-if="!isReadOnly && savedList[focusedMapCircle.circle_id]"
+                          @click="toggleBought(focusedMapCircle.circle_id)"
+                          class="px-2.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1 border"
+                          :class="savedList[focusedMapCircle.circle_id].bought ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-slate-800 active:bg-slate-700 text-white border-slate-600'">
+                    <span>{{ savedList[focusedMapCircle.circle_id].bought ? '✓済' : '🛒済' }}</span>
+                  </button>
+                  <button @click="clearMapFocus" class="w-7 h-7 rounded-full text-slate-400 flex items-center justify-center text-sm">×</button>
                 </div>
               </div>
             </div>
@@ -936,8 +1027,15 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         const showShareModal = ref(false);
         const showHelpModal = ref(false);
         const targetSpace = ref(null);
+        const focusedMapCircle = ref(null);
         const showListPins = ref(true);
+        const showCompletedPins = ref(false);
         const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.default : (mapCoordsData || {}));
+
+        const clearMapFocus = () => {
+          targetSpace.value = null;
+          focusedMapCircle.value = null;
+        };
 
         const getCircleMapPos = (circle) => {
           if (!circle) return null;
@@ -957,8 +1055,8 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
           circles.value.forEach(c => {
             const saved = savedList.value[c.circle_id];
             if (!saved) return;
-            // 購入済・完売・当日不参加は未完了プロットから除外（買い回るほどスッキリする設計）
-            if (saved.bought || saved.soldout || isCircleAbsent(c.circle_id)) return;
+            const isCompleted = Boolean(saved.bought || saved.soldout || isCircleAbsent(c.circle_id));
+            if (isCompleted && !showCompletedPins.value) return;
             const pos = getCircleMapPos(c);
             if (!pos) return;
             const priority = saved.priority || '';
@@ -968,27 +1066,51 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
               spaceLabel: `${c.space_sym}-${c.space_num}`,
               x: pos.x,
               y: pos.y,
-              priority
+              priority,
+              isCompleted
             });
           });
-          // 描画順：未設定 -> B -> A -> S の順にし、Sが必ず最前面に来るようにする
+          // 描画順：完了済 -> 未設定 -> B -> A -> S の順にし、Sが必ず最前面に来るようにする
           const order = { '': 1, 'B': 2, 'A': 3, 'S': 4 };
-          result.sort((a, b) => (order[a.priority] || 0) - (order[b.priority] || 0));
+          result.sort((a, b) => {
+            if (a.isCompleted !== b.isCompleted) return a.isCompleted ? -1 : 1;
+            return (order[a.priority] || 0) - (order[b.priority] || 0);
+          });
           return result;
+        });
+
+        // 配置順（A-01 -> N-40）でソートされたリストピンの配列（◀ ▶ 順送り用）
+        const spaceOrderedListPins = computed(() => {
+          return [...activeListMapPins.value].sort((a, b) => {
+            if (a.circle.space_sym !== b.circle.space_sym) {
+              return a.circle.space_sym.localeCompare(b.circle.space_sym);
+            }
+            return parseInt(a.circle.space_num) - parseInt(b.circle.space_num);
+          });
         });
 
         const getListPinStyle = (item) => {
           const scale = mapScale.value;
-          const isS = item.priority === 'S';
-          const size = isS
-            ? Math.max(6, Math.round(7.5 * scale))
-            : Math.max(5, Math.round(6 * scale));
+          const isSelected = focusedMapCircle.value && focusedMapCircle.value.circle_id === item.circle_id;
+          const isS = item.priority === 'S' && !item.isCompleted;
+          const baseSize = item.isCompleted
+            ? Math.max(4, Math.round(5 * scale))
+            : isS
+              ? Math.max(6, Math.round(7.5 * scale))
+              : Math.max(5, Math.round(6 * scale));
+          const size = isSelected ? baseSize + 3 : baseSize;
 
           let bg = '#10b981'; // 🟢 未設定: Emerald Green
           let ring = '#065f46';
           let zIndex = 5;
+          let opacity = 1;
 
-          if (item.priority === 'S') {
+          if (item.isCompleted) {
+            bg = '#94a3b8'; // ⚪ 購入済・完売: Slate Gray
+            ring = '#475569';
+            zIndex = 3;
+            opacity = 0.65;
+          } else if (item.priority === 'S') {
             bg = '#ef4444'; // 🔴 S: Vivid Red
             ring = '#991b1b';
             zIndex = 8;
@@ -1002,15 +1124,97 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
             zIndex = 6;
           }
 
+          if (isSelected) {
+            zIndex = 12;
+          }
+
           return {
             left: (item.x * scale) + 'px',
             top: (item.y * scale) + 'px',
             width: size + 'px',
             height: size + 'px',
             backgroundColor: bg,
-            boxShadow: `0 0 0 1px ${ring}, 0 1px 2px rgba(0,0,0,0.35)`,
+            opacity,
+            boxShadow: isSelected
+              ? `0 0 0 2px #ffffff, 0 0 0 4px #ec4899, 0 2px 4px rgba(0,0,0,0.5)`
+              : `0 0 0 1px ${ring}, 0 1px 2px rgba(0,0,0,0.35)`,
             zIndex
           };
+        };
+
+        const getFocusedPinBadgeClass = (circleId) => {
+          const saved = savedList.value[circleId];
+          if (!saved) return 'bg-blue-600 text-white';
+          if (saved.bought) return 'bg-emerald-600 text-white';
+          if (saved.soldout) return 'bg-slate-600 text-slate-200 line-through';
+          if (saved.priority === 'S') return 'bg-red-500 text-white';
+          if (saved.priority === 'A') return 'bg-yellow-400 text-slate-950';
+          if (saved.priority === 'B') return 'bg-blue-600 text-white';
+          return 'bg-emerald-500 text-white';
+        };
+
+        // ★ Step 2: マップ上のドット近傍スナップ選択（指でのスクロールと誤タップを厳密に区別）
+        let mapDownPos = { x: 0, y: 0 };
+        const handleMapPointerDown = (e) => {
+          const pt = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
+          mapDownPos = { x: pt.clientX, y: pt.clientY };
+        };
+
+        const focusMapPinItem = (item, shouldScroll = false) => {
+          if (!item) return;
+          focusedMapCircle.value = item.circle;
+          pinX.value = item.x;
+          pinY.value = item.y;
+          targetSpace.value = `${item.spaceLabel} (${item.circle.circle_name})`;
+          savePinPos();
+          if (shouldScroll) {
+            scrollMapToPin(item.x, item.y);
+          }
+        };
+
+        const handleMapClick = (e) => {
+          if (isDraggingPin) return;
+          const dxMove = Math.abs(e.clientX - mapDownPos.x);
+          const dyMove = Math.abs(e.clientY - mapDownPos.y);
+          if (dxMove > 6 || dyMove > 6) return; // スクロールやドラッグ操作時は無視
+
+          if (!activeListMapPins.value.length) return;
+
+          const container = e.currentTarget;
+          const rect = container.getBoundingClientRect();
+          const mapX = (e.clientX - rect.left) / mapScale.value;
+          const mapY = (e.clientY - rect.top) / mapScale.value;
+
+          // 画面上で半径 18px 以内にあるドットを距離順に取得
+          const maxMapDist = 18 / mapScale.value;
+          const candidates = activeListMapPins.value
+            .map(item => {
+              const dist = Math.hypot(item.x - mapX, item.y - mapY);
+              return { item, dist };
+            })
+            .filter(c => c.dist <= maxMapDist)
+            .sort((a, b) => a.dist - b.dist);
+
+          if (candidates.length === 0) return;
+
+          // 同じ密集箇所を連続タップした場合は、近くにある次の候補へ順番に切り替えられるようにする
+          let chosen = candidates[0].item;
+          if (focusedMapCircle.value && candidates.length > 1) {
+            const currentIdx = candidates.findIndex(c => c.item.circle_id === focusedMapCircle.value.circle_id);
+            if (currentIdx !== -1) {
+              chosen = candidates[(currentIdx + 1) % candidates.length].item;
+            }
+          }
+          focusMapPinItem(chosen, false);
+        };
+
+        const stepMapPin = (dir) => {
+          const list = spaceOrderedListPins.value;
+          if (!list.length) return;
+          const currentId = focusedMapCircle.value?.circle_id;
+          const idx = list.findIndex(item => item.circle_id === currentId);
+          const nextIdx = idx === -1 ? 0 : (idx + dir + list.length) % list.length;
+          focusMapPinItem(list[nextIdx], true);
         };
 
         const resetAllFilters = () => {
@@ -1040,6 +1244,7 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
 
         const selectBlockAndFocusMap = (block, switchTabOnMobile = true) => {
           filterBlock.value = filterBlock.value === block ? '' : block;
+          focusedMapCircle.value = null;
           if (window.innerWidth >= 768 && activeTab.value === 'map') {
             activeTab.value = 'search';
           }
@@ -1058,6 +1263,7 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         const jumpToMap = (circle) => {
           const spaceId = circle.space_sym + '-' + circle.space_num;
           targetSpace.value = spaceId + ' (' + circle.circle_name + ')';
+          focusedMapCircle.value = circle;
           
           // モバイル表示のときのみマップタブへ切り替え（PCでは左ペインに常時マップがあるため現在のタブを維持）
           if (window.innerWidth < 768) {
