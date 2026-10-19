@@ -726,7 +726,7 @@
                     <span class="text-[11px] font-bold text-gray-500 hidden sm:inline">並び:</span>
                     <select v-model="sortOrder" class="h-8 text-xs font-bold bg-gray-50 border border-gray-300 rounded-xl px-2 outline-none focus:ring-2 focus:ring-pink-500 text-gray-800 cursor-pointer">
                       <option value="default">追加順</option>
-                      <option value="space">配置順 (A→N)</option>
+                      <option value="space">配置順 (A→N・島別)</option>
                       <option value="priority">優先度順 (S→B)</option>
                       <option value="recent">🆕 お品書き新着順</option>
                     </select>
@@ -822,13 +822,60 @@
               </div>
               
               <ul v-else class="grid grid-cols-1 xl:grid-cols-2" :class="isListCompactMode ? 'gap-2' : 'gap-3.5'">
-                <li v-for="circle in sortedSavedCircles" :key="circle.circle_id" 
-                    class="rounded-2xl shadow-sm border overflow-hidden relative transition-all duration-200 flex flex-col justify-between" 
-                    :class="[
-                      savedList[circle.circle_id].bought ? 'opacity-65 bg-gray-50 border-gray-200' : 
-                      savedList[circle.circle_id].soldout ? 'opacity-70 bg-gray-100/90 border-dashed border-gray-300' : 
-                      isCircleAbsent(circle.circle_id) ? 'bg-rose-50/50 border-rose-300' : 'bg-white border-gray-200/90 hover:border-pink-300'
-                    ]">
+                <template v-for="(circle, index) in sortedSavedCircles" :key="circle.circle_id">
+                  <!-- ★ ブロック区切りヘッダー (配置順ソート時のみ自動挿入、グリッド全幅) -->
+                  <li v-if="shouldShowBlockHeader(circle, index)" 
+                      class="col-span-full pt-3 pb-1 first:pt-0">
+                    <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-slate-100 via-slate-50 to-white border border-slate-200/90 shadow-2xs">
+                      <!-- 左側: ブロックバッジ & 周回状況 -->
+                      <div class="flex items-center gap-2 flex-wrap min-w-0">
+                        <span class="inline-flex items-center justify-center px-2.5 py-1 bg-slate-800 text-white font-black text-xs md:text-sm rounded-lg shadow-xs tracking-wide">
+                          {{ circle.space_sym }} ブロック
+                        </span>
+
+                        <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                          <span v-if="savedBlockStats[circle.space_sym]?.remainingCount === 0" 
+                                class="inline-flex items-center gap-1 text-emerald-700 font-extrabold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                            <span>✓</span>
+                            <span>周回完了 (全{{ savedBlockStats[circle.space_sym]?.totalCount }}件)</span>
+                          </span>
+                          <span v-else class="flex items-center gap-1">
+                            <span>残り</span>
+                            <span class="text-pink-600 font-black text-sm">{{ savedBlockStats[circle.space_sym]?.remainingCount }}</span>
+                            <span class="text-slate-400">/</span>
+                            <span>全{{ savedBlockStats[circle.space_sym]?.totalCount }}件</span>
+                          </span>
+
+                          <span v-if="savedBlockStats[circle.space_sym]?.soldoutCount > 0" class="text-[10px] text-rose-700 font-bold bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
+                            完売 {{ savedBlockStats[circle.space_sym]?.soldoutCount }}
+                          </span>
+                        </span>
+
+                        <!-- 残り予定額 -->
+                        <span v-if="savedBlockStats[circle.space_sym]?.remainingPrice > 0" 
+                              class="text-[11px] font-mono font-bold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+                          残 ¥{{ savedBlockStats[circle.space_sym]?.remainingPrice.toLocaleString() }}
+                        </span>
+                      </div>
+
+                      <!-- 右側: マップで島を表示ボタン -->
+                      <button @click="selectBlockAndFocusMap(circle.space_sym, true)" 
+                              type="button"
+                              class="shrink-0 px-2.5 py-1 bg-white hover:bg-blue-50 text-blue-700 hover:text-blue-800 border border-blue-200 hover:border-blue-300 rounded-lg text-xs font-extrabold transition-all shadow-2xs active:scale-95 flex items-center gap-1 cursor-pointer"
+                              title="マップ上でこの島（ブロック）の位置を表示">
+                        <span>📍</span>
+                        <span class="hidden sm:inline">マップで</span>
+                        <span>島を確認</span>
+                      </button>
+                    </div>
+                  </li>
+
+                  <li class="rounded-2xl shadow-sm border overflow-hidden relative transition-all duration-200 flex flex-col justify-between" 
+                      :class="[
+                        savedList[circle.circle_id].bought ? 'opacity-65 bg-gray-50 border-gray-200' : 
+                        savedList[circle.circle_id].soldout ? 'opacity-70 bg-gray-100/90 border-dashed border-gray-300' : 
+                        isCircleAbsent(circle.circle_id) ? 'bg-rose-50/50 border-rose-300' : 'bg-white border-gray-200/90 hover:border-pink-300'
+                      ]">
 
                   <!-- =========================================================
                        ★ パターンA: 当日コンパクト表示モード (1画面に多数収まる高密度・誤タップ防止設計)
@@ -1110,7 +1157,8 @@
                     </div>
                   </template>
                 </li>
-              </ul>
+              </template>
+            </ul>
             </div>
           </div>
 
@@ -1539,7 +1587,10 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         const selectBlockAndFocusMap = (block, switchTabOnMobile = true) => {
           filterBlock.value = filterBlock.value === block ? '' : block;
           focusedMapCircle.value = null;
-          if (window.innerWidth >= 768 && activeTab.value === 'map') {
+          if (filterBlock.value && switchTabOnMobile && window.innerWidth < 768) {
+            activeTab.value = 'map';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (window.innerWidth >= 768 && activeTab.value === 'map') {
             activeTab.value = 'search';
           }
           if (filterBlock.value && mapCoords.value[filterBlock.value]) {
@@ -2126,6 +2177,46 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
           return Math.min(100, Math.round((boughtCount.value / activeTargetCount.value) * 100));
         });
         
+        // ★ ブロックごとの周回状況・予定額の統計集計（買い物リスト用）
+        const savedBlockStats = computed(() => {
+          const stats = {};
+          circles.value.forEach(circle => {
+            const saved = savedList.value[circle.circle_id];
+            if (!saved) return;
+            const b = circle.space_sym || '他';
+            if (!stats[b]) {
+              stats[b] = {
+                totalCount: 0,
+                boughtCount: 0,
+                soldoutCount: 0,
+                remainingCount: 0,
+                remainingPrice: 0,
+                spentPrice: 0,
+              };
+            }
+            stats[b].totalCount++;
+            const price = parseInt(saved.price) || 0;
+            if (saved.bought) {
+              stats[b].boughtCount++;
+              stats[b].spentPrice += price;
+            } else if (saved.soldout) {
+              stats[b].soldoutCount++;
+            } else {
+              stats[b].remainingCount++;
+              stats[b].remainingPrice += price;
+            }
+          });
+          return stats;
+        });
+
+        // ★ 配置順ソート時のブロック見出し表示判定
+        const shouldShowBlockHeader = (circle, index) => {
+          if (sortOrder.value !== 'space') return false;
+          if (index === 0) return true;
+          const prev = sortedSavedCircles.value[index - 1];
+          return !prev || prev.space_sym !== circle.space_sym;
+        };
+
         const sortedSavedCircles = computed(() => {
           let list = circles.value.filter(c => savedList.value[c.circle_id]);
           if (hideBought.value) {
@@ -2133,10 +2224,21 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
           }
           if (sortOrder.value === 'space') {
             list.sort((a, b) => {
-              if (a.space_sym !== b.space_sym) return a.space_sym.localeCompare(b.space_sym);
-              return parseInt(a.space_num) - parseInt(b.space_num);
+              // 1. ブロック記号順
+              if (a.space_sym !== b.space_sym) return (a.space_sym || '').localeCompare(b.space_sym || '');
+              // 2. ブロック内でのステータス順 (未完了: 0 -> 購入済: 1 -> 完売: 2)
+              const aData = savedList.value[a.circle_id] || {};
+              const bData = savedList.value[b.circle_id] || {};
+              const aStatus = aData.soldout ? 2 : (aData.bought ? 1 : 0);
+              const bStatus = bData.soldout ? 2 : (bData.bought ? 1 : 0);
+              if (aStatus !== bStatus) return aStatus - bStatus;
+              // 3. スペース番号順
+              return (parseInt(a.space_num) || 0) - (parseInt(b.space_num) || 0);
             });
-          } else if (sortOrder.value === 'priority') {
+            return list;
+          }
+
+          if (sortOrder.value === 'priority') {
             const weight = { 'S': 3, 'A': 2, 'B': 1, '': 0 };
             list.sort((a, b) => {
               const wa = weight[savedList.value[a.circle_id].priority || ''];
