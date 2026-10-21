@@ -1,18 +1,17 @@
-import { createApp } from 'vue'
-import './style.css'
-import App from './App.vue'
+import { createApp } from 'vue';
+import './style.css';
+import App from './App.vue';
+import { registerSW } from 'virtual:pwa-register';
 
-createApp(App).mount('#app')
+// Service Worker 自動更新登録 (Vite PWA)
+registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    console.log('[PWA] New content available, reloading...');
+  },
+  onOfflineReady() {
+    console.log('[PWA] App ready to work completely offline (即売会場完全オフライン対応)');
+  }
+});
 
-// Service Worker の登録（オフライン完全対応 & PWA化）
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => {
-        console.log('[SW] Service Worker registered successfully:', reg.scope);
-      })
-      .catch(err => {
-        console.warn('[SW] Service Worker registration failed:', err);
-      });
-  });
-}
+createApp(App).mount('#app');
