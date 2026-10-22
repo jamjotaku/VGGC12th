@@ -81,13 +81,20 @@
             </span>
           </div>
 
-          <!-- 買い物リストプロット ON/OFF トグル -->
-          <button @click="showListPins = !showListPins"
-                  class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
-                  :class="showListPins ? 'bg-slate-800 text-white border-slate-900' : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'">
-            <span>🛒 リスト表示: {{ showListPins ? 'ON' : 'OFF' }}</span>
-            <span v-if="showListPins" class="px-1.5 py-0.2 bg-white/20 rounded text-[10px] font-mono">{{ activeListMapPins.length }}</span>
-          </button>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <!-- 公式会場マップPDFリンク -->
+            <a href="/map.pdf" target="_blank" class="text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded-lg flex items-center gap-1 transition shadow-xs" title="公式会場マップPDFを開く / 印刷・保存">
+              <span>📄 PDF ↗</span>
+            </a>
+
+            <!-- 買い物リストプロット ON/OFF トグル -->
+            <button @click="showListPins = !showListPins"
+                    class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                    :class="showListPins ? 'bg-slate-800 text-white border-slate-900' : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'">
+              <span>🛒 リスト表示: {{ showListPins ? 'ON' : 'OFF' }}</span>
+              <span v-if="showListPins" class="px-1.5 py-0.2 bg-white/20 rounded text-[10px] font-mono">{{ activeListMapPins.length }}</span>
+            </button>
+          </div>
         </div>
 
         <!-- 4原色カラー凡例バー (リスト表示ON時) -->
@@ -285,12 +292,17 @@
                     <button @click="clearMapFocus" class="ml-0.5">×</button>
                   </span>
                 </div>
-                <button @click="showListPins = !showListPins"
-                        class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition flex items-center gap-1 shrink-0"
-                        :class="showListPins ? 'bg-slate-800 text-white border-slate-900' : 'bg-gray-200/80 text-gray-700 border-gray-300'">
-                  <span>🛒 リスト表示: {{ showListPins ? 'ON' : 'OFF' }}</span>
-                  <span v-if="showListPins" class="px-1 bg-white/20 rounded text-[10px] font-mono">{{ activeListMapPins.length }}</span>
-                </button>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <a href="/map.pdf" target="_blank" class="text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 px-2 py-1 rounded-lg flex items-center gap-0.5" title="公式会場マップPDFを開く">
+                    <span>📄 PDF ↗</span>
+                  </a>
+                  <button @click="showListPins = !showListPins"
+                          class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition flex items-center gap-1 shrink-0"
+                          :class="showListPins ? 'bg-slate-800 text-white border-slate-900' : 'bg-gray-200/80 text-gray-700 border-gray-300'">
+                    <span>🛒 リスト: {{ showListPins ? 'ON' : 'OFF' }}</span>
+                    <span v-if="showListPins" class="px-1 bg-white/20 rounded text-[10px] font-mono">{{ activeListMapPins.length }}</span>
+                  </button>
+                </div>
               </div>
 
               <!-- スマホ用 4原色カラー凡例バー -->
