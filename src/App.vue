@@ -450,10 +450,10 @@
                     <span>📍 {{ filterBlock }}</span>
                     <span>×</span>
                   </button>
-                  <button v-if="filterMember" @click="filterMember = ''"
-                          class="text-[11px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 hover:opacity-80 transition cursor-pointer"
-                          :style="getMemberStyle(filterMember)">
-                    <span>{{ getMemberMark(filterMember) }}{{ filterMember }}</span>
+                  <button v-for="m in selectedMembers" :key="'chip_'+m" @click="toggleMemberFilter(m)"
+                          class="text-[11px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 hover:opacity-80 transition cursor-pointer shadow-2xs"
+                          :style="getMemberStyle(m)">
+                    <span>{{ getMemberMark(m) }}{{ m }}</span>
                     <span>×</span>
                   </button>
                   <button v-if="filterItemTag" @click="filterItemTag = ''"
@@ -467,7 +467,7 @@
                     <span>×</span>
                   </button>
 
-                  <button v-if="searchQuery || filterBlock || filterMember || filterItemTag || filterHasOshinagaki || filterRecentOnly || searchSortOrder !== 'space'"
+                  <button v-if="searchQuery || filterBlock || selectedMembers.length > 0 || filterItemTag || filterHasOshinagaki || filterRecentOnly || searchSortOrder !== 'space'"
                           @click="resetAllFilters"
                           class="text-[11px] font-bold text-rose-600 hover:underline px-1 py-0.5 cursor-pointer">
                     クリア
@@ -501,8 +501,11 @@
                   <!-- フィルター開閉トグル -->
                   <button @click="showSearchFilters = !showSearchFilters"
                           class="px-2.5 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1 shadow-xs cursor-pointer"
-                          :class="(showSearchFilters || filterBlock || filterMember || filterItemTag || filterRecentOnly) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
+                          :class="(showSearchFilters || filterBlock || selectedMembers.length > 0 || filterItemTag || filterRecentOnly) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
                     <span>🌪️ 絞り込み</span>
+                    <span v-if="selectedMembers.length > 0" class="px-1.5 py-0.2 bg-white/20 rounded-full text-[10px] font-mono font-bold">
+                      {{ selectedMembers.length }}
+                    </span>
                     <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="showSearchFilters ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                   </button>
                 </div>
@@ -536,12 +539,26 @@
                   </div>
                 </div>
 
-                <!-- メンバー横スクロール -->
+                <!-- メンバー横スクロール (複数OR選択対応) -->
                 <div v-if="availableTags.members.length" class="flex items-center gap-2">
-                  <span class="text-[11px] font-bold text-gray-500 w-12 shrink-0">メンバー</span>
-                  <div class="flex gap-1 overflow-x-auto pb-1 custom-scrollbar flex-1">
-                    <button @click="filterMember = ''" class="px-2 py-0.5 text-xs font-bold rounded-full whitespace-nowrap transition cursor-pointer" :class="!filterMember ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'">すべて</button>
-                    <button v-for="m in availableTags.members" :key="'fm_'+m" @click="filterMember = filterMember === m ? '' : m" class="px-2.5 py-0.5 text-xs font-bold rounded-full whitespace-nowrap border flex items-center gap-1 transition cursor-pointer" :style="filterMember === m ? getMemberStyle(m) : {}" :class="filterMember !== m ? 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50' : 'opacity-100 ring-2 ring-offset-1 ring-gray-400'">
+                  <div class="flex items-center gap-1 w-16 shrink-0">
+                    <span class="text-[11px] font-bold text-gray-500">メンバー</span>
+                    <span v-if="selectedMembers.length > 0" class="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 border border-blue-200 px-1 rounded-sm">
+                      {{ selectedMembers.length }}
+                    </span>
+                  </div>
+                  <div class="flex gap-1 overflow-x-auto pb-1 custom-scrollbar flex-1 items-center">
+                    <button @click="selectedMembers = []" 
+                            class="px-2 py-0.5 text-xs font-bold rounded-full whitespace-nowrap transition cursor-pointer" 
+                            :class="selectedMembers.length === 0 ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'">
+                      すべて
+                    </button>
+                    <button v-for="m in availableTags.members" :key="'fm_'+m" 
+                            @click="toggleMemberFilter(m)" 
+                            class="px-2.5 py-0.5 text-xs font-bold rounded-full whitespace-nowrap border flex items-center gap-1 transition cursor-pointer" 
+                            :style="isMemberSelected(m) ? getMemberStyle(m) : {}" 
+                            :class="!isMemberSelected(m) ? 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50' : 'opacity-100 ring-2 ring-offset-1 ring-blue-500 font-black shadow-xs'">
+                      <span v-if="isMemberSelected(m)" class="text-[10px] font-black">✓</span>
                       <span>{{ getMemberMark(m) }}</span>
                       <span>{{ m }}</span>
                     </button>
@@ -659,9 +676,11 @@
                   <!-- メンバー ＆ 頒布物タグ -->
                   <div v-if="circleExtraInfo[circle.circle_id]?.members?.length || circleExtraInfo[circle.circle_id]?.tags?.length" class="flex flex-wrap gap-1">
                     <span v-for="member in (circleExtraInfo[circle.circle_id]?.members || [])" :key="'m_'+member" 
-                          @click="filterMember = filterMember === member ? '' : member"
+                          @click="toggleMemberFilter(member)"
                           class="px-2 py-0.5 text-[11px] font-bold rounded-md border shadow-xs flex items-center gap-1 cursor-pointer hover:opacity-80 transition" 
+                          :class="isMemberSelected(member) ? 'ring-2 ring-offset-1 ring-blue-500 font-black' : ''"
                           :style="getMemberStyle(member)">
+                      <span v-if="isMemberSelected(member)" class="text-[9px] font-black">✓</span>
                       <span>{{ getMemberMark(member) }}</span>
                       <span>{{ member }}</span>
                     </span>
@@ -1278,7 +1297,16 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         const loading = ref(true);
         const searchQuery = ref('');
         const filterBlock = ref('');
-        const filterMember = ref('');
+        const selectedMembers = ref([]);
+        const toggleMemberFilter = (member) => {
+          const idx = selectedMembers.value.indexOf(member);
+          if (idx >= 0) {
+            selectedMembers.value.splice(idx, 1);
+          } else {
+            selectedMembers.value.push(member);
+          }
+        };
+        const isMemberSelected = (member) => selectedMembers.value.includes(member);
         const filterItemTag = ref('');
         const filterHasOshinagaki = ref(false);
         const showSearchFilters = ref(false);
@@ -1572,7 +1600,7 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         const resetAllFilters = () => {
           searchQuery.value = '';
           filterBlock.value = '';
-          filterMember.value = '';
+          selectedMembers.value = [];
           filterItemTag.value = '';
           filterHasOshinagaki.value = false;
           filterRecentOnly.value = false;
@@ -2332,7 +2360,8 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
               matchItemName;
 
             const matchBlock = !filterBlock.value || circle.space_sym === filterBlock.value;
-            const matchMember = !filterMember.value || (extra.members || []).includes(filterMember.value);
+            const matchMember = selectedMembers.value.length === 0 || 
+              selectedMembers.value.some(m => (extra.members || []).includes(m));
             const matchItemTag = !filterItemTag.value || (extra.tags || []).includes(filterItemTag.value);
               
             const matchOshinagaki = !filterHasOshinagaki.value || Boolean(extra.oshinagaki_url) || ((extra.items || []).length > 0);
