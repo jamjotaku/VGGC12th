@@ -466,8 +466,13 @@
                     <span>🆕 48h新着のみ</span>
                     <span>×</span>
                   </button>
+                  <button v-if="hideAbsent" @click="hideAbsent = false"
+                          class="text-[11px] font-bold bg-slate-800 text-white px-2 py-0.5 rounded-full flex items-center gap-1 hover:bg-slate-700 transition cursor-pointer shadow-2xs">
+                    <span>🚫 欠席非表示</span>
+                    <span>×</span>
+                  </button>
 
-                  <button v-if="searchQuery || filterBlock || selectedMembers.length > 0 || filterItemTag || filterHasOshinagaki || filterRecentOnly || searchSortOrder !== 'space'"
+                  <button v-if="searchQuery || filterBlock || selectedMembers.length > 0 || filterItemTag || filterHasOshinagaki || filterRecentOnly || hideAbsent || searchSortOrder !== 'space'"
                           @click="resetAllFilters"
                           class="text-[11px] font-bold text-rose-600 hover:underline px-1 py-0.5 cursor-pointer">
                     クリア
@@ -501,27 +506,36 @@
                   <!-- フィルター開閉トグル -->
                   <button @click="showSearchFilters = !showSearchFilters"
                           class="px-2.5 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1 shadow-xs cursor-pointer"
-                          :class="(showSearchFilters || filterBlock || selectedMembers.length > 0 || filterItemTag || filterRecentOnly) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
+                          :class="(showSearchFilters || filterBlock || selectedMembers.length > 0 || filterItemTag || filterRecentOnly || hideAbsent) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
                     <span>🌪️ 絞り込み</span>
-                    <span v-if="selectedMembers.length > 0" class="px-1.5 py-0.2 bg-white/20 rounded-full text-[10px] font-mono font-bold">
-                      {{ selectedMembers.length }}
+                    <span v-if="selectedMembers.length > 0 || hideAbsent" class="px-1.5 py-0.2 bg-white/20 rounded-full text-[10px] font-mono font-bold">
+                      {{ selectedMembers.length + (hideAbsent ? 1 : 0) }}
                     </span>
                     <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="showSearchFilters ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                   </button>
                 </div>
               </div>
               
-              <!-- ★ 絞り込みフィルター群 (ブロック / メンバー / タグ / 新着 クロス検索対応) -->
+              <!-- ★ 絞り込みフィルター群 (ブロック / メンバー / タグ / 新着 / 欠席 クロス検索対応) -->
               <div v-show="showSearchFilters" class="mt-2 pt-2 border-t border-gray-200/80 space-y-1.5 px-0.5">
-                <!-- 更新状況クイック絞り込み -->
+                <!-- 更新状況＆欠席クイック絞り込み -->
                 <div class="flex items-center gap-2">
-                  <span class="text-[11px] font-bold text-gray-500 w-12 shrink-0">お品書き</span>
-                  <div class="flex gap-1.5 overflow-x-auto pb-1 custom-scrollbar flex-1">
+                  <span class="text-[11px] font-bold text-gray-500 w-12 shrink-0">状況</span>
+                  <div class="flex gap-1.5 overflow-x-auto pb-1 custom-scrollbar flex-1 items-center">
+                    <!-- 直近48時間更新 -->
                     <button @click="filterRecentOnly = !filterRecentOnly"
                             type="button"
-                            class="px-2.5 py-0.5 text-xs font-bold rounded-full whitespace-nowrap border transition flex items-center gap-1 cursor-pointer"
+                            class="px-2.5 py-0.5 text-xs font-bold rounded-full whitespace-nowrap border transition flex items-center gap-1 cursor-pointer shrink-0"
                             :class="filterRecentOnly ? 'bg-gradient-to-r from-rose-500 to-orange-500 text-white border-rose-500 shadow-2xs' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
-                      <span>🆕 直近48時間以内の更新のみ ({{ recentOshinagakiCount }}件)</span>
+                      <span>🆕 直近48時間更新 ({{ recentOshinagakiCount }}件)</span>
+                    </button>
+
+                    <!-- 当日欠席サークル除外 -->
+                    <button @click="hideAbsent = !hideAbsent"
+                            type="button"
+                            class="px-2.5 py-0.5 text-xs font-bold rounded-full whitespace-nowrap border transition flex items-center gap-1 cursor-pointer shrink-0"
+                            :class="hideAbsent ? 'bg-slate-800 text-white border-slate-900 shadow-2xs' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
+                      <span>🚫 欠席・不参加を除く{{ absentCirclesCount > 0 ? ` (${absentCirclesCount}件)` : '' }}</span>
                     </button>
                   </div>
                 </div>
@@ -1309,6 +1323,7 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         const isMemberSelected = (member) => selectedMembers.value.includes(member);
         const filterItemTag = ref('');
         const filterHasOshinagaki = ref(false);
+        const hideAbsent = ref(false);
         const showSearchFilters = ref(false);
         const searchInputRef = ref(null);
         const activeTab = ref('search');
@@ -1604,6 +1619,7 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
           filterItemTag.value = '';
           filterHasOshinagaki.value = false;
           filterRecentOnly.value = false;
+          hideAbsent.value = false;
           searchSortOrder.value = 'space';
         };
 
@@ -2014,6 +2030,10 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
           return Boolean(extra.is_absent) || (extra.tags || []).includes('__ABSENT__') || (extra.tags || []).includes('不参加') || (extra.tags || []).includes('欠席');
         };
 
+        const absentCirclesCount = computed(() => {
+          return circles.value.filter(c => isCircleAbsent(c.circle_id)).length;
+        });
+
         const loadSharedList = async (id) => {
           const { data } = await supabaseClient.from('shopping_lists').select('list_data, is_public').eq('id', id).single();
           if (data && data.is_public) {
@@ -2366,8 +2386,9 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
               
             const matchOshinagaki = !filterHasOshinagaki.value || Boolean(extra.oshinagaki_url) || ((extra.items || []).length > 0);
             const matchRecent = !filterRecentOnly.value || isRecentOshinagakiUpdate(circle.circle_id);
+            const matchAbsent = !hideAbsent.value || !isCircleAbsent(circle.circle_id);
               
-            return matchQuery && matchBlock && matchMember && matchItemTag && matchOshinagaki && matchRecent;
+            return matchQuery && matchBlock && matchMember && matchItemTag && matchOshinagaki && matchRecent && matchAbsent;
           });
 
           if (searchSortOrder.value === 'recent') {
