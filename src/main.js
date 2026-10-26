@@ -3,6 +3,11 @@ import './style.css';
 import App from './App.vue';
 import { registerSW } from 'virtual:pwa-register';
 
+// 過去の手動キャッシュ（vggc-cache-v1）のクリーンアップ
+if (typeof window !== 'undefined' && 'caches' in window) {
+  caches.delete('vggc-cache-v1').catch(() => {});
+}
+
 // Service Worker 自動更新登録 (Vite PWA)
 registerSW({
   immediate: true,

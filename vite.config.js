@@ -19,6 +19,8 @@ export default defineConfig({
         name: 'VGGC 12th サークルリスト＆マップ',
         short_name: 'VGGC 12th',
         description: 'ぶいすぽっ！オンリー即売会「VGGC 12th」のサークル配置マップ、お品書き・商品管理、買い物リスト作成ツール（完全オフライン対応）',
+        start_url: '/',
+        scope: '/',
         theme_color: '#2563eb',
         background_color: '#0f172a',
         display: 'standalone',
