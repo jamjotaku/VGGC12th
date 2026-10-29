@@ -321,8 +321,8 @@
           </button>
         </div>
 
-        <!-- スクロール可能なコンテンツエリア -->
-        <div class="flex-1 overflow-y-auto w-full relative min-h-0">
+        <!-- スクロール可能なコンテンツエリア (スクロール連動自動スリムヘッダー検知) -->
+        <div ref="mainScrollContainer" @scroll.passive="handleListScroll" class="flex-1 overflow-y-auto w-full relative min-h-0">
           
           <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-gray-50/80 z-20 backdrop-blur-sm">
             <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -819,27 +819,31 @@
                   </span>
 
                   <div class="flex items-center gap-1.5">
-                    <!-- スリムヘッダー時はここに金額サマリーを表示 -->
+                    <!-- スリムヘッダー時のインライン警告 ＆ 金額サマリー -->
+                    <span v-if="isListHeaderSlim && (isOverBudget || isSpentOverBudget)" 
+                          class="text-[10px] font-black text-rose-700 bg-rose-100 border border-rose-300 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 animate-pulse shrink-0">
+                      ⚠️+¥{{ (isSpentOverBudget ? overSpentAmount : overBudgetAmount).toLocaleString() }}
+                    </span>
                     <span v-if="isListHeaderSlim" class="text-[11px] font-extrabold text-pink-800 bg-pink-50 border border-pink-200 px-2 py-0.5 rounded-md font-mono">
                       済:¥{{ spentPrice.toLocaleString() }} / 予:¥{{ totalPrice.toLocaleString() }}
                     </span>
-                    <button @click="isListHeaderSlim = !isListHeaderSlim"
-                            class="text-[10px] font-bold text-gray-500 hover:text-gray-800 bg-white border border-gray-200 px-2 py-0.5 rounded-lg flex items-center gap-0.5 cursor-pointer shadow-2xs"
+                    <button @click="toggleManualListHeaderSlim"
+                            class="text-[10px] font-bold text-gray-500 hover:text-gray-800 bg-white border border-gray-200 px-2 py-0.5 rounded-lg flex items-center gap-0.5 cursor-pointer shadow-2xs shrink-0"
                             :title="isListHeaderSlim ? '予算・シェア・速報パネルを展開' : 'ヘッダーをスリムに折りたたむ'">
-                      <span>{{ isListHeaderSlim ? '▼ 予算・速報' : '▲ スリム化' }}</span>
+                      <span>{{ isListHeaderSlim ? '▼ 展開' : '▲ スリム' }}</span>
                     </button>
                   </div>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden shadow-inner">
-                  <div class="h-2 rounded-full transition-all duration-500 ease-out" 
+                <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden shadow-inner">
+                  <div class="h-1.5 rounded-full transition-all duration-500 ease-out" 
                        :class="isOverBudget ? 'bg-gradient-to-r from-amber-500 via-rose-500 to-red-600' : 'bg-gradient-to-r from-blue-500 to-pink-500'"
                        :style="{ width: progressPercent + '%' }"></div>
                 </div>
               </div>
 
-              <!-- ★ 💰 予算上限オーバー警告アラート (予定超過または購入超過時に自動表示) -->
-              <div v-if="isOverBudget || isSpentOverBudget" 
-                   class="bg-gradient-to-r from-rose-50 via-amber-50 to-rose-50 border border-rose-300 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-2 shadow-xs">
+              <!-- ★ 💰 予算上限オーバー警告アラート (通常時のみ大型表示、スリム時は上部にインライン縮小) -->
+              <div v-if="(isOverBudget || isSpentOverBudget) && !isListHeaderSlim" 
+                   class="bg-gradient-to-r from-rose-50 via-amber-50 to-rose-50 border border-rose-300 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-2 shadow-xs transition-all duration-200">
                 <div class="flex items-center gap-2 min-w-0">
                   <div class="w-7 h-7 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-sm shrink-0 shadow-xs animate-pulse">
                     ⚠️
@@ -1409,7 +1413,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import mapCoordsData from './map_coords.json';
 import { supabaseClient } from './supabase';
 import { STORAGE_KEY, vspoDict, priorityColors } from './constants';
@@ -1486,7 +1490,25 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
         const showPcBlockPanel = ref(true);
         const isListCompactMode = ref(localStorage.getItem('vggc12th_list_compact') === 'true');
         const expandedCompactCircleId = ref(null);
+        const mainScrollContainer = ref(null);
         const isListHeaderSlim = ref(false);
+        let isManualHeaderToggle = false;
+
+        const toggleManualListHeaderSlim = () => {
+          isManualHeaderToggle = true;
+          isListHeaderSlim.value = !isListHeaderSlim.value;
+        };
+
+        const handleListScroll = (e) => {
+          if (activeTab.value !== 'list' || isManualHeaderToggle) return;
+          const target = e?.target || mainScrollContainer.value || document.documentElement;
+          const y = target.scrollTop ?? window.scrollY ?? 0;
+          if (y > 50 && !isListHeaderSlim.value) {
+            isListHeaderSlim.value = true;
+          } else if (y <= 15 && isListHeaderSlim.value) {
+            isListHeaderSlim.value = false;
+          }
+        };
         const isPanningMap = ref(false);
         const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.default : (mapCoordsData || {}));
 
@@ -1860,7 +1882,7 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           }
         };
 
-        const sortOrder = ref('default'); 
+        const sortOrder = ref('route'); // デフォルトを巡回ルート(最短買い回り順)に設定して最適化 
         const hideBought = ref(false);
         const searchSortOrder = ref('space'); // 'space' | 'recent'
         const filterRecentOnly = ref(false);
@@ -2370,6 +2392,13 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           setInterval(() => {
             checkTimelineNotifications();
           }, 30000);
+
+          // ★ 買い物リストのスクロール連動型自動スリムヘッダー
+          window.addEventListener('scroll', handleListScroll, { passive: true });
+        });
+
+        onUnmounted(() => {
+          window.removeEventListener('scroll', handleListScroll);
         });
 
         const isCircleAbsent = (circleId) => {
