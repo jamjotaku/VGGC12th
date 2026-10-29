@@ -12,7 +12,16 @@
           <span>圏外(保存済)</span>
         </span>
       </div>
-      <div class="flex items-center gap-2 md:gap-3">
+      <div class="flex items-center gap-1.5 md:gap-3">
+        <!-- ★ お知らせ・タイムライン通知ボタン (未読赤丸バッジ付き) -->
+        <button @click="showNotificationModal = true" 
+                class="relative p-1 md:p-1.5 text-gray-600 hover:bg-gray-100 rounded-full transition cursor-pointer" 
+                title="お知らせ・タイムライン通知">
+          <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          <span v-if="unreadNotificationsCount > 0" 
+                class="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
+        </button>
+
         <!-- ヘルプボタン -->
         <button @click="showHelpModal = true" class="p-1 md:p-1.5 text-gray-500 hover:bg-gray-100 rounded-full transition cursor-pointer" title="ヘルプ・免責事項">
           <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -57,6 +66,17 @@
         </template>
       </div>
     </nav>
+
+    <!-- 緊急お知らせバナー (urgent未読時のみ自動表示) -->
+    <div v-if="urgentNotification" 
+         @click="showNotificationModal = true"
+         class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 text-xs font-bold flex items-center justify-between cursor-pointer transition z-20 shrink-0 shadow-sm animate-pulse">
+      <div class="flex items-center gap-2 truncate">
+        <span class="bg-white/20 px-1.5 py-0.5 rounded text-[10px]">🚨 緊急</span>
+        <span class="truncate">{{ urgentNotification.title }}</span>
+      </div>
+      <span class="text-[10px] bg-white/25 hover:bg-white/35 px-2 py-0.5 rounded-full shrink-0">確認する →</span>
+    </div>
 
     <!-- 11/14 当日カウントダウン ＆ 進行状況バー（全画面共通・アコーディオン展開対応） -->
     <EventCountdownBar :countdown="eventCountdown" :is-current-schedule="isCurrentSchedule" />
@@ -1262,6 +1282,18 @@
     <!-- 初回・ヘルプモーダル -->
     <HelpModal :show="showHelpModal" @close="showHelpModal = false" />
 
+    <!-- ★ お知らせ・タイムライン通知モーダル -->
+    <NotificationModal 
+      :is-open="showNotificationModal"
+      :notifications="notifications"
+      :read-notification-ids="readNotificationIds"
+      @close="showNotificationModal = false"
+      @mark-as-read="markNotificationAsRead"
+      @mark-all-as-read="markAllNotificationsAsRead"
+      @action-click="handleNotificationAction"
+      @test-timeline-notify="triggerTimelineTest"
+    />
+
     <!-- ★サークル詳細 / お品書き モーダル (PC2カラム ＆ スマホタブ切り替え対応) -->
     <CircleDetailModal 
       :circle="selectedCircle" 
@@ -1316,6 +1348,8 @@ import HelpModal from './components/HelpModal.vue';
 import AuthModal from './components/AuthModal.vue';
 import ShareModal from './components/ShareModal.vue';
 import EventCountdownBar from './components/EventCountdownBar.vue';
+import NotificationModal from './components/NotificationModal.vue';
+import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from './utils/timelineNotifier';
 
         const circles = ref([]);
         const blocks = ref([]);
@@ -1355,6 +1389,18 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         const showAuthModal = ref(false);
         const showShareModal = ref(false);
         const showHelpModal = ref(false);
+        const showNotificationModal = ref(false);
+        const notifications = ref([]);
+        const readNotificationIds = ref(JSON.parse(localStorage.getItem('vggc_read_notifications') || '[]'));
+        
+        const unreadNotificationsCount = computed(() => {
+          return notifications.value.filter(n => !readNotificationIds.value.includes(n.id)).length;
+        });
+
+        const urgentNotification = computed(() => {
+          return notifications.value.find(n => n.type === 'urgent' && !readNotificationIds.value.includes(n.id)) || null;
+        });
+
         const targetSpace = ref(null);
         const focusedMapCircle = ref(null);
         const showListPins = ref(true);
@@ -1904,6 +1950,131 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
           }, 3000); 
         };
 
+        // デフォルト初期アナウンス (Supabase未接続時やオフライン時の安全フォールバック)
+        const DEFAULT_NOTIFICATIONS = [
+          {
+            id: 'default_welcome_vggc12th',
+            created_at: '2026-10-29T12:00:00Z',
+            title: 'VGGC 12th お買い物支援ツール 大型アップデート公開！',
+            body: '当日タイムスケジュール、お品書き拡大ピンチズーム、ぶいすぽ推し複数選択、完全オフライン耐障害性強化など新機能が多数追加されました！',
+            type: 'feature',
+            category: 'announcement',
+            is_pinned: true,
+            link_url: null
+          },
+          {
+            id: 'default_official_schedule',
+            created_at: '2026-10-29T11:00:00Z',
+            title: '【公式】11/14(土) 当日スケジュール案内',
+            body: '09:45 受付開始\n10:00 サークル入場/更衣室開場\n12:00 即売会開会（一般入場）\n15:30 即売会終了\n15:45 アフターイベント',
+            type: 'official',
+            category: 'official',
+            is_pinned: false,
+            link_url: null
+          }
+        ];
+
+        // Supabaseから通知を取得 (2.5秒タイムアウト保護付き)
+        const fetchNotifications = async () => {
+          // まずローカルキャッシュから即時復元 (0ms)
+          try {
+            const cached = localStorage.getItem('vggc_cached_notifications');
+            if (cached) {
+              notifications.value = JSON.parse(cached);
+            } else {
+              notifications.value = [...DEFAULT_NOTIFICATIONS];
+            }
+          } catch (e) {
+            notifications.value = [...DEFAULT_NOTIFICATIONS];
+          }
+
+          if (!isOnline.value) return;
+
+          try {
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Notifications timeout')), 2500)
+            );
+            const fetchPromise = supabaseClient
+              .from('notifications')
+              .select('*')
+              .order('is_pinned', { ascending: false })
+              .order('created_at', { ascending: false });
+
+            const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+            if (!error && data && data.length > 0) {
+              // タイムラインのローカル通知とクラウド通知をマージ
+              const timelineNotifs = notifications.value.filter(n => n.category === 'timeline');
+              const merged = [...timelineNotifs];
+              data.forEach(cloudItem => {
+                if (!merged.some(m => m.id === cloudItem.id)) {
+                  merged.push(cloudItem);
+                }
+              });
+              notifications.value = merged;
+              localStorage.setItem('vggc_cached_notifications', JSON.stringify(merged));
+            }
+          } catch (e) {
+            console.warn('Notifications fetch skipped or timed out:', e);
+          }
+        };
+
+        // タイムライン当日リマインダーをチェック
+        const checkTimelineNotifications = (simulatedDate = null) => {
+          const events = timelineEvents.value || [];
+          const newNotifs = checkUpcomingTimelineReminders(events, circles.value, simulatedDate);
+          if (newNotifs && newNotifs.length > 0) {
+            const currentIds = notifications.value.map(n => n.id);
+            const toAdd = newNotifs.filter(n => !currentIds.includes(n.id));
+            if (toAdd.length > 0) {
+              notifications.value = [...toAdd, ...notifications.value];
+              localStorage.setItem('vggc_cached_notifications', JSON.stringify(notifications.value));
+            }
+          }
+        };
+
+        // 既読処理
+        const markNotificationAsRead = (id) => {
+          if (!readNotificationIds.value.includes(id)) {
+            readNotificationIds.value.push(id);
+            localStorage.setItem('vggc_read_notifications', JSON.stringify(readNotificationIds.value));
+          }
+        };
+
+        const markAllNotificationsAsRead = () => {
+          const allIds = notifications.value.map(n => n.id);
+          readNotificationIds.value = Array.from(new Set([...readNotificationIds.value, ...allIds]));
+          localStorage.setItem('vggc_read_notifications', JSON.stringify(readNotificationIds.value));
+        };
+
+        // 通知クリック時のアクション処理
+        const handleNotificationAction = (action) => {
+          if (!action) return;
+          if (action.type === 'open_circle' && action.circleId) {
+            const target = circles.value.find(c => c.circle_id === action.circleId);
+            if (target) {
+              selectedCircle.value = target;
+            }
+          } else if (action.type === 'jump_to_timeline') {
+            activeTab.value = 'memo';
+          }
+        };
+
+        // タイムライン通知テスト実行 (ユーザーがデモ動作を確認可能)
+        const triggerTimelineTest = () => {
+          const testNotif = generateTestTimelineNotification(timelineEvents.value, circles.value);
+          if (testNotif) {
+            // 未読として先頭に追加
+            notifications.value = [testNotif, ...notifications.value];
+            localStorage.setItem('vggc_cached_notifications', JSON.stringify(notifications.value));
+            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+              new Notification(testNotif.title, {
+                body: testNotif.body,
+                icon: '/icons/icon-192.png'
+              });
+            }
+          }
+        };
+
         onMounted(async () => {
           // キーボードショートカット ('/' で検索フォーカス、'Escape' でモーダルを閉じる)
           window.addEventListener('keydown', (e) => {
@@ -1917,6 +2088,7 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
               });
             } else if (e.key === 'Escape') {
               if (selectedCircle.value) selectedCircle.value = null;
+              else if (showNotificationModal.value) showNotificationModal.value = false;
               else if (showHelpModal.value) showHelpModal.value = false;
               else if (showBudgetModal.value) showBudgetModal.value = false;
               else if (showAuthModal.value) showAuthModal.value = false;
@@ -2071,6 +2243,13 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
               console.warn('Supabase circle_info network error (offline fallback applied):', error); 
             }
           }
+
+          // ★ お知らせ・タイムライン通知の初期ロード ＆ 30秒定期監視
+          fetchNotifications();
+          checkTimelineNotifications();
+          setInterval(() => {
+            checkTimelineNotifications();
+          }, 30000);
         });
 
         const isCircleAbsent = (circleId) => {
