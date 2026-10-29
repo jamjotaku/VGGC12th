@@ -1893,9 +1893,11 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
           clearTimeout(saveTimeout); isSaving.value = true;
           saveTimeout = setTimeout(async () => {
             try {
-              await supabaseClient.from('shopping_lists').update({ list_data: newVal, updated_at: new Date().toISOString() }).eq('user_id', user.value.id);
+              const updatePromise = supabaseClient.from('shopping_lists').update({ list_data: newVal, updated_at: new Date().toISOString() }).eq('user_id', user.value.id);
+              const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ error: 'TIMEOUT' }), 3500));
+              await Promise.race([updatePromise, timeoutPromise]);
             } catch (err) {
-              console.error('Cloud save failed:', err);
+              console.warn('Cloud save deferred (offline/weak signal):', err);
             } finally {
               isSaving.value = false;
             }
@@ -1965,32 +1967,34 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
             activeTab.value = 'list';
             await loadSharedList(sharedListId);
           } else {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            user.value = session?.user || null;
-            if (user.value && isOnline.value) {
-              await loadCloudList(user.value.id);
-            } else {
-              const stored = localStorage.getItem(STORAGE_KEY);
-              if (stored) {
-                try { savedList.value = JSON.parse(stored); syncFreeMemoFromState(); } catch (e) {}
+            // ★ Local-First: まずローカルストレージから即座に復元 (0ms・オフラインでも即時表示)
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+              try { savedList.value = JSON.parse(stored); syncFreeMemoFromState(); } catch (e) {}
+            }
+
+            try {
+              const { data: { session } } = await supabaseClient.auth.getSession();
+              user.value = session?.user || null;
+              if (user.value && isOnline.value) {
+                // バックグラウンドでクラウドリストと同期 (タイムアウト保護付き)
+                loadCloudList(user.value.id);
               }
+            } catch (e) {
+              console.warn('Auth session check skipped:', e);
             }
           }
 
           supabaseClient.auth.onAuthStateChange(async (event, session) => {
             const currentUser = session?.user || null;
             user.value = currentUser;
-            if (currentUser && !isReadOnly.value && isOnline.value) await loadCloudList(currentUser.id);
+            if (currentUser && !isReadOnly.value && isOnline.value) loadCloudList(currentUser.id);
           });
 
-          // データの並列読み込み (data.json & Supabase circle_info)
+          // ★ データの独立読み込み＆耐障害性向上 (data.json と Supabase を分離)
+          // 1. 静的データ (/data.json) を最優先でロード (Service Workerプリキャッシュから一瞬で返却)
           try {
-            const [localRes, supabaseRes] = await Promise.all([
-              fetch('/data.json'),
-              supabaseClient.from('circle_info').select('*')
-            ]);
-            
-            // 静的データのマッピング
+            const localRes = await fetch('/data.json');
             if (localRes && localRes.ok) {
               const data = await localRes.json();
               circles.value = data.circles;
@@ -2002,59 +2006,70 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
                 }));
               } catch (e) {}
             }
-            
-            // Supabaseからの追加情報のマッピング
-            if (supabaseRes && !supabaseRes.error && supabaseRes.data) {
-              const infoMap = {};
-              supabaseRes.data.forEach(info => {
-                const rawTags = Array.isArray(info.tags) ? info.tags : [];
-                const isAbsent = Boolean(info.is_absent) || rawTags.includes('__ABSENT__') || rawTags.includes('不参加') || rawTags.includes('欠席');
-                const cleanTags = rawTags.filter(t => !String(t).startsWith('__'));
-                infoMap[info.circle_id] = {
-                  tags: cleanTags,
-                  members: info.members || [],
-                  oshinagaki_url: info.oshinagaki_url || '',
-                  items: Array.isArray(info.items) ? info.items : [],
-                  twitter_id: info.twitter_id || '',
-                  staff_twitter: info.staff_twitter || '',
-                  is_absent: isAbsent,
-                  updated_at: info.updated_at || null
-                };
-              });
-              circleExtraInfo.value = infoMap;
-              try {
-                localStorage.setItem('vggc12th_circle_info_cache', JSON.stringify(infoMap));
-              } catch (e) {}
-            }
+          } catch (err) {
+            console.warn('Local data.json fetch error, using SWR cache:', err);
+          } finally {
+            // サークルデータが手元に入った時点でローディングスピナーを解除（白画面ブロックを根絶）
+            loading.value = false;
+          }
 
-            // Supabase Realtime
-            supabaseClient
-              .channel('public:circle_info')
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'circle_info' }, (payload) => {
-                if (payload.new && payload.new.circle_id) {
-                  const rawTags = Array.isArray(payload.new.tags) ? payload.new.tags : [];
-                  const isAbsent = Boolean(payload.new.is_absent) || rawTags.includes('__ABSENT__') || rawTags.includes('不参加') || rawTags.includes('欠席');
+          // 2. Supabaseからの追加情報 (お品書き・タグ・欠席情報) を2.5秒タイムアウト保護付きで非同期取得
+          if (isOnline.value) {
+            try {
+              const fetchPromise = supabaseClient.from('circle_info').select('*');
+              const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ error: 'TIMEOUT', data: null }), 2500));
+              const supabaseRes = await Promise.race([fetchPromise, timeoutPromise]);
+              
+              if (supabaseRes && !supabaseRes.error && supabaseRes.data) {
+                const infoMap = {};
+                supabaseRes.data.forEach(info => {
+                  const rawTags = Array.isArray(info.tags) ? info.tags : [];
+                  const isAbsent = Boolean(info.is_absent) || rawTags.includes('__ABSENT__') || rawTags.includes('不参加') || rawTags.includes('欠席');
                   const cleanTags = rawTags.filter(t => !String(t).startsWith('__'));
-                  circleExtraInfo.value[payload.new.circle_id] = {
+                  infoMap[info.circle_id] = {
                     tags: cleanTags,
-                    members: payload.new.members || [],
-                    oshinagaki_url: payload.new.oshinagaki_url || '',
-                    items: Array.isArray(payload.new.items) ? payload.new.items : [],
-                    twitter_id: payload.new.twitter_id || '',
-                    staff_twitter: payload.new.staff_twitter || '',
+                    members: info.members || [],
+                    oshinagaki_url: info.oshinagaki_url || '',
+                    items: Array.isArray(info.items) ? info.items : [],
+                    twitter_id: info.twitter_id || '',
+                    staff_twitter: info.staff_twitter || '',
                     is_absent: isAbsent,
-                    updated_at: payload.new.updated_at || null
+                    updated_at: info.updated_at || null
                   };
-                  try {
-                    localStorage.setItem('vggc12th_circle_info_cache', JSON.stringify(circleExtraInfo.value));
-                  } catch (e) {}
-                }
-              })
-              .subscribe();
-          } catch (error) { 
-            console.error('Data loading error:', error); 
-          } finally { 
-            loading.value = false; 
+                });
+                circleExtraInfo.value = infoMap;
+                try {
+                  localStorage.setItem('vggc12th_circle_info_cache', JSON.stringify(infoMap));
+                } catch (e) {}
+              }
+
+              // Supabase Realtime (電波安定時のみ安全に購読)
+              supabaseClient
+                .channel('public:circle_info')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'circle_info' }, (payload) => {
+                  if (payload.new && payload.new.circle_id) {
+                    const rawTags = Array.isArray(payload.new.tags) ? payload.new.tags : [];
+                    const isAbsent = Boolean(payload.new.is_absent) || rawTags.includes('__ABSENT__') || rawTags.includes('不参加') || rawTags.includes('欠席');
+                    const cleanTags = rawTags.filter(t => !String(t).startsWith('__'));
+                    circleExtraInfo.value[payload.new.circle_id] = {
+                      tags: cleanTags,
+                      members: payload.new.members || [],
+                      oshinagaki_url: payload.new.oshinagaki_url || '',
+                      items: Array.isArray(payload.new.items) ? payload.new.items : [],
+                      twitter_id: payload.new.twitter_id || '',
+                      staff_twitter: payload.new.staff_twitter || '',
+                      is_absent: isAbsent,
+                      updated_at: payload.new.updated_at || null
+                    };
+                    try {
+                      localStorage.setItem('vggc12th_circle_info_cache', JSON.stringify(circleExtraInfo.value));
+                    } catch (e) {}
+                  }
+                })
+                .subscribe();
+            } catch (error) { 
+              console.warn('Supabase circle_info network error (offline fallback applied):', error); 
+            }
           }
         });
 
@@ -2078,15 +2093,25 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         };
 
         const loadCloudList = async (userId) => {
-          const { data } = await supabaseClient.from('shopping_lists').select('*').eq('user_id', userId).single();
-          if (data) {
-            savedList.value = data.list_data || {}; isPublic.value = data.is_public; listId.value = data.id; syncFreeMemoFromState();
-          } else {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            let initialData = {};
-            if (stored) { try { initialData = JSON.parse(stored); } catch (e) {} }
-            const { data: newData } = await supabaseClient.from('shopping_lists').insert({ user_id: userId, list_data: initialData }).select().single();
-            if (newData) { savedList.value = newData.list_data; listId.value = newData.id; syncFreeMemoFromState(); }
+          try {
+            const fetchPromise = supabaseClient.from('shopping_lists').select('*').eq('user_id', userId).single();
+            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ error: 'TIMEOUT', data: null }), 2500));
+            const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
+            if (data && !error) {
+              savedList.value = data.list_data || {}; 
+              isPublic.value = data.is_public; 
+              listId.value = data.id; 
+              syncFreeMemoFromState();
+            } else if (!error) {
+              const stored = localStorage.getItem(STORAGE_KEY);
+              let initialData = {};
+              if (stored) { try { initialData = JSON.parse(stored); } catch (e) {} }
+              const { data: newData } = await supabaseClient.from('shopping_lists').insert({ user_id: userId, list_data: initialData }).select().single();
+              if (newData) { savedList.value = newData.list_data; listId.value = newData.id; syncFreeMemoFromState(); }
+            }
+          } catch (e) {
+            console.warn('loadCloudList network error, maintaining local list:', e);
           }
         };
 

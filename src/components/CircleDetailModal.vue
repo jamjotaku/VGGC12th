@@ -509,8 +509,11 @@ const staffAccounts = computed(() => {
   return getCircleStaffAccounts(extra.value);
 });
 
+let imgLoadTimeout = null;
+
 // モーダルが開かれたらタブ・画像状態を初期化
 watch(() => props.circle, (newCircle) => {
+  if (imgLoadTimeout) clearTimeout(imgLoadTimeout);
   pixivImgLoaded.value = false;
   pixivImgError.value = false;
   showImageViewer.value = false;
@@ -521,6 +524,13 @@ watch(() => props.circle, (newCircle) => {
     } else {
       mobileModalTab.value = hasItems ? 'items' : 'tweet';
     }
+
+    // 電波微弱・オフライン時タイムアウト保護 (5秒以内に画像が読めない場合はフォールバック)
+    imgLoadTimeout = setTimeout(() => {
+      if (!pixivImgLoaded.value) {
+        pixivImgError.value = true;
+      }
+    }, 5000);
   }
 });
 

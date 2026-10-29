@@ -12,6 +12,7 @@ export default defineConfig({
         'icons/icon.svg',
         'data.json',
         'map.jpg',
+        'map.pdf',
         'map_coords.json',
         'ogp.png'
       ],
