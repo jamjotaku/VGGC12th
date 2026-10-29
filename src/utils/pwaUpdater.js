@@ -131,15 +131,51 @@ export async function checkForAppUpdate(notifyUser = true) {
 }
 
 /**
+ * キャッシュストレージを完全消去し、最新バージョンを強制再取得してリロードする
+ */
+export async function forceUpdateAndReload() {
+  console.log('[PWA] ⚡ 強制キャッシュパージ ＆ 最新版再取得を開始...');
+  
+  // 1. CacheStorage をすべて削除
+  if (typeof window !== 'undefined' && 'caches' in window) {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+      console.log('[PWA] ✓ CacheStorage 全削除完了:', keys);
+    } catch (e) {
+      console.warn('[PWA] CacheStorage 削除スキップ:', e);
+    }
+  }
+
+  // 2. 登録済み Service Worker の更新 & スキップウェイティング
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of registrations) {
+        await reg.update();
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+      }
+    } catch (e) {
+      console.warn('[PWA] SW更新スキップ:', e);
+    }
+  }
+
+  // 3. タイムスタンプ付与でブラウザHTTPキャッシュをバイパスして強制リロード
+  if (typeof window !== 'undefined') {
+    const url = new URL(window.location.href);
+    url.searchParams.set('_v', Date.now().toString());
+    window.location.replace(url.toString());
+  }
+}
+
+/**
  * 新しいバージョンへ即時切り替えてページをリロードする
  */
 export async function applyAppUpdate() {
   console.log('[PWA] ⚡ 新バージョンを適用してリロードします...');
-  if (updateSWHandler) {
-    await updateSWHandler(true);
-  } else {
-    window.location.reload();
-  }
+  await forceUpdateAndReload();
 }
 
 // 画面検証・テスト用トリガー

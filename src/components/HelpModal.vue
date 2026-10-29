@@ -26,8 +26,8 @@
                 <span>⚡</span>
                 <span>アプリのバージョン・更新状態</span>
               </h3>
-              <span class="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-mono font-bold">
-                PWA v1.2 (Auto-Update)
+              <span class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full font-mono font-bold">
+                PWA v2.1 (Force-Update)
               </span>
             </div>
             <p class="text-[11px] text-slate-500 leading-relaxed">
@@ -65,7 +65,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { checkForAppUpdate, applyAppUpdate } from '../utils/pwaUpdater.js';
+import { checkForAppUpdate, forceUpdateAndReload } from '../utils/pwaUpdater.js';
 
 defineProps({
   show: {
@@ -80,21 +80,13 @@ const checkStatusMsg = ref('');
 
 const handleManualCheck = async () => {
   isChecking.value = true;
-  checkStatusMsg.value = '';
+  checkStatusMsg.value = '⚡ キャッシュ更新中...';
   try {
-    const hasUpdate = await checkForAppUpdate(true);
-    if (hasUpdate) {
-      checkStatusMsg.value = '🆕 更新があります！';
-    } else {
-      checkStatusMsg.value = '✓ 最新版です';
-    }
+    // ユーザーが明示的に押した場合は、CacheStorageを完全パージして最新アセットを強制再取得
+    await forceUpdateAndReload();
   } catch (e) {
     checkStatusMsg.value = '通信エラー';
-  } finally {
     isChecking.value = false;
-    setTimeout(() => {
-      checkStatusMsg.value = '';
-    }, 4000);
   }
 };
 </script>
