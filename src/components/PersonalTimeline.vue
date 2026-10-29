@@ -29,13 +29,13 @@
           <span class="hidden sm:inline">共有コピー</span>
         </button>
 
-        <!-- 公式スケジュール一括追加 -->
-        <button v-if="!isReadOnly && !hasOfficialPresets"
+        <!-- 公式スケジュール一括追加 / 更新 -->
+        <button v-if="!isReadOnly"
                 @click="addOfficialPresets"
                 class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                title="一般入場や閉会など公式枠をワンタップ追加">
+                :title="hasOfficialPresets ? '公式タイムテーブル(全5件)を再適用・同期' : '公式タイムテーブル(全5件)を一括セット'">
           <span>📢</span>
-          <span class="hidden sm:inline">公式枠追加</span>
+          <span class="hidden sm:inline">{{ hasOfficialPresets ? '公式枠を更新' : '公式枠追加' }}</span>
         </button>
 
         <!-- 予定追加ボタン -->
@@ -158,9 +158,9 @@
                   </span>
                 </div>
 
-                <!-- 2行目: タイトル -->
-                <h4 class="font-bold text-xs md:text-sm leading-snug break-words"
-                    :class="item.event.done ? 'text-gray-500 line-through' : 'text-gray-900'">
+                <!-- 2行目: タイトル (公式画像準拠: 開会は青、終了は赤) -->
+                <h4 class="text-xs md:text-sm leading-snug break-words"
+                    :class="getEventTitleClass(item.event)">
                   {{ item.event.title }}
                 </h4>
 
@@ -235,12 +235,12 @@
 
     </div>
 
-    <!-- コピー完了トースト通知 -->
+    <!-- トースト通知 -->
     <transition name="toast">
       <div v-if="showToast" 
            class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900/95 backdrop-blur-md text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg z-50 flex items-center gap-2">
         <span>✓</span>
-        <span>タイムスケジュールをクリップボードにコピーしました！</span>
+        <span>{{ toastMessage }}</span>
       </div>
     </transition>
 
@@ -437,12 +437,48 @@ const QUICK_TAGS = [
   { label: '🍙 昼食・休憩', category: 'other', title: '昼食・休憩' }
 ];
 
-// 公式スケジュールテンプレート
+// 公式スケジュールテンプレート (VGGC 12th 11/14(土) 当日タイムテーブル完全一致)
 const OFFICIAL_PRESETS = [
-  { time: '12:00', endTime: '15:30', category: 'official', title: '📢 一般入場開始・即売会スタート', location: '全ホール', memo: '買い物リスト順に巡回開始！' },
-  { time: '15:30', endTime: '15:45', category: 'official', title: '🏁 即売会終了', location: '全ホール', memo: '一般頒布終了・閉会アナウンス' },
-  { time: '15:45', endTime: '16:30', category: 'official', title: '🏆 本部前 大じゃんけん大会', location: '本部前', memo: '公式企画ポスターじゃんけん' },
-  { time: '16:30', endTime: '', category: 'official', title: '👋 完全撤収・イベント終了', location: '会場出口', memo: 'お疲れ様でした！' }
+  {
+    time: '09:45',
+    endTime: '',
+    category: 'official',
+    title: '一般参加者受付開始',
+    location: 'TRC第一展示場 (A-Dホール)',
+    memo: ''
+  },
+  {
+    time: '10:00',
+    endTime: '11:40',
+    category: 'official',
+    title: 'サークル入場 (11:40迄) / 更衣室開場',
+    location: 'TRC第一展示場 (A-Dホール)',
+    memo: 'サークル入場締切: 11:40 / 更衣室開場'
+  },
+  {
+    time: '12:00',
+    endTime: '',
+    category: 'official',
+    title: '即売会開会（一般入場開始）',
+    location: 'TRC第一展示場 (A-Dホール)',
+    memo: '即売会開会'
+  },
+  {
+    time: '15:30',
+    endTime: '',
+    category: 'official',
+    title: '即売会終了',
+    location: 'TRC第一展示場 (A-Dホール)',
+    memo: '一般頒布終了'
+  },
+  {
+    time: '15:45',
+    endTime: '17:00',
+    category: 'official',
+    title: 'アフターイベント (17:00完全撤収)',
+    location: 'TRC第一展示場 (A-Dホール)',
+    memo: '17:00完全撤収'
+  }
 ];
 
 // =========================================
@@ -476,6 +512,20 @@ const sortedEvents = computed(() => {
     return (a.endTime || '').localeCompare(b.endTime || '');
   });
 });
+
+// イベントタイトルのスタイル判定 (公式タイムテーブル画像に準拠: 開会は青、終了は赤)
+const getEventTitleClass = (evt) => {
+  if (evt.done) return 'text-gray-400 line-through';
+  if (evt.category === 'official') {
+    if (evt.time === '12:00' || evt.title.includes('即売会開会')) {
+      return 'text-blue-600 font-extrabold';
+    }
+    if (evt.time === '15:30' || evt.title.includes('即売会終了')) {
+      return 'text-red-600 font-extrabold';
+    }
+  }
+  return 'text-gray-900 font-bold';
+};
 
 // 公式プリセットが既に登録されているか判定
 const hasOfficialPresets = computed(() => {
@@ -697,24 +747,33 @@ const removeEvent = (id) => {
   emit('update:timelineEvents', currentList);
 };
 
-// 公式スケジュール一括追加
-const addOfficialPresets = () => {
-  if (props.isReadOnly) return;
-  const currentList = [...props.timelineEvents];
-  OFFICIAL_PRESETS.forEach((preset, idx) => {
-    currentList.push({
-      id: 'evt_official_' + Date.now() + '_' + idx,
-      done: false,
-      ...preset
-    });
-  });
-  emit('update:timelineEvents', currentList);
-};
-
 // =========================================
-// LINE / X 共有用テキストコピー
+// トースト通知 & LINE / X 共有用テキストコピー
 // =========================================
 const showToast = ref(false);
+const toastMessage = ref('');
+
+// 公式スケジュール一括追加・最新更新
+const addOfficialPresets = () => {
+  if (props.isReadOnly) return;
+  // 個人の予定（official以外）はすべて維持し、公式予定を最新の5件に同期
+  const personalEvents = props.timelineEvents.filter(e => e.category !== 'official');
+  const newOfficialEvents = OFFICIAL_PRESETS.map((preset, idx) => ({
+    id: 'evt_official_' + Date.now() + '_' + idx,
+    done: false,
+    ...preset
+  }));
+
+  const updatedList = [...personalEvents, ...newOfficialEvents];
+  emit('update:timelineEvents', updatedList);
+
+  // トースト案内
+  toastMessage.value = '📢 公式タイムテーブル(全5件)を反映しました！';
+  showToast.value = true;
+  setTimeout(() => {
+    showToast.value = false;
+  }, 2500);
+};
 
 const copyTimelineText = async () => {
   if (sortedEvents.value.length === 0) return;
@@ -737,6 +796,7 @@ const copyTimelineText = async () => {
   const text = lines.join('\n');
   try {
     await navigator.clipboard.writeText(text);
+    toastMessage.value = 'タイムスケジュールをクリップボードにコピーしました！';
     showToast.value = true;
     setTimeout(() => {
       showToast.value = false;
@@ -749,6 +809,7 @@ const copyTimelineText = async () => {
     textarea.select();
     document.execCommand('copy');
     document.body.removeChild(textarea);
+    toastMessage.value = 'タイムスケジュールをクリップボードにコピーしました！';
     showToast.value = true;
     setTimeout(() => {
       showToast.value = false;
