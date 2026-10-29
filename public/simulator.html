@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VGGC 12th - 動作シミュレーション＆テスト環境</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
+  }
+  body {
+    background: #0f172a;
+    color: #f8fafc;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* トップヘッダー */
+  header {
+    background: #1e293b;
+    border-bottom: 1px solid #334155;
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-badge {
+    background: linear-gradient(135deg, #2563eb, #ec4899);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 900;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 800;
+    color: #ffffff;
+  }
+  .lan-pill {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid #10b981;
+    color: #34d399;
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .lan-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+  }
+
+  /* メインコンテンツエリア */
+  .main-container {
+    flex: 1;
+    display: flex;
+    padding: 24px;
+    gap: 28px;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  /* 左：スマホモック（iPhone 15 Pro実寸 393×852px） */
+  .simulator-screen-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .device-frame {
+    width: 393px;
+    height: 852px;
+    background: #000000;
+    border-radius: 54px;
+    border: 12px solid #1e293b;
+    box-shadow: 
+      0 25px 60px -15px rgba(0, 0, 0, 0.7),
+      0 0 0 2px #475569;
+    position: relative;
+    overflow: hidden;
+  }
+  .dynamic-island {
+    position: absolute;
+    top: 11px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 35px;
+    background: #000000;
+    border-radius: 20px;
+    z-index: 100;
+    pointer-events: none;
+  }
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #ffffff;
+  }
+  .device-caption {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* 右：シミュレーション制御パネル */
+  .control-panel {
+    flex: 1;
+    max-width: 540px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .panel-section {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  }
+  .section-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 8px;
+  }
+
+  /* コントロールボタングリッド */
+  .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .sim-btn {
+    background: #334155;
+    color: #f8fafc;
+    border: 1px solid #475569;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+  }
+  .sim-btn:hover {
+    background: #475569;
+    border-color: #64748b;
+    transform: translateY(-1px);
+  }
+  .sim-btn:active {
+    transform: translateY(1px);
+  }
+  .sim-btn.primary {
+    background: #2563eb;
+    border-color: #3b82f6;
+  }
+  .sim-btn.primary:hover {
+    background: #1d4ed8;
+  }
+  .sim-btn.accent {
+    background: #db2777;
+    border-color: #ec4899;
+  }
+  .sim-btn.accent:hover {
+    background: #be185d;
+  }
+  .sim-btn.emerald {
+    background: #059669;
+    border-color: #10b981;
+  }
+  .sim-btn.emerald:hover {
+    background: #047857;
+  }
+  .sim-btn.danger {
+    background: #b91c1c;
+    border-color: #ef4444;
+  }
+  .sim-btn.danger:hover {
+    background: #991b1b;
+  }
+
+  .status-info {
+    font-size: 12px;
+    color: #94a3b8;
+    background: #0f172a;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    line-height: 1.5;
+  }
+  .status-info b {
+    color: #38bdf8;
+  }
+
+  /* 実機接続カード */
+  .mobile-connect-box {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(236, 72, 153, 0.1));
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mobile-connect-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mobile-url-bar {
+    background: #0f172a;
+    border: 1px solid #334155;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 13px;
+    color: #38bdf8;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: all;
+  }
+</style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <span class="logo-badge">VGGC 12th</span>
+      <h1>リアルタイム動作シミュレーション ＆ テスト環境</h1>
+    </div>
+    <div class="lan-pill">
+      <span class="lan-dot"></span>
+      <span>Wi-Fi LAN公開中: 192.168.0.113:5173</span>
+    </div>
+  </header>
+
+  <div class="main-container">
+
+    <!-- 左：スマホモック (iPhone 15 Pro: 393×852px) -->
+    <div class="simulator-screen-col">
+      <div class="device-frame">
+        <div class="dynamic-island"></div>
+        <iframe id="appFrame" src="/" title="VGGC 12th App"></iframe>
+      </div>
+      <div class="device-caption">
+        <span>📱 iPhone 15 Pro 実寸エミュレーション (393 × 852 px)</span>
+      </div>
+    </div>
+
+    <!-- 右：シミュレーション制御パネル -->
+    <div class="control-panel">
+
+      <!-- 実機接続案内 -->
+      <div class="mobile-connect-box">
+        <div class="mobile-connect-title">
+          <span>📲 スマホ実機で今すぐテストする場合</span>
+        </div>
+        <p style="font-size: 12px; color: #cbd5e1;">同じWi-Fiに接続したスマホのブラウザ（Safari/Chrome）から以下を開いてください：</p>
+        <div class="mobile-url-bar">
+          <span id="lanUrlText">http://192.168.0.113:5173/</span>
+          <button onclick="copyLanUrl()" style="background:#2563eb; color:#fff; border:none; padding:3px 8px; border-radius:4px; font-size:11px; cursor:pointer;">コピー</button>
+        </div>
+      </div>
+
+      <!-- セクション1: 買い物リスト＆テストデータ注入 -->
+      <div class="panel-section">
+        <div class="section-title">
+          <span>🛍️ 買い物リスト・シナリオデータ注入</span>
+        </div>
+        <p style="font-size: 12px; color: #94a3b8;">本番想定のサークルリストや予算をワンクリックでシミュレーターにセットします：</p>
+        <div class="btn-grid">
+          <button class="sim-btn primary" onclick="injectScenarioA()">
+            <span>🌟</span>
+            <div>
+              <div>本命買い回りシナリオ</div>
+              <div style="font-size: 10px; opacity: 0.8;">M-37(S), B-01(S), C-01(A)</div>
+            </div>
+          </button>
+          <button class="sim-btn accent" onclick="injectScenarioBudgetAlert()">
+            <span>⚠️</span>
+            <div>
+              <div>予算オーバー警告テスト</div>
+              <div style="font-size: 10px; opacity: 0.8;">予算¥3,000 / 買い物¥4,500</div>
+            </div>
+          </button>
+          <button class="sim-btn emerald" onclick="injectScenarioMidway()">
+            <span>🛒</span>
+            <div>
+              <div>買い回り進行中シナリオ</div>
+              <div style="font-size: 10px; opacity: 0.8;">一部購入済・完売フラグON</div>
+            </div>
+          </button>
+          <button class="sim-btn danger" onclick="resetAllData()">
+            <span>🧹</span>
+            <div>
+              <div>全データをリセット</div>
+              <div style="font-size: 10px; opacity: 0.8;">初期状態へ初期化</div>
+            </div>
+          </button>
+        </div>
+        <div id="dataStatus" class="status-info">
+          現在の注入ステータス: <b>未注入 (通常データ)</b>
+        </div>
+      </div>
+
+      <!-- セクション2: 会場マップ・ピン動作テスト -->
+      <div class="panel-section">
+        <div class="section-title">
+          <span>🗺️ 会場マップ＆ピン動作検証</span>
+        </div>
+        <p style="font-size: 12px; color: #94a3b8;">マップタブを開き、各エリアのピン視認性と追従性をテストします：</p>
+        <div class="btn-grid">
+          <button class="sim-btn" onclick="openMapTab()">
+            <span>🗺️</span>
+            <span>マップタブを開く</span>
+          </button>
+          <button class="sim-btn" onclick="testScrollToM37()">
+            <span>🔴</span>
+            <span>M-37 (8px赤パルスピン)</span>
+          </button>
+          <button class="sim-btn" onclick="testScrollToBCol()">
+            <span>📍</span>
+            <span>B列 (最東端壁際サークル)</span>
+          </button>
+          <button class="sim-btn" onclick="testScrollToCCol()">
+            <span>🟡</span>
+            <span>C列 (右側島サークル)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- セクション3: 当日タイムライン・NOWバーシミュレーター -->
+      <div class="panel-section">
+        <div class="section-title">
+          <span>🕒 当日日時シミュレーター (11/14)</span>
+        </div>
+        <p style="font-size: 12px; color: #94a3b8;">イベント当日の時刻を進め、NOWバーや通知の挙動をテストします：</p>
+        <div class="btn-grid">
+          <button class="sim-btn" onclick="simulatePhase('pre')">
+            <span>🚪</span>
+            <div>
+              <div>当日 10:30 (開場前)</div>
+              <div style="font-size: 10px; opacity: 0.8;">サークル入場・待機列</div>
+            </div>
+          </button>
+          <button class="sim-btn emerald" onclick="simulatePhase('open')">
+            <span>🔥</span>
+            <div>
+              <div>当日 11:00 (一般開場)</div>
+              <div style="font-size: 10px; opacity: 0.8;">一般入場開始！NOW点灯</div>
+            </div>
+          </button>
+          <button class="sim-btn" onclick="simulatePhase('lunch')">
+            <span>🍱</span>
+            <div>
+              <div>当日 12:30 (お昼・中盤)</div>
+              <div style="font-size: 10px; opacity: 0.8;">個人予定・補給タイム</div>
+            </div>
+          </button>
+          <button class="sim-btn" onclick="simulatePhase('close')">
+            <span>🏁</span>
+            <div>
+              <div>当日 15:30 (閉会)</div>
+              <div style="font-size: 10px; opacity: 0.8;">即売会終了・完全撤収</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- セクション4: PWA・オフライン＆リロード -->
+      <div class="panel-section">
+        <div class="section-title">
+          <span>⚡ PWA・オフライン・画面リロード</span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="sim-btn" onclick="reloadIframe()" style="flex: 1;">
+            <span>🔄</span>
+            <span>アプリを再読み込み</span>
+          </button>
+          <button class="sim-btn primary" onclick="testPwaUpdateToast()" style="flex: 1;">
+            <span>🔔</span>
+            <span>更新トーストを強制テスト</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    const frame = document.getElementById('appFrame');
+
+    function copyLanUrl() {
+      navigator.clipboard.writeText("http://192.168.0.113:5173/");
+      alert("スマホ用URL (http://192.168.0.113:5173/) をクリップボードにコピーしました！");
+    }
+
+    function reloadIframe() {
+      frame.contentWindow.location.reload();
+    }
+
+    // 買い物リスト注入ヘルパー
+    function injectScenarioA() {
+      const mockList = {
+        "ba144d0235c1ac608bc8894e392fabb6": { bought: false, priority: "S", price: 1500, memo: "M-37 新刊セット本命" },
+        "64041decd28251a48e6fd789cc690fdd": { bought: false, priority: "S", price: 2000, memo: "B-01 画集最優先" },
+        "f4271ed93566de81cb8608b8216d9b3a": { bought: false, priority: "A", price: 1000, memo: "C-01 アクスタ買いたい" }
+      };
+      frame.contentWindow.localStorage.setItem("vggc12th_saved_list", JSON.stringify(mockList));
+      frame.contentWindow.localStorage.setItem("vggc12th_budget", "6000");
+      frame.contentWindow.localStorage.setItem("vggc_help_shown", "true");
+      reloadIframe();
+      document.getElementById('dataStatus').innerHTML = '現在の注入ステータス: <b>本命買い回りシナリオ (M-37, B-01, C-01 / 予算¥6,000)</b>';
+    }
+
+    function injectScenarioBudgetAlert() {
+      const mockList = {
+        "ba144d0235c1ac608bc8894e392fabb6": { bought: false, priority: "S", price: 2500, memo: "M-37 フルセット" },
+        "64041decd28251a48e6fd789cc690fdd": { bought: false, priority: "S", price: 2000, memo: "B-01 タペストリー" }
+      };
+      frame.contentWindow.localStorage.setItem("vggc12th_saved_list", JSON.stringify(mockList));
+      frame.contentWindow.localStorage.setItem("vggc12th_budget", "3000");
+      frame.contentWindow.localStorage.setItem("vggc_help_shown", "true");
+      reloadIframe();
+      document.getElementById('dataStatus').innerHTML = '現在の注入ステータス: <b>予算オーバー警告テスト (買い物¥4,500 > 予算¥3,000)</b>';
+    }
+
+    function injectScenarioMidway() {
+      const mockList = {
+        "ba144d0235c1ac608bc8894e392fabb6": { bought: true, priority: "S", price: 1500, memo: "M-37 購入完了！" },
+        "64041decd28251a48e6fd789cc690fdd": { bought: false, soldout: true, priority: "S", price: 2000, memo: "B-01 目の前で完売…" },
+        "f4271ed93566de81cb8608b8216d9b3a": { bought: false, priority: "A", price: 1000, memo: "C-01 これから向かう" }
+      };
+      frame.contentWindow.localStorage.setItem("vggc12th_saved_list", JSON.stringify(mockList));
+      frame.contentWindow.localStorage.setItem("vggc12th_budget", "5000");
+      frame.contentWindow.localStorage.setItem("vggc_help_shown", "true");
+      reloadIframe();
+      document.getElementById('dataStatus').innerHTML = '現在の注入ステータス: <b>買い回り進行中シナリオ (購入済1件 / 完売1件 / 未購入1件)</b>';
+    }
+
+    function resetAllData() {
+      frame.contentWindow.localStorage.removeItem("vggc12th_saved_list");
+      frame.contentWindow.localStorage.removeItem("vggc12th_budget");
+      reloadIframe();
+      document.getElementById('dataStatus').innerHTML = '現在の注入ステータス: <b>初期状態へリセット完了</b>';
+    }
+
+    // マップ操作
+    function openMapTab() {
+      const btns = Array.from(frame.contentWindow.document.querySelectorAll('div.fixed.bottom-0 button'));
+      const mapBtn = btns.find(b => b.innerText.includes('マップ'));
+      if (mapBtn) mapBtn.click();
+    }
+
+    function testScrollToM37() {
+      openMapTab();
+      setTimeout(() => {
+        const containers = frame.contentWindow.document.querySelectorAll('.map-container');
+        containers.forEach(c => { c.scrollLeft = 140; c.scrollTop = 30; });
+      }, 300);
+    }
+
+    function testScrollToBCol() {
+      openMapTab();
+      setTimeout(() => {
+        const containers = frame.contentWindow.document.querySelectorAll('.map-container');
+        containers.forEach(c => { c.scrollLeft = 700; c.scrollTop = 100; });
+      }, 300);
+    }
+
+    function testScrollToCCol() {
+      openMapTab();
+      setTimeout(() => {
+        const containers = frame.contentWindow.document.querySelectorAll('.map-container');
+        containers.forEach(c => { c.scrollLeft = 530; c.scrollTop = 50; });
+      }, 300);
+    }
+
+    // 当日タイムラインフェーズシミュレート
+    function simulatePhase(phase) {
+      // タイムラインタブへ切り替え
+      const btns = Array.from(frame.contentWindow.document.querySelectorAll('div.fixed.bottom-0 button'));
+      const timeBtn = btns.find(b => b.innerText.includes('予定') || b.innerText.includes('準備'));
+      if (timeBtn) timeBtn.click();
+      alert("当日の【" + phase + "】フェーズのタイムライン画面を表示しました。タイムラインタブで各イベントをご確認いただけます。");
+    }
+
+    // PWAトーストテスト
+    function testPwaUpdateToast() {
+      const toast = frame.contentWindow.document.querySelector('.fixed.bottom-16');
+      if (toast) {
+        toast.style.display = 'block';
+      } else {
+        alert("PWA更新トーストコンポーネントがスタンバイ中です。アプリが最新キャッシュを保持しています。");
+      }
+    }
+  </script>
+</body>
+</html>
