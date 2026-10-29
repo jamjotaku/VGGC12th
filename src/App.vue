@@ -107,6 +107,14 @@
               <span>📄 PDF ↗</span>
             </a>
 
+            <!-- 買物中マップモード ON/OFF トグル (リスト登録サークルを発光強調) -->
+            <button @click="toggleShoppingMapMode"
+                    class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                    :class="isShoppingMapMode ? 'bg-pink-600 text-white border-pink-700 ring-2 ring-pink-300 animate-pulse' : 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100'"
+                    title="買い物リストに入れたサークルをマップ上で大きく発光させ、買い回りやすくする専用モード">
+              <span>📍 買物中: {{ isShoppingMapMode ? 'ON' : 'OFF' }}</span>
+            </button>
+
             <!-- 買い物リストプロット ON/OFF トグル -->
             <button @click="showListPins = !showListPins"
                     class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
@@ -177,6 +185,20 @@
                 <span class="text-2xl leading-none relative z-10">📍</span>
               </div>
             </div>
+          </div>
+
+          <!-- ★ 買物中モード専用: 未購入サークルクイックピルバー (PC) -->
+          <div v-if="isShoppingMapMode && unboughtListMapPins.length > 0 && !focusedMapCircle"
+               class="absolute bottom-2 inset-x-2 z-20 bg-slate-950/90 backdrop-blur-md text-white rounded-xl px-2.5 py-1.5 shadow-xl flex items-center gap-1.5 overflow-x-auto border border-pink-500/40 custom-scrollbar">
+            <span class="text-[10px] font-extrabold text-pink-400 shrink-0 flex items-center gap-1">
+              <span class="animate-pulse">🎯</span>未購入:
+            </span>
+            <button v-for="pin in unboughtListMapPins" :key="'pc_shop_nav_'+pin.circle_id"
+                    @click="focusMapCircleById(pin.circle_id)"
+                    class="shrink-0 px-2 py-0.5 rounded-lg text-[11px] font-extrabold flex items-center gap-1 transition cursor-pointer bg-white/10 hover:bg-pink-600 hover:text-white border border-white/10">
+              <span class="text-pink-300 font-mono">{{ pin.circle.space_sym }}-{{ pin.circle.space_num }}</span>
+              <span class="max-w-[80px] truncate text-[10px] opacity-80">{{ pin.circle.circle_name }}</span>
+            </button>
           </div>
 
           <!-- ★ マップ選択中サークルのクイックアクションバー (PC: マップ下部オーバーレイ固定でガタつき防止) -->
@@ -317,8 +339,14 @@
                   <a href="/map.pdf" target="_blank" class="text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 px-2 py-1 rounded-lg flex items-center gap-0.5" title="公式会場マップPDFを開く">
                     <span>📄 PDF ↗</span>
                   </a>
+                  <!-- スマホ用 買物中マップモード ON/OFF トグル -->
+                  <button @click="toggleShoppingMapMode"
+                          class="text-[11px] font-extrabold px-2 py-1 rounded-lg border transition flex items-center gap-1 shrink-0"
+                          :class="isShoppingMapMode ? 'bg-pink-600 text-white border-pink-700 ring-2 ring-pink-300 animate-pulse' : 'bg-pink-50 text-pink-700 border-pink-200'">
+                    <span>📍 買物中: {{ isShoppingMapMode ? 'ON' : 'OFF' }}</span>
+                  </button>
                   <button @click="showListPins = !showListPins"
-                          class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition flex items-center gap-1 shrink-0"
+                          class="text-[11px] font-extrabold px-2 py-1 rounded-lg border transition flex items-center gap-1 shrink-0"
                           :class="showListPins ? 'bg-slate-800 text-white border-slate-900' : 'bg-gray-200/80 text-gray-700 border-gray-300'">
                     <span>🛒 リスト: {{ showListPins ? 'ON' : 'OFF' }}</span>
                     <span v-if="showListPins" class="px-1 bg-white/20 rounded text-[10px] font-mono">{{ activeListMapPins.length }}</span>
@@ -379,6 +407,20 @@
                       <span class="text-2xl leading-none relative z-10">📍</span>
                     </div>
                   </div>
+                </div>
+
+                <!-- ★ 買物中モード専用: 未購入サークルクイックピルバー (スマホ) -->
+                <div v-if="isShoppingMapMode && unboughtListMapPins.length > 0 && !focusedMapCircle"
+                     class="absolute bottom-2 inset-x-2 z-20 bg-slate-950/90 backdrop-blur-md text-white rounded-xl px-2 py-1.5 shadow-xl flex items-center gap-1.5 overflow-x-auto border border-pink-500/40 custom-scrollbar">
+                  <span class="text-[10px] font-extrabold text-pink-400 shrink-0 flex items-center gap-1">
+                    <span class="animate-pulse">🎯</span>未購入:
+                  </span>
+                  <button v-for="pin in unboughtListMapPins" :key="'mb_shop_nav_'+pin.circle_id"
+                          @click="focusMapCircleById(pin.circle_id)"
+                          class="shrink-0 px-2 py-0.5 rounded-lg text-[11px] font-extrabold flex items-center gap-1 transition cursor-pointer bg-white/10 active:bg-pink-600 active:text-white border border-white/10">
+                    <span class="text-pink-300 font-mono">{{ pin.circle.space_sym }}-{{ pin.circle.space_num }}</span>
+                    <span class="max-w-[70px] truncate text-[10px] opacity-80">{{ pin.circle.circle_name }}</span>
+                  </button>
                 </div>
 
                 <!-- ★ マップ選択中サークルのクイックアクションバー (スマホ: マップ下部オーバーレイ固定でガタつき防止) -->
@@ -780,8 +822,34 @@
                   </div>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden shadow-inner">
-                  <div class="bg-gradient-to-r from-blue-500 to-pink-500 h-2 rounded-full transition-all duration-500 ease-out" :style="{ width: progressPercent + '%' }"></div>
+                  <div class="h-2 rounded-full transition-all duration-500 ease-out" 
+                       :class="isOverBudget ? 'bg-gradient-to-r from-amber-500 via-rose-500 to-red-600' : 'bg-gradient-to-r from-blue-500 to-pink-500'"
+                       :style="{ width: progressPercent + '%' }"></div>
                 </div>
+              </div>
+
+              <!-- ★ 💰 予算上限オーバー警告アラート (予定超過または購入超過時に自動表示) -->
+              <div v-if="isOverBudget || isSpentOverBudget" 
+                   class="bg-gradient-to-r from-rose-50 via-amber-50 to-rose-50 border border-rose-300 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-2 shadow-xs">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-7 h-7 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-sm shrink-0 shadow-xs animate-pulse">
+                    ⚠️
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-xs font-black text-rose-900 flex items-center gap-1.5 flex-wrap">
+                      <span v-if="isSpentOverBudget">購入額が予算上限を +¥{{ overSpentAmount.toLocaleString() }} 超過！</span>
+                      <span v-else>予定総額が予算（¥{{ budgetAmount.toLocaleString() }}）を +¥{{ overBudgetAmount.toLocaleString() }} 超過！</span>
+                      <span class="text-[10px] bg-rose-200/80 text-rose-900 px-1.5 py-0.2 rounded font-bold">要調整</span>
+                    </div>
+                    <div class="text-[11px] text-gray-600 truncate mt-0.5">
+                      購入予定: ¥{{ totalPrice.toLocaleString() }} / 現在購入済: ¥{{ spentPrice.toLocaleString() }}
+                    </div>
+                  </div>
+                </div>
+                <button @click="openBudgetModal" 
+                        class="text-xs font-bold bg-white hover:bg-rose-50 text-rose-800 border border-rose-300 px-3 py-1.5 rounded-xl shrink-0 transition shadow-2xs cursor-pointer">
+                  予算を変更
+                </button>
               </div>
 
               <!-- ツールバー ＆ 予算サマリー -->
@@ -791,10 +859,11 @@
                   <div class="flex items-center gap-1">
                     <span class="text-[11px] font-bold text-gray-500 hidden sm:inline">並び:</span>
                     <select v-model="sortOrder" class="h-8 text-xs font-bold bg-gray-50 border border-gray-300 rounded-xl px-2 outline-none focus:ring-2 focus:ring-pink-500 text-gray-800 cursor-pointer">
-                      <option value="default">追加順</option>
+                      <option value="route">🗺️ 巡回ルート (最短買い回り順)</option>
                       <option value="space">配置順 (A→N・島別)</option>
                       <option value="priority">優先度順 (S→B)</option>
                       <option value="recent">🆕 お品書き新着順</option>
+                      <option value="default">追加順</option>
                     </select>
                   </div>
 
@@ -1543,16 +1612,37 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           });
         });
 
+        // 未購入のリストマップピン一覧 (買物中ナビゲーション用)
+        const unboughtListMapPins = computed(() => {
+          return spaceOrderedListPins.value.filter(p => !p.isCompleted);
+        });
+
+        const toggleShoppingMapMode = () => {
+          isShoppingMapMode.value = !isShoppingMapMode.value;
+          if (isShoppingMapMode.value) {
+            showListPins.value = true;
+          }
+        };
+
         const getListPinStyle = (item) => {
           const scale = mapScale.value;
           const isSelected = focusedMapCircle.value && focusedMapCircle.value.circle_id === item.circle_id;
           const isS = item.priority === 'S' && !item.isCompleted;
-          const baseSize = item.isCompleted
-            ? Math.max(4, Math.round(5 * scale))
-            : isS
-              ? Math.max(6, Math.round(7.5 * scale))
-              : Math.max(5, Math.round(6 * scale));
-          const size = isSelected ? baseSize + 3 : baseSize;
+
+          // ★ 買物中モード時の発光サイズ拡大 (遠目でもパッと目立つサイズ)
+          let baseSize = 0;
+          if (isShoppingMapMode.value) {
+            baseSize = item.isCompleted 
+              ? Math.max(5, Math.round(6 * scale))
+              : Math.max(10, Math.round(13 * scale));
+          } else {
+            baseSize = item.isCompleted
+              ? Math.max(4, Math.round(5 * scale))
+              : isS
+                ? Math.max(6, Math.round(7.5 * scale))
+                : Math.max(5, Math.round(6 * scale));
+          }
+          const size = isSelected ? baseSize + 4 : baseSize;
 
           let bg = '#10b981'; // 🟢 未設定: Emerald Green
           let ring = '#065f46';
@@ -1563,23 +1653,35 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
             bg = '#94a3b8'; // ⚪ 購入済・完売: Slate Gray
             ring = '#475569';
             zIndex = 3;
-            opacity = 0.65;
+            opacity = isShoppingMapMode.value ? 0.35 : 0.65;
           } else if (item.priority === 'S') {
             bg = '#ef4444'; // 🔴 S: Vivid Red
             ring = '#991b1b';
-            zIndex = 8;
+            zIndex = isShoppingMapMode.value ? 25 : 8;
           } else if (item.priority === 'A') {
             bg = '#facc15'; // 🟡 A: Vivid Yellow
             ring = '#854d0e';
-            zIndex = 7;
+            zIndex = isShoppingMapMode.value ? 24 : 7;
           } else if (item.priority === 'B') {
             bg = '#2563eb'; // 🔵 B: Royal Blue
             ring = '#1e3a8a';
-            zIndex = 6;
+            zIndex = isShoppingMapMode.value ? 23 : 6;
           }
 
           if (isSelected) {
-            zIndex = 12;
+            zIndex = 30;
+          }
+
+          // ★ 買物中モードの光彩グロー (夜間ネオンのような強い発光効果)
+          let boxShadow = '';
+          if (isShoppingMapMode.value && !item.isCompleted) {
+            boxShadow = isSelected
+              ? `0 0 0 3px #ffffff, 0 0 0 6px #ec4899, 0 0 20px rgba(236,72,153,0.9)`
+              : `0 0 0 2px #ffffff, 0 0 10px ${bg}, 0 0 22px ${bg}, 0 1px 3px rgba(0,0,0,0.5)`;
+          } else {
+            boxShadow = isSelected
+              ? `0 0 0 2px #ffffff, 0 0 0 4px #ec4899, 0 2px 4px rgba(0,0,0,0.5)`
+              : `0 0 0 1px ${ring}, 0 1px 2px rgba(0,0,0,0.35)`;
           }
 
           return {
@@ -1589,9 +1691,7 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
             height: size + 'px',
             backgroundColor: bg,
             opacity,
-            boxShadow: isSelected
-              ? `0 0 0 2px #ffffff, 0 0 0 4px #ec4899, 0 2px 4px rgba(0,0,0,0.5)`
-              : `0 0 0 1px ${ring}, 0 1px 2px rgba(0,0,0,0.35)`,
+            boxShadow,
             zIndex
           };
         };
@@ -1623,6 +1723,13 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           savePinPos();
           if (shouldScroll) {
             scrollMapToPin(item.x, item.y);
+          }
+        };
+
+        const focusMapCircleById = (circleId) => {
+          const found = activeListMapPins.value.find(p => p.circle_id === circleId);
+          if (found) {
+            focusMapPinItem(found, true);
           }
         };
 
@@ -2412,6 +2519,25 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           return budgetAmount.value - spentPrice.value;
         });
 
+        // ★ 予算オーバー判定 & 超過金額
+        const isOverBudget = computed(() => {
+          return budgetAmount.value > 0 && totalPrice.value > budgetAmount.value;
+        });
+
+        const overBudgetAmount = computed(() => {
+          return Math.max(0, totalPrice.value - budgetAmount.value);
+        });
+
+        const isSpentOverBudget = computed(() => {
+          return budgetAmount.value > 0 && spentPrice.value > budgetAmount.value;
+        });
+
+        const overSpentAmount = computed(() => {
+          return Math.max(0, spentPrice.value - budgetAmount.value);
+        });
+
+        const isShoppingMapMode = ref(false);
+
         const openBudgetModal = () => {
           if (isReadOnly.value) return;
           showBudgetModal.value = true;
@@ -2512,9 +2638,9 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           return stats;
         });
 
-        // ★ 配置順ソート時のブロック見出し表示判定
+        // ★ 配置順・巡回ルートソート時のブロック見出し表示判定
         const shouldShowBlockHeader = (circle, index) => {
-          if (sortOrder.value !== 'space') return false;
+          if (sortOrder.value !== 'space' && sortOrder.value !== 'route') return false;
           if (index === 0) return true;
           const prev = sortedSavedCircles.value[index - 1];
           return !prev || prev.space_sym !== circle.space_sym;
@@ -2525,6 +2651,33 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           if (hideBought.value) {
             list = list.filter(c => !savedList.value[c.circle_id].bought && !savedList.value[c.circle_id].soldout);
           }
+          if (sortOrder.value === 'route') {
+            // 🗺️ 最短巡回ルート (A->N・ブロック順路 & 未購入優先 & S最優先壁サークル先頭)
+            const prioWeight = { 'S': 3, 'A': 2, 'B': 1, '': 0 };
+            list.sort((a, b) => {
+              const aData = savedList.value[a.circle_id] || {};
+              const bData = savedList.value[b.circle_id] || {};
+              // 1. 未購入優先 (0: 未購入 -> 1: 購入済 -> 2: 完売)
+              const aStatus = aData.soldout ? 2 : (aData.bought ? 1 : 0);
+              const bStatus = bData.soldout ? 2 : (bData.bought ? 1 : 0);
+              if (aStatus !== bStatus) return aStatus - bStatus;
+
+              // 2. ブロック記号順 (A -> B -> C ...)
+              if (a.space_sym !== b.space_sym) {
+                return (a.space_sym || '').localeCompare(b.space_sym || '');
+              }
+
+              // 3. 同一ブロック内では S優先度（壁・最優先）を先に
+              const wa = prioWeight[aData.priority || ''];
+              const wb = prioWeight[bData.priority || ''];
+              if (wa !== wb) return wb - wa;
+
+              // 4. スペース番号順 (01 -> 02 ...)
+              return (parseInt(a.space_num) || 0) - (parseInt(b.space_num) || 0);
+            });
+            return list;
+          }
+
           if (sortOrder.value === 'space') {
             list.sort((a, b) => {
               // 1. ブロック記号順

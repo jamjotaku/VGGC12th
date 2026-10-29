@@ -125,6 +125,109 @@
           </div>
         </div>
 
+        <!-- ★ 🏪 会場(TRC)周辺サバイバルガイド ＆ ATM・コンビニ情報 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-5 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-2 cursor-pointer select-none"
+               @click="isGuideOpen = !isGuideOpen">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center font-bold text-xs">
+                🏪
+              </div>
+              <div class="flex items-center gap-2">
+                <h2 class="font-bold text-gray-900 text-sm md:text-base">会場(TRC)周辺 ATM・コンビニ</h2>
+                <span class="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
+                  土曜営業情報
+                </span>
+              </div>
+            </div>
+            <button class="text-xs text-gray-400 hover:text-gray-600 font-bold transition">
+              {{ isGuideOpen ? '▲ たたむ' : '▼ ひらく' }}
+            </button>
+          </div>
+
+          <div v-show="isGuideOpen" class="space-y-3 pt-0.5">
+            <!-- 🚨 最重要Tipsアラート -->
+            <div class="bg-amber-50 border border-amber-300 rounded-xl p-2.5 space-y-1 text-xs text-amber-950">
+              <div class="font-extrabold flex items-center gap-1.5 text-amber-900">
+                <span>🚨</span>
+                <span>現金は「乗換駅」で事前に下ろすのが絶対の鉄則！</span>
+              </div>
+              <p class="text-[11px] leading-relaxed text-amber-900/90">
+                会場真下のローソンATMは開場前後に<strong>凄まじい長蛇の列</strong>になり、過去には<strong>千円札が一時枯渇</strong>した前例があります。<br>
+                モノレール乗換駅の<strong>浜松町駅</strong>や、京急線<strong>平和島駅</strong>、JR<strong>大森駅</strong>で事前に十分な千円札・小銭をご用意ください。
+              </p>
+            </div>
+
+            <!-- 土曜営業のATM・コンビニスポット一覧 -->
+            <div class="space-y-2">
+              <div class="text-[11px] font-bold text-gray-700 flex items-center justify-between">
+                <span>📍 土曜日(11/14) 営業スポット</span>
+                <span class="text-[10px] text-gray-400">TRC敷地内</span>
+              </div>
+
+              <!-- スポット1: ローソン 東京流通センター店 -->
+              <div class="p-2.5 rounded-xl border border-blue-200 bg-blue-50/30 space-y-1 text-xs">
+                <div class="flex items-center justify-between">
+                  <span class="font-extrabold text-gray-900 flex items-center gap-1">
+                    <span>🏪 ローソン 東京流通センター店</span>
+                  </span>
+                  <span class="text-[10px] font-bold bg-blue-600 text-white px-1.5 py-0.5 rounded">24時間営業</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-gray-600">
+                  <span>場所: センタービル1F (展示場真下)</span>
+                  <span class="font-bold text-blue-700">🏧 ローソン銀行ATM</span>
+                </div>
+                <p class="text-[10.5px] text-gray-500 bg-white/80 p-1.5 rounded-lg border border-gray-100">
+                  ⚠️ 最も近いですが大混雑します。飲料水・軽食の調達はお早めに。
+                </p>
+              </div>
+
+              <!-- スポット2: 東京流通センター内郵便局 -->
+              <div class="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/30 space-y-1 text-xs">
+                <div class="flex items-center justify-between">
+                  <span class="font-extrabold text-gray-900 flex items-center gap-1">
+                    <span>🏣 東京流通センター内郵便局</span>
+                    <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">穴場</span>
+                  </span>
+                  <span class="text-[10px] font-bold bg-emerald-600 text-white px-1.5 py-0.5 rounded font-mono">土曜 9:00〜17:00</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-gray-600">
+                  <span>場所: センタービル1F</span>
+                  <span class="font-bold text-emerald-700">🏧 ゆうちょ銀行ATM</span>
+                </div>
+                <p class="text-[10.5px] text-gray-500 bg-white/80 p-1.5 rounded-lg border border-gray-100">
+                  💡 土曜も稼働！ローソンATMが大行列の際、ゆうちょや提携都市銀行カードで引き出せます。
+                </p>
+              </div>
+
+              <!-- スポット3: ローソン TRC物流ビルA棟店 -->
+              <div class="p-2 rounded-xl border border-gray-200 bg-gray-50/60 flex items-center justify-between text-xs">
+                <div>
+                  <div class="font-bold text-gray-800">🏪 ローソン TRC物流ビルA棟店</div>
+                  <div class="text-[10.5px] text-gray-500">駅から北東へ徒歩約3分 / 24時間 / 🏧 ローソン銀行</div>
+                </div>
+                <span class="text-[10px] text-gray-500 shrink-0 font-medium bg-white px-1.5 py-0.5 rounded border border-gray-200">迂回先</span>
+              </div>
+
+              <!-- スポット4: ローソン TRC 南B棟店 -->
+              <div class="p-2 rounded-xl border border-gray-200 bg-gray-50/60 flex items-center justify-between text-xs">
+                <div>
+                  <div class="font-bold text-gray-800">🏪 ローソン TRC 南B棟店</div>
+                  <div class="text-[10.5px] text-gray-500">物流ビルB棟南側1F (徒歩4〜5分) / 🏧 ローソン銀行</div>
+                </div>
+                <span class="text-[10px] text-gray-500 shrink-0 font-medium bg-white px-1.5 py-0.5 rounded border border-gray-200">奥の店舗</span>
+              </div>
+            </div>
+
+            <!-- Googleマップ外部リンクボタン -->
+            <a href="https://www.google.com/maps/search/東京流通センター+コンビニ+ATM/" target="_blank"
+               class="w-full py-2 bg-slate-900 hover:bg-slate-800 active:scale-98 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs">
+              <span>📍 Googleマップで周辺ATM・コンビニを開く</span>
+              <span>↗</span>
+            </a>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -177,6 +280,7 @@ const defaultChecklist = [
 
 const checklist = ref([]);
 const newCheckItemText = ref('');
+const isGuideOpen = ref(true);
 
 // 持ち物チェックリストのキャッシュ復元
 try {
