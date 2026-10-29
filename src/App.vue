@@ -143,9 +143,9 @@
 
         <!-- PC用マップビューポートラッパー (ズームボタンとアクションバーをスクロール領域外に固定) -->
         <div class="relative flex-1 min-h-[220px] flex flex-col rounded-xl border border-gray-200 bg-white shadow-inner overflow-hidden">
-          <!-- 固定ズームコントロール (スクロールしても常に右下に固定・アクションバー表示時は自動で上に退避) -->
+          <!-- 固定ズームコントロール (スクロールしても常に右下に固定・アクションバーまたはピルバー表示時は自動で上に退避) -->
           <div class="absolute right-3 flex flex-col gap-1.5 z-20 transition-all duration-200"
-               :class="focusedMapCircle ? 'bottom-16' : 'bottom-3'">
+               :class="(focusedMapCircle || (isShoppingMapMode && unboughtListMapPins.length > 0)) ? 'bottom-16' : 'bottom-3'">
             <button @click="changeMapScale(0.25)" class="w-9 h-9 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="拡大 (Ctrl+ホイール)">＋</button>
             <button @click="mapScale = 1.0" class="w-9 h-7 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-[10px] text-gray-600 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="100%にリセット">{{ Math.round(mapScale * 100) }}%</button>
             <button @click="changeMapScale(-0.25)" class="w-9 h-9 bg-white/95 shadow-md rounded-xl flex items-center justify-center text-gray-700 font-bold border border-gray-200 active:scale-95 hover:bg-gray-50 transition cursor-pointer" title="縮小 (Ctrl+ホイール)">－</button>
@@ -325,7 +325,7 @@
           <!-- =========================================
                [スマホ専用] マップ タブ
           ========================================== -->
-          <div v-show="activeTab === 'map'" class="md:hidden p-2.5 space-y-2.5 pb-20">
+          <div v-show="activeTab === 'map'" class="md:hidden p-2.5 space-y-2.5 pb-28">
             <div class="space-y-2">
               <div class="flex justify-between items-center gap-2">
                 <div class="flex items-center gap-1.5 min-w-0">
@@ -371,9 +371,9 @@
 
               <!-- スマホ用マップビューポートラッパー (ズームボタンとアクションバーを固定しガタつきゼロ化) -->
               <div class="relative h-[58vh] min-h-[290px] max-h-[540px] flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-                <!-- 固定ズームコントロール (スクロールしても流れない・アクションバー表示時は上に自動退避) -->
+                <!-- 固定ズームコントロール (スクロールしても流れない・アクションバーまたはピルバー表示時は上に自動退避) -->
                 <div class="absolute right-3 flex flex-col gap-1.5 z-20 transition-all duration-200"
-                     :class="focusedMapCircle ? 'bottom-16' : 'bottom-3'">
+                     :class="(focusedMapCircle || (isShoppingMapMode && unboughtListMapPins.length > 0)) ? 'bottom-16' : 'bottom-3'">
                   <button @click="changeMapScale(0.25)" class="w-10 h-10 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-gray-800 font-bold border border-gray-200 active:bg-gray-100 transition" title="拡大">＋</button>
                   <button @click="mapScale = 1.0" class="w-10 h-7 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-[10px] text-gray-600 font-bold border border-gray-200 active:bg-gray-100 transition" title="リセット">{{ Math.round(mapScale * 100) }}%</button>
                   <button @click="changeMapScale(-0.25)" class="w-10 h-10 bg-white/95 shadow-lg rounded-xl flex items-center justify-center text-gray-800 font-bold border border-gray-200 active:bg-gray-100 transition" title="縮小">－</button>
@@ -482,7 +482,7 @@
           <!-- =========================================
                探す (検索) タブ
           ========================================== -->
-          <div v-show="activeTab === 'search'" class="flex flex-col min-h-full pb-20 md:pb-8">
+          <div v-show="activeTab === 'search'" class="flex flex-col min-h-full pb-28 md:pb-8">
             <div class="p-2.5 md:p-3.5 bg-gray-50/95 backdrop-blur-md sticky top-0 z-10 border-b border-gray-200 shadow-xs">
               <!-- 検索入力ボックス -->
               <div class="relative shadow-xs rounded-xl overflow-hidden bg-white border border-gray-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
@@ -795,7 +795,7 @@
           <!-- =========================================
                リスト タブ (買い物リスト・予算・優先度)
           ========================================== -->
-          <div v-show="activeTab === 'list'" class="flex flex-col min-h-full pb-24 md:pb-8 relative">
+          <div v-show="activeTab === 'list'" class="flex flex-col min-h-full pb-28 md:pb-8 relative">
             
             <div class="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-md p-2.5 md:p-3.5 border-b border-gray-200 shadow-sm space-y-2">
               <!-- 達成度プログレスバー ＆ スリムヘッダー切替 -->

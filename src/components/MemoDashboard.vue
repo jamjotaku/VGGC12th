@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col min-h-full pb-20 md:pb-6 p-3 md:p-6 space-y-4 md:space-y-6">
+  <div class="flex flex-col min-h-full pb-28 md:pb-6 p-3 md:p-6 space-y-4 md:space-y-6">
     <div class="flex flex-col md:grid md:grid-cols-12 md:gap-6 space-y-4 md:space-y-0">
       
       <!-- 左カラム: 当日タイムスケジュール ＆ フリーメモ (md:col-span-7) -->
