@@ -173,9 +173,9 @@
               <div v-for="item in activeListMapPins" :key="'pc_mp_'+item.circle_id"
                    class="list-map-dot pointer-events-none select-none"
                    :style="getListPinStyle(item)">
-                <!-- 優先度S未完了ピン: 呼吸するように広がる赤いパルス波紋 -->
+                <!-- 優先度S未完了ピン: 呼吸するように広がる赤いパルス波紋 (inset-0でブース枠内に収まるスマート発光) -->
                 <span v-if="item.priority === 'S' && !item.isCompleted"
-                      class="absolute -inset-1 rounded-full bg-rose-500 animate-ping opacity-60 pointer-events-none"></span>
+                      class="absolute inset-0 rounded-full bg-rose-500 animate-ping opacity-75 pointer-events-none"></span>
               </div>
 
               <!-- ターゲットピン (案B: targetSpace選択時のみ表示) -->
@@ -398,9 +398,9 @@
                     <div v-for="item in activeListMapPins" :key="'mb_mp_'+item.circle_id"
                          class="list-map-dot pointer-events-none select-none"
                          :style="getListPinStyle(item)">
-                      <!-- 優先度S未完了ピン: 呼吸するように広がる赤いパルス波紋 -->
+                      <!-- 優先度S未完了ピン: 呼吸するように広がる赤いパルス波紋 (inset-0でブース枠内に収まるスマート発光) -->
                       <span v-if="item.priority === 'S' && !item.isCompleted"
-                            class="absolute -inset-1 rounded-full bg-rose-500 animate-ping opacity-60 pointer-events-none"></span>
+                            class="absolute inset-0 rounded-full bg-rose-500 animate-ping opacity-75 pointer-events-none"></span>
                     </div>
 
                     <!-- ターゲットピン (案B: targetSpace選択時のみ表示) -->
@@ -1665,24 +1665,24 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           const isSelected = focusedMapCircle.value && focusedMapCircle.value.circle_id === item.circle_id;
           const isS = item.priority === 'S' && !item.isCompleted;
 
-          // ★ マップピンのサイズ（通常時・買物中モード共通で、黒文字に埋もれず視認性を確保）
+          // ★ マップピンのサイズ（1スペース枠 約6px〜8px にジャストフィットし、隣接サークルを覆わない黄金比）
           let baseSize = 0;
           if (isShoppingMapMode.value) {
             baseSize = item.isCompleted 
-              ? Math.max(6, Math.round(7 * scale))
+              ? Math.max(4.5, Math.round(5 * scale))
               : isS
-                ? Math.max(14, Math.round(16 * scale))
-                : Math.max(12, Math.round(14 * scale));
+                ? Math.max(8, Math.round(9 * scale))
+                : Math.max(7, Math.round(7.5 * scale));
           } else {
             baseSize = item.isCompleted
-              ? Math.max(5, Math.round(6 * scale))
+              ? Math.max(4, Math.round(4.5 * scale))
               : isS
-                ? Math.max(12, Math.round(14 * scale)) // ★ 優先度S: 7.5px -> 14px に倍増！
+                ? Math.max(7.5, Math.round(8 * scale))  // ★ 1スペース枠に収まるジャスト8px！
                 : item.priority === 'A'
-                  ? Math.max(10, Math.round(12 * scale))
-                  : Math.max(9, Math.round(10.5 * scale));
+                  ? Math.max(6.5, Math.round(7 * scale))
+                  : Math.max(6, Math.round(6.5 * scale));
           }
-          const size = isSelected ? baseSize + 5 : baseSize;
+          const size = isSelected ? baseSize + 3 : baseSize;
 
           let bg = '#10b981'; // 🟢 未設定: Emerald Green
           let ring = '#065f46';
@@ -1712,18 +1712,16 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
             zIndex = 30;
           }
 
-          // ★ 視認性の高い白太枠とシャドウ（黒文字の上に重なってもクッキリ浮き上がる）
+          // ★ 隣接ブース（M-38等）へのはみ出しを防ぎつつ、黒文字上でくっきり浮き立つシャープな枠線・シャドウ
           let boxShadow = '';
           if (isShoppingMapMode.value && !item.isCompleted) {
             boxShadow = isSelected
-              ? `0 0 0 3px #ffffff, 0 0 0 6px #ec4899, 0 0 20px rgba(236,72,153,0.9)`
-              : `0 0 0 2.5px #ffffff, 0 0 10px ${bg}, 0 0 22px ${bg}, 0 2px 4px rgba(0,0,0,0.5)`;
+              ? `0 0 0 2px #ffffff, 0 0 0 4px #ec4899, 0 0 12px rgba(236,72,153,0.9)`
+              : `0 0 6px ${bg}, 0 1px 3px rgba(0,0,0,0.6)`;
           } else {
             boxShadow = isSelected
-              ? `0 0 0 2.5px #ffffff, 0 0 0 5px #ec4899, 0 2px 5px rgba(0,0,0,0.5)`
-              : isS
-                ? `0 0 0 2px #ffffff, 0 0 0 3.5px ${ring}, 0 2px 6px rgba(0,0,0,0.5)`
-                : `0 0 0 1.8px #ffffff, 0 0 0 3px ${ring}, 0 1px 3px rgba(0,0,0,0.35)`;
+              ? `0 0 0 2px #ffffff, 0 0 0 3px #ec4899, 0 1px 3px rgba(0,0,0,0.5)`
+              : `0 1px 3px rgba(0,0,0,0.6)`;
           }
 
           return {
