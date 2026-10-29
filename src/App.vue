@@ -173,6 +173,9 @@
               <div v-for="item in activeListMapPins" :key="'pc_mp_'+item.circle_id"
                    class="list-map-dot pointer-events-none select-none"
                    :style="getListPinStyle(item)">
+                <!-- 優先度S未完了ピン: 呼吸するように広がる赤いパルス波紋 -->
+                <span v-if="item.priority === 'S' && !item.isCompleted"
+                      class="absolute -inset-1 rounded-full bg-rose-500 animate-ping opacity-60 pointer-events-none"></span>
               </div>
 
               <!-- ターゲットピン (案B: targetSpace選択時のみ表示) -->
@@ -395,6 +398,9 @@
                     <div v-for="item in activeListMapPins" :key="'mb_mp_'+item.circle_id"
                          class="list-map-dot pointer-events-none select-none"
                          :style="getListPinStyle(item)">
+                      <!-- 優先度S未完了ピン: 呼吸するように広がる赤いパルス波紋 -->
+                      <span v-if="item.priority === 'S' && !item.isCompleted"
+                            class="absolute -inset-1 rounded-full bg-rose-500 animate-ping opacity-60 pointer-events-none"></span>
                     </div>
 
                     <!-- ターゲットピン (案B: targetSpace選択時のみ表示) -->
@@ -486,7 +492,7 @@
                探す (検索) タブ
           ========================================== -->
           <div v-show="activeTab === 'search'" class="flex flex-col min-h-full pb-28 md:pb-8">
-            <div class="p-2.5 md:p-3.5 bg-gray-50/95 backdrop-blur-md sticky top-0 z-10 border-b border-gray-200 shadow-xs">
+            <div class="p-2.5 md:p-3.5 bg-gray-50/95 backdrop-blur-md sticky top-0 z-20 border-b border-gray-200 shadow-xs">
               <!-- 検索入力ボックス -->
               <div class="relative shadow-xs rounded-xl overflow-hidden bg-white border border-gray-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -680,7 +686,7 @@
                 <!-- 買い物リスト追加/削除ボタン (44x44px タッチターゲット確保) -->
                 <button v-if="!isReadOnly" @click="toggleSave(circle.circle_id)" 
                         :title="savedList[circle.circle_id] ? '買い物リストから外す' : '買い物リストに追加'"
-                        class="absolute top-3 right-3 w-11 h-11 rounded-full transition-all active:scale-90 flex items-center justify-center z-10 cursor-pointer"
+                        class="absolute top-3 right-3 w-11 h-11 rounded-full transition-all active:scale-90 flex items-center justify-center z-1 cursor-pointer"
                         :class="savedList[circle.circle_id] ? 'bg-pink-500 text-white shadow-md hover:bg-pink-600 ring-2 ring-pink-200' : 'bg-gray-100 text-gray-500 hover:bg-pink-50 hover:text-pink-600 border border-gray-200'">
                   <svg class="h-5 w-5" :fill="savedList[circle.circle_id] ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path v-if="!savedList[circle.circle_id]" stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -1659,20 +1665,24 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           const isSelected = focusedMapCircle.value && focusedMapCircle.value.circle_id === item.circle_id;
           const isS = item.priority === 'S' && !item.isCompleted;
 
-          // ★ 買物中モード時の発光サイズ拡大 (遠目でもパッと目立つサイズ)
+          // ★ マップピンのサイズ（通常時・買物中モード共通で、黒文字に埋もれず視認性を確保）
           let baseSize = 0;
           if (isShoppingMapMode.value) {
             baseSize = item.isCompleted 
-              ? Math.max(5, Math.round(6 * scale))
-              : Math.max(10, Math.round(13 * scale));
+              ? Math.max(6, Math.round(7 * scale))
+              : isS
+                ? Math.max(14, Math.round(16 * scale))
+                : Math.max(12, Math.round(14 * scale));
           } else {
             baseSize = item.isCompleted
-              ? Math.max(4, Math.round(5 * scale))
+              ? Math.max(5, Math.round(6 * scale))
               : isS
-                ? Math.max(6, Math.round(7.5 * scale))
-                : Math.max(5, Math.round(6 * scale));
+                ? Math.max(12, Math.round(14 * scale)) // ★ 優先度S: 7.5px -> 14px に倍増！
+                : item.priority === 'A'
+                  ? Math.max(10, Math.round(12 * scale))
+                  : Math.max(9, Math.round(10.5 * scale));
           }
-          const size = isSelected ? baseSize + 4 : baseSize;
+          const size = isSelected ? baseSize + 5 : baseSize;
 
           let bg = '#10b981'; // 🟢 未設定: Emerald Green
           let ring = '#065f46';
@@ -1687,31 +1697,33 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           } else if (item.priority === 'S') {
             bg = '#ef4444'; // 🔴 S: Vivid Red
             ring = '#991b1b';
-            zIndex = isShoppingMapMode.value ? 25 : 8;
+            zIndex = isShoppingMapMode.value ? 25 : 12;
           } else if (item.priority === 'A') {
             bg = '#facc15'; // 🟡 A: Vivid Yellow
             ring = '#854d0e';
-            zIndex = isShoppingMapMode.value ? 24 : 7;
+            zIndex = isShoppingMapMode.value ? 24 : 10;
           } else if (item.priority === 'B') {
             bg = '#2563eb'; // 🔵 B: Royal Blue
             ring = '#1e3a8a';
-            zIndex = isShoppingMapMode.value ? 23 : 6;
+            zIndex = isShoppingMapMode.value ? 23 : 8;
           }
 
           if (isSelected) {
             zIndex = 30;
           }
 
-          // ★ 買物中モードの光彩グロー (夜間ネオンのような強い発光効果)
+          // ★ 視認性の高い白太枠とシャドウ（黒文字の上に重なってもクッキリ浮き上がる）
           let boxShadow = '';
           if (isShoppingMapMode.value && !item.isCompleted) {
             boxShadow = isSelected
               ? `0 0 0 3px #ffffff, 0 0 0 6px #ec4899, 0 0 20px rgba(236,72,153,0.9)`
-              : `0 0 0 2px #ffffff, 0 0 10px ${bg}, 0 0 22px ${bg}, 0 1px 3px rgba(0,0,0,0.5)`;
+              : `0 0 0 2.5px #ffffff, 0 0 10px ${bg}, 0 0 22px ${bg}, 0 2px 4px rgba(0,0,0,0.5)`;
           } else {
             boxShadow = isSelected
-              ? `0 0 0 2px #ffffff, 0 0 0 4px #ec4899, 0 2px 4px rgba(0,0,0,0.5)`
-              : `0 0 0 1px ${ring}, 0 1px 2px rgba(0,0,0,0.35)`;
+              ? `0 0 0 2.5px #ffffff, 0 0 0 5px #ec4899, 0 2px 5px rgba(0,0,0,0.5)`
+              : isS
+                ? `0 0 0 2px #ffffff, 0 0 0 3.5px ${ring}, 0 2px 6px rgba(0,0,0,0.5)`
+                : `0 0 0 1.8px #ffffff, 0 0 0 3px ${ring}, 0 1px 3px rgba(0,0,0,0.35)`;
           }
 
           return {
