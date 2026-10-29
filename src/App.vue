@@ -819,15 +819,6 @@
                   </span>
 
                   <div class="flex items-center gap-1.5">
-                    <!-- ★ 戦利品レシート発行ボタン (購入済みが1件以上ある場合) -->
-                    <button v-if="boughtCount > 0"
-                            @click="showReceiptModal = true"
-                            class="px-2 py-0.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 active:scale-95 text-white rounded-lg text-[10px] font-black shadow-xs flex items-center gap-1 cursor-pointer transition select-none animate-pulse"
-                            title="本日の戦利品レシート画像を生成">
-                      <span>🏆</span>
-                      <span>レシート</span>
-                    </button>
-
                     <!-- スリムヘッダー時はここに金額サマリーを表示 -->
                     <span v-if="isListHeaderSlim" class="text-[11px] font-extrabold text-pink-800 bg-pink-50 border border-pink-200 px-2 py-0.5 rounded-md font-mono">
                       済:¥{{ spentPrice.toLocaleString() }} / 予:¥{{ totalPrice.toLocaleString() }}
@@ -929,13 +920,6 @@
                   </div>
 
                   <div class="flex items-center gap-1.5">
-                    <!-- ★ 戦利品レシートボタン -->
-                    <button @click="showReceiptModal = true" 
-                            class="h-9 px-2.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white rounded-xl active:scale-95 transition flex items-center gap-1 shadow-sm cursor-pointer text-xs font-black select-none"
-                            title="戦利品レシート画像を生成＆シェア">
-                      <span>🏆</span>
-                      <span class="hidden sm:inline">レシート</span>
-                    </button>
                     <button @click="shareToTwitter" class="w-9 h-9 bg-gray-900 text-white rounded-xl hover:bg-gray-700 active:scale-95 transition flex items-center justify-center shadow-sm cursor-pointer" title="X (Twitter) でシェア">
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
                     </button>
@@ -1420,15 +1404,6 @@
 
     <!-- 共有モーダル -->
     <ShareModal :show="showShareModal" :is-public="isPublic" :share-url="shareUrl" @close="showShareModal = false" @toggle-public="onTogglePublic" />
-
-    <!-- ★ 戦利品レシート（リザルト画像）自動生成モーダル -->
-    <ReceiptModal 
-      :is-open="showReceiptModal"
-      :saved-list="savedList"
-      :circles="circles"
-      @close="showReceiptModal = false"
-    />
-
   
 </div>
 </template>
@@ -1451,7 +1426,6 @@ import AuthModal from './components/AuthModal.vue';
 import ShareModal from './components/ShareModal.vue';
 import EventCountdownBar from './components/EventCountdownBar.vue';
 import NotificationModal from './components/NotificationModal.vue';
-import ReceiptModal from './components/ReceiptModal.vue';
 import PwaUpdateToast from './components/PwaUpdateToast.vue';
 import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from './utils/timelineNotifier';
 
@@ -1460,7 +1434,6 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
         const loading = ref(true);
         const searchQuery = ref('');
         const filterBlock = ref('');
-        const showReceiptModal = ref(false);
         const selectedMembers = ref([]);
         const toggleMemberFilter = (member) => {
           const idx = selectedMembers.value.indexOf(member);
