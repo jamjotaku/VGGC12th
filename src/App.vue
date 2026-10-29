@@ -267,8 +267,9 @@
             <span>📝 買い物リスト</span>
             <span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs shadow-xs">{{ savedCount }}</span>
           </button>
-          <button @click="activeTab = 'memo'" :class="activeTab === 'memo' ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-3 border-b-2 font-extrabold text-sm transition-colors cursor-pointer">
-            ✍️ 準備・フリーメモ
+          <button @click="activeTab = 'memo'" :class="activeTab === 'memo' ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-3 border-b-2 font-extrabold text-sm transition-colors flex justify-center items-center gap-1.5 cursor-pointer">
+            <span>⏰ 準備・予定</span>
+            <span v-if="timelineEvents.length > 0" class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-xs font-mono font-bold shadow-xs">{{ timelineEvents.length }}</span>
           </button>
         </div>
 
@@ -1208,13 +1209,19 @@
           </div>
 
           <!-- =========================================
-               フリーメモ タブ (即売会準備ダッシュボード)
+               準備・予定 タブ (当日タイムスケジュール＆準備ダッシュボード)
           ========================================== -->
           <MemoDashboard 
+            ref="memoDashboardRef"
             v-show="activeTab === 'memo'" 
             v-model:freeMemoText="freeMemoText" 
+            v-model:timelineEvents="timelineEvents"
+            :circles="circles"
+            :saved-list="savedList"
             :is-read-only="isReadOnly" 
             :currency-breakdown="currencyBreakdown" 
+            @open-circle="openDetails"
+            @jump-to-map="jumpToMap"
           />
 
         </div>
@@ -1244,8 +1251,11 @@
       </button>
       <button @click="activeTab = 'memo'" class="flex-1 min-h-[54px] py-2 flex flex-col items-center justify-center gap-0.5 transition-colors relative cursor-pointer" :class="activeTab === 'memo' ? 'text-emerald-600 font-extrabold bg-emerald-50/40' : 'text-gray-500 hover:text-gray-800'">
         <span v-if="activeTab === 'memo'" class="absolute top-0 inset-x-4 h-0.5 bg-emerald-600 rounded-b-full"></span>
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-        <span class="text-[11px] tracking-tight">メモ・準備</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span class="text-[11px] tracking-tight">準備・予定</span>
+        <span v-if="timelineEvents.length > 0" class="absolute top-1 right-2.5 px-1 min-w-[17px] h-4 bg-emerald-600 text-white rounded-full text-[9px] font-mono font-bold flex items-center justify-center shadow-xs">
+          {{ timelineEvents.length }}
+        </span>
       </button>
     </div>
 
@@ -1268,6 +1278,7 @@
       @toggle-item="toggleItemSelection" 
       @open-circle="openDetails" 
       @jump-to-map="jumpToMap"
+      @add-timeline="openAddTimelineForCircle"
     />
 
     <!-- ★予算設定モーダル -->
@@ -1331,6 +1342,8 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
         
         const savedList = ref({});
         const freeMemoText = ref('');
+        const timelineEvents = ref([]);
+        const memoDashboardRef = ref(null);
         
         const user = ref(null);
         const listId = ref(null);
@@ -1844,6 +1857,11 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
 
         const syncFreeMemoFromState = () => {
           if (savedList.value['__FREE_MEMO__']) freeMemoText.value = savedList.value['__FREE_MEMO__'].text || '';
+          if (savedList.value['__TIMELINE__'] && Array.isArray(savedList.value['__TIMELINE__'])) {
+            timelineEvents.value = savedList.value['__TIMELINE__'];
+          } else {
+            timelineEvents.value = [];
+          }
           if (savedList.value['__PIN_POS__']) {
             const sx = savedList.value['__PIN_POS__'].x;
             const sy = savedList.value['__PIN_POS__'].y;
@@ -1852,6 +1870,22 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
               pinY.value = sy;
             }
           }
+        };
+
+        const openAddTimelineForCircle = (circle) => {
+          if (!circle) return;
+          activeTab.value = 'memo';
+          nextTick(() => {
+            const space = `${circle.space_sym}-${circle.space_num}`;
+            memoDashboardRef.value?.openAddTimelineModal({
+              circleId: circle.circle_id,
+              circleName: circle.circle_name,
+              space: space,
+              location: space,
+              title: `【${space}】${circle.circle_name}`,
+              category: 'circle'
+            });
+          });
         };
 
         const saveToCloud = async (newVal) => {
@@ -2068,6 +2102,11 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
           if (!savedList.value['__FREE_MEMO__']) savedList.value['__FREE_MEMO__'] = {};
           savedList.value['__FREE_MEMO__'].text = newText;
         });
+
+        watch(timelineEvents, (newList) => {
+          if (isReadOnly.value) return;
+          savedList.value['__TIMELINE__'] = newList;
+        }, { deep: true });
 
         const savePinPos = () => {
           if (isReadOnly.value) return;
@@ -2415,7 +2454,7 @@ import EventCountdownBar from './components/EventCountdownBar.vue';
             await supabaseClient.from('shopping_lists').update({ is_public: newVal }).eq('user_id', user.value.id);
           }
         };
-        const signOut = async () => { await supabaseClient.auth.signOut(); savedList.value = {}; listId.value = null; isPublic.value = false; freeMemoText.value = ''; };
+        const signOut = async () => { await supabaseClient.auth.signOut(); savedList.value = {}; listId.value = null; isPublic.value = false; freeMemoText.value = ''; timelineEvents.value = []; };
         const exitReadOnly = () => { const url = new URL(window.location.href); url.searchParams.delete('list'); window.location.href = url.toString(); };
 
         

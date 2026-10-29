@@ -2,26 +2,43 @@
   <div class="flex flex-col min-h-full pb-20 md:pb-6 p-3 md:p-6 space-y-4 md:space-y-6">
     <div class="flex flex-col md:grid md:grid-cols-12 md:gap-6 space-y-4 md:space-y-0">
       
-      <!-- 左カラム: フリーメモ (md:col-span-6) -->
-      <div class="md:col-span-6 bg-white rounded-2xl shadow-sm border border-green-100 p-4 md:p-5 flex flex-col min-h-[260px] md:min-h-[460px]">
-        <div class="mb-3 flex items-center justify-between border-b border-green-50 pb-2.5">
-          <div class="flex items-center gap-2">
-            <div class="w-7 h-7 bg-green-100 text-green-700 rounded-lg flex items-center justify-center font-bold text-xs">
-              ✍️
+      <!-- 左カラム: 当日タイムスケジュール ＆ フリーメモ (md:col-span-7) -->
+      <div class="md:col-span-7 space-y-4">
+        
+        <!-- ★ ⏰ 当日個人タイムスケジュール (実時間NOW連動・サークル連携) -->
+        <PersonalTimeline
+          ref="timelineRef"
+          :timeline-events="timelineEvents"
+          :circles="circles"
+          :saved-list="savedList"
+          :is-read-only="isReadOnly"
+          @update:timeline-events="$emit('update:timelineEvents', $event)"
+          @open-circle="$emit('openCircle', $event)"
+          @jump-to-map="$emit('jumpToMap', $event)"
+        />
+
+        <!-- ★ ✍️ フリーメモ (自動保存) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-green-100 p-4 md:p-5 flex flex-col min-h-[220px]">
+          <div class="mb-2.5 flex items-center justify-between border-b border-green-50 pb-2">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 bg-green-100 text-green-700 rounded-lg flex items-center justify-center font-bold text-xs">
+                ✍️
+              </div>
+              <h2 class="font-bold text-gray-800 text-sm md:text-base">フリーメモ</h2>
             </div>
-            <h2 class="font-bold text-gray-800 text-sm md:text-base">フリーメモ</h2>
+            <span class="text-[10px] text-gray-400">クラウド・端末に自動保存</span>
           </div>
-          <span class="text-[10px] text-gray-400">自動保存されます</span>
+          <textarea :value="freeMemoText" 
+                    @input="$emit('update:freeMemoText', $event.target.value)" 
+                    :readonly="isReadOnly" 
+                    placeholder="当日の手伝いの予定、気になるサークルの合流連絡などを自由にメモ..." 
+                    class="flex-1 w-full min-h-[140px] p-3 text-xs md:text-sm rounded-xl border border-gray-100 focus:ring-2 focus:ring-green-400 resize-none bg-green-50/20 leading-relaxed outline-none"></textarea>
         </div>
-        <textarea :value="freeMemoText" 
-                  @input="$emit('update:freeMemoText', $event.target.value)" 
-                  :readonly="isReadOnly" 
-                  placeholder="当日の待ち合わせ、手伝いの予定、気になることなどを自由にメモ..." 
-                  class="flex-1 w-full p-3 text-sm rounded-xl border border-gray-100 focus:ring-2 focus:ring-green-400 resize-none bg-green-50/20 leading-relaxed outline-none"></textarea>
+
       </div>
 
-      <!-- 右カラム: 両替計算 ＆ 持ち物チェックリスト (md:col-span-6) -->
-      <div class="md:col-span-6 space-y-4">
+      <!-- 右カラム: 両替計算 ＆ 持ち物チェックリスト (md:col-span-5) -->
+      <div class="md:col-span-5 space-y-4">
         
         <!-- ★ 🪙 両替・金種計算ナビ (買い物リストから自動逆算) -->
         <div class="bg-white rounded-2xl shadow-sm border border-amber-200 p-4 md:p-5 space-y-3">
@@ -116,11 +133,24 @@
 
 <script setup>
 import { ref } from 'vue';
+import PersonalTimeline from './PersonalTimeline.vue';
 
-defineProps({
+const props = defineProps({
   freeMemoText: {
     type: String,
     default: ''
+  },
+  timelineEvents: {
+    type: Array,
+    default: () => []
+  },
+  circles: {
+    type: Array,
+    default: () => []
+  },
+  savedList: {
+    type: Object,
+    default: () => ({})
   },
   isReadOnly: {
     type: Boolean,
@@ -132,7 +162,9 @@ defineProps({
   }
 });
 
-defineEmits(['update:freeMemoText']);
+defineEmits(['update:freeMemoText', 'update:timelineEvents', 'openCircle', 'jumpToMap']);
+
+const timelineRef = ref(null);
 
 const defaultChecklist = [
   { text: '小銭入れ（1万円札を崩したか？）', done: false },
@@ -146,7 +178,7 @@ const defaultChecklist = [
 const checklist = ref([]);
 const newCheckItemText = ref('');
 
-// キャッシュ復元
+// 持ち物チェックリストのキャッシュ復元
 try {
   const storedList = localStorage.getItem('vggc12th_checklist');
   if (storedList) {
@@ -181,4 +213,13 @@ const removeCheckItem = (idx) => {
   checklist.value.splice(idx, 1);
   saveChecklist();
 };
+
+// 外部からタイムライン追加モーダルを直接呼び出すためのメソッド
+const openAddTimelineModal = (preset = {}) => {
+  timelineRef.value?.openAddModal(preset);
+};
+
+defineExpose({
+  openAddTimelineModal
+});
 </script>
