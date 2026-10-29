@@ -1,6 +1,9 @@
 <template>
 <div class="font-sans bg-gray-50 text-gray-900 h-screen flex flex-col pt-12 md:pt-11 pb-14 md:pb-0 overflow-hidden">
 
+    <!-- ★ PWA自動更新＆オフライン通知トースト -->
+    <PwaUpdateToast />
+
     <!-- ナビゲーションバー -->
     <nav class="bg-white shadow-sm border-b px-3 md:px-4 py-2 md:py-2.5 flex justify-between items-center z-20 flex-shrink-0">
       <div class="font-bold text-base md:text-lg flex items-center gap-2">
@@ -1443,6 +1446,7 @@ import ShareModal from './components/ShareModal.vue';
 import EventCountdownBar from './components/EventCountdownBar.vue';
 import NotificationModal from './components/NotificationModal.vue';
 import ReceiptModal from './components/ReceiptModal.vue';
+import PwaUpdateToast from './components/PwaUpdateToast.vue';
 import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from './utils/timelineNotifier';
 
         const circles = ref([]);
