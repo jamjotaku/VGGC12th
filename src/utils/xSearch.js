@@ -230,3 +230,69 @@ export const getEventLiveSearchUrl = (type = 'all') => {
 
   return `${BASE_X_SEARCH_URL}?q=${encodeURIComponent(query)}&f=live`;
 };
+
+
+/**
+ * 複数のお品書きURL文字列（改行・カンマ・空白区切り）をパースし、有効なURLの配列を返す
+ * @param {string|string[]|null} rawUrls 
+ * @returns {string[]}
+ */
+export const parseOshinagakiUrls = (rawUrls) => {
+  if (!rawUrls) return [];
+  if (Array.isArray(rawUrls)) {
+    return rawUrls.map(u => String(u).trim()).filter(u => /^https?:\/\//i.test(u));
+  }
+  const s = String(rawUrls).trim();
+  if (!s) return [];
+
+  // 改行、カンマ、読点で分割。なければ空白で分割
+  const tokens = /[\n,、]/.test(s) ? s.split(/[\n,、]+/) : s.split(/\s+/);
+  const results = [];
+  const seen = new Set();
+
+  for (const token of tokens) {
+    const trimmed = token.trim();
+    if (/^https?:\/\//i.test(trimmed) && !seen.has(trimmed)) {
+      seen.add(trimmed);
+      results.push(trimmed);
+    }
+  }
+
+  // もしURLスキームが欠落していた場合のフォールバック（例: x.com/...）
+  if (results.length === 0 && (s.includes('x.com/') || s.includes('twitter.com/') || s.includes('pixiv.net/'))) {
+    const fixedTokens = s.split(/[\n,、\s]+/);
+    for (const t of fixedTokens) {
+      const trimmed = t.trim();
+      if ((trimmed.startsWith('x.com') || trimmed.startsWith('twitter.com') || trimmed.startsWith('www.pixiv.net')) && !seen.has('https://' + trimmed)) {
+        seen.add('https://' + trimmed);
+        results.push('https://' + trimmed);
+      }
+    }
+  }
+
+  return results;
+};
+
+/**
+ * 単一のお品書きURLの種類（Pixiv、X/Twitter、その他）とIDを解析
+ * @param {string} url 
+ * @returns {{ type: 'pixiv' | 'x' | 'other', id: string | null, url: string }}
+ */
+export const parseOshinagakiUrlType = (url) => {
+  if (!url) return { type: 'other', id: null, url: '' };
+  const s = String(url).trim();
+
+  // Pixiv作品判定
+  const pixivMatch = s.match(/(?:pixiv\.net\/(?:[a-z]{2}\/)?(?:artworks\/|member_illust\.php\?(?:.*&)?illust_id=))(\d+)/i);
+  if (pixivMatch && pixivMatch[1]) {
+    return { type: 'pixiv', id: pixivMatch[1], url: s };
+  }
+
+  // X (Twitter) ポスト判定
+  const xMatch = s.match(/(?:twitter\.com|x\.com)\/(?:[^/]+)\/status\/(\d+)/i);
+  if (xMatch && xMatch[1]) {
+    return { type: 'x', id: xMatch[1], url: s };
+  }
+
+  return { type: 'other', id: null, url: s };
+};

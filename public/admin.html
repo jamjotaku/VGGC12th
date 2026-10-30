@@ -460,14 +460,16 @@
                          class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-400 font-mono text-xs">
                 </div>
 
-                <!-- お品書きURL (Xポスト / Pixiv作品対応) ＆ ID自動抽出ボタン -->
+                <!-- お品書きURL (Xポスト / Pixiv作品対応・複数行入力対応) ＆ ID自動抽出ボタン -->
                 <div>
                   <div class="flex justify-between items-center mb-1">
                     <label class="font-bold text-slate-700 flex items-center gap-1">
                       <span>📸</span>
-                      <span>お品書き URL (Xポスト / Pixiv作品):</span>
-                      <span v-if="editData[circle.circle_id]?.url && /pixiv\.net/i.test(editData[circle.circle_id].url)"
-                            class="px-1.5 py-0.2 bg-blue-600 text-white text-[9px] font-extrabold rounded">pixiv</span>
+                      <span>お品書き URL (複数ある場合は改行):</span>
+                      <span v-if="parseOshinagakiUrls(editData[circle.circle_id]?.url).length > 1"
+                            class="px-1.5 py-0.2 bg-amber-500 text-white text-[9px] font-extrabold rounded">
+                        {{ parseOshinagakiUrls(editData[circle.circle_id]?.url).length }}件
+                      </span>
                     </label>
                     <button v-if="editData[circle.circle_id]?.url && !/pixiv\.net/i.test(editData[circle.circle_id].url)" 
                             @click="extractTwitterIdFromUrl(circle.circle_id)"
@@ -476,19 +478,29 @@
                       <span>⚡ URLからID自動抽出</span>
                     </button>
                   </div>
-                  <div class="flex gap-1.5">
-                    <input type="text" 
-                           v-model="editData[circle.circle_id].url" 
-                           @input="onUrlInput(circle.circle_id)"
-                           @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
-                           @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
-                           placeholder="https://x.com/.../status/... または https://www.pixiv.net/artworks/..." 
-                           class="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 font-mono text-xs">
-                    <a v-if="editData[circle.circle_id]?.url" :href="editData[circle.circle_id].url" target="_blank" 
-                       class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-slate-600 font-bold transition flex items-center" 
-                       title="別タブでお品書きを開く">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                    </a>
+                  <div class="space-y-1.5">
+                    <div class="flex gap-1.5">
+                      <textarea v-model="editData[circle.circle_id].url" 
+                                @input="onUrlInput(circle.circle_id)"
+                                @keydown.ctrl.s.prevent="saveCircle(circle.circle_id)"
+                                @keydown.meta.s.prevent="saveCircle(circle.circle_id)"
+                                rows="2"
+                                placeholder="https://x.com/.../status/... (複数ある場合は改行して入力)" 
+                                class="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 font-mono text-xs resize-y custom-scrollbar leading-tight"></textarea>
+                    </div>
+                    <!-- 登録済みURLのクイックリンクバッジ -->
+                    <div v-if="parseOshinagakiUrls(editData[circle.circle_id]?.url).length > 0" class="flex flex-wrap items-center gap-1">
+                      <a v-for="(u, uIdx) in parseOshinagakiUrls(editData[circle.circle_id]?.url)" 
+                         :key="uIdx" 
+                         :href="u" 
+                         target="_blank" 
+                         class="px-2 py-0.5 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-300 rounded text-[10px] font-mono font-bold transition flex items-center gap-1 shadow-2xs"
+                         :title="u">
+                        <span>{{ /pixiv\.net/i.test(u) ? '🎨' : '𝕏' }}</span>
+                        <span>お品書き {{ uIdx + 1 }}</span>
+                        <svg class="w-2.5 h-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                      </a>
+                    </div>
                   </div>
                 </div>
 
@@ -679,8 +691,9 @@
             <div class="lg:col-span-6 bg-white border border-slate-200 rounded-xl p-3 shadow-xs space-y-2.5">
               <div class="flex items-center justify-between gap-2">
                 <label class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                  <span>📸 お品書きプレビュー (X / Pixiv)</span>
+                  <span>📸 お品書きプレビュー</span>
                   <span v-if="modalPixivArtworkId" class="px-1.5 py-0.2 bg-blue-600 text-white text-[9px] font-black rounded">pixiv</span>
+                  <span v-if="modalOshinagakiList.length > 1" class="px-1.5 py-0.2 bg-amber-500 text-white text-[9px] font-black rounded">全{{ modalOshinagakiList.length }}件</span>
                 </label>
                 <div class="flex items-center gap-1.5">
                   <button v-if="modalPixivArtworkId"
@@ -689,8 +702,8 @@
                           class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold cursor-pointer">
                     {{ isModalPreviewZoomed ? '🔍 全体表示に戻す' : '🔍 画像を大きく表示' }}
                   </button>
-                  <a v-if="editData[activeCircleForItems.circle_id]?.url"
-                     :href="editData[activeCircleForItems.circle_id].url"
+                  <a v-if="activeModalOshinagaki?.url"
+                     :href="activeModalOshinagaki.url"
                      target="_blank"
                      class="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-0.5">
                     <span>元ページを開く</span>
@@ -699,18 +712,31 @@
                 </div>
               </div>
 
+              <!-- 複数URLある場合の切り替えタブ -->
+              <div v-if="modalOshinagakiList.length > 1" class="flex items-center gap-1.5 overflow-x-auto py-1 border-b border-slate-200 custom-scrollbar">
+                <button v-for="(item, idx) in modalOshinagakiList" :key="item.url + '_' + idx"
+                        type="button"
+                        @click="activeModalOshinagakiIndex = idx; renderModalOshinagakiPreview()"
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs border"
+                        :class="activeModalOshinagakiIndex === idx ? 'bg-blue-600 text-white border-blue-700 shadow-xs' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'">
+                  <span>{{ item.type === 'pixiv' ? '🎨' : (item.type === 'x' ? '𝕏' : '🔗') }}</span>
+                  <span>{{ item.label }}</span>
+                </button>
+              </div>
+
               <!-- モーダル内でも直接お品書きURLを貼り付け・修正可能 -->
               <div class="flex gap-1.5">
-                <input type="text"
-                       v-model="editData[activeCircleForItems.circle_id].url"
-                       @input="onModalUrlInput(activeCircleForItems.circle_id)"
-                       placeholder="お品書きURL (https://x.com/.../status/... または pixiv.net/artworks/...)"
-                       class="flex-1 px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono outline-none focus:ring-2 focus:ring-blue-400">
+                <textarea v-model="editData[activeCircleForItems.circle_id].url"
+                          @input="onModalUrlInput(activeCircleForItems.circle_id)"
+                          rows="2"
+                          placeholder="お品書きURL (複数ある場合は改行して入力)"
+                          class="flex-1 px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono outline-none focus:ring-2 focus:ring-blue-400 resize-y custom-scrollbar leading-tight"></textarea>
                 <button type="button"
                         @click="renderModalOshinagakiPreview"
-                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 shrink-0 cursor-pointer"
+                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 shrink-0 cursor-pointer flex flex-col items-center justify-center"
                         title="プレビューを再読み込み">
-                  🔄
+                  <span>🔄</span>
+                  <span class="text-[9px]">再読込</span>
                 </button>
               </div>
 
@@ -732,7 +758,7 @@
                 </div>
 
                 <!-- パターン2: X (Twitter) 埋め込みポスト -->
-                <div v-else-if="editData[activeCircleForItems.circle_id]?.url" class="w-full">
+                <div v-else-if="activeModalOshinagaki && activeModalOshinagaki.type === 'x'" class="w-full">
                   <div v-if="isModalTweetLoading" class="py-12 text-center space-y-2">
                     <div class="w-7 h-7 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
                     <p class="text-xs text-slate-500 font-bold">Xポストを読み込み中...</p>
@@ -740,7 +766,18 @@
                   <div id="admin-modal-tweet-container" class="w-full flex justify-center"></div>
                 </div>
 
-                <!-- パターン3: お品書きURL未登録時 -->
+                <!-- パターン3: その他外部リンク -->
+                <div v-else-if="activeModalOshinagaki" class="text-center py-8 px-4 space-y-2.5">
+                  <div class="text-2xl">🔗</div>
+                  <p class="text-xs font-bold text-slate-700">外部サイトのお品書きリンク</p>
+                  <a :href="activeModalOshinagaki.url" target="_blank"
+                     class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition">
+                    <span>元ページを開く</span>
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                  </a>
+                </div>
+
+                <!-- パターン4: お品書きURL未登録時 -->
                 <div v-else class="text-center py-8 px-4 space-y-2.5">
                   <div class="text-2xl">🔍</div>
                   <p class="text-xs font-bold text-slate-600">お品書きURLがまだ入力されていません</p>
@@ -1356,6 +1393,51 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
 
     const DRAFT_STORAGE_KEY = 'vggc_admin_draft_edits_v1';
 
+    // 複数お品書きURLのパースユーティリティ
+    const parseOshinagakiUrls = (rawUrls) => {
+      if (!rawUrls) return [];
+      if (Array.isArray(rawUrls)) {
+        return rawUrls.map(u => String(u).trim()).filter(u => /^https?:\/\//i.test(u));
+      }
+      const s = String(rawUrls).trim();
+      if (!s) return [];
+      const tokens = /[\n,、]/.test(s) ? s.split(/[\n,、]+/) : s.split(/\s+/);
+      const results = [];
+      const seen = new Set();
+      for (const token of tokens) {
+        const trimmed = token.trim();
+        if (/^https?:\/\//i.test(trimmed) && !seen.has(trimmed)) {
+          seen.add(trimmed);
+          results.push(trimmed);
+        }
+      }
+      if (results.length === 0 && (s.includes('x.com/') || s.includes('twitter.com/') || s.includes('pixiv.net/'))) {
+        const fixedTokens = s.split(/[\n,、\s]+/);
+        for (const t of fixedTokens) {
+          const trimmed = t.trim();
+          if ((trimmed.startsWith('x.com') || trimmed.startsWith('twitter.com') || trimmed.startsWith('www.pixiv.net')) && !seen.has('https://' + trimmed)) {
+            seen.add('https://' + trimmed);
+            results.push('https://' + trimmed);
+          }
+        }
+      }
+      return results;
+    };
+
+    const parseOshinagakiUrlType = (url) => {
+      if (!url) return { type: 'other', id: null, url: '' };
+      const s = String(url).trim();
+      const pixivMatch = s.match(/(?:pixiv\.net\/(?:[a-z]{2}\/)?(?:artworks\/|member_illust\.php\?(?:.*&)?illust_id=))(\d+)/i);
+      if (pixivMatch && pixivMatch[1]) {
+        return { type: 'pixiv', id: pixivMatch[1], url: s };
+      }
+      const xMatch = s.match(/(?:twitter\.com|x\.com)\/(?:[^/]+)\/status\/(\d+)/i);
+      if (xMatch && xMatch[1]) {
+        return { type: 'x', id: xMatch[1], url: s };
+      }
+      return { type: 'other', id: null, url: s };
+    };
+
     createApp({
       setup() {
         const user = ref(null);
@@ -1562,11 +1644,32 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           }
         };
 
+        const activeModalOshinagakiIndex = ref(0);
+
+        const modalOshinagakiList = computed(() => {
+          if (!activeCircleForItems.value) return [];
+          const raw = editData.value[activeCircleForItems.value.circle_id]?.url || '';
+          const urls = parseOshinagakiUrls(raw);
+          return urls.map((u, idx) => {
+            const parsed = parseOshinagakiUrlType(u);
+            return {
+              index: idx,
+              url: u,
+              type: parsed.type,
+              id: parsed.id,
+              label: urls.length > 1 ? `お品書き ${idx + 1}` : 'お品書き'
+            };
+          });
+        });
+
+        const activeModalOshinagaki = computed(() => {
+          if (modalOshinagakiList.value.length === 0) return null;
+          return modalOshinagakiList.value[activeModalOshinagakiIndex.value] || modalOshinagakiList.value[0];
+        });
+
         const modalPixivArtworkId = computed(() => {
-          if (!activeCircleForItems.value) return null;
-          const url = editData.value[activeCircleForItems.value.circle_id]?.url || '';
-          const m = url.match(/pixiv\.net\/(?:en\/)?(?:artworks\/|member_illust\.php\?(?:.*&)?illust_id=)(\d+)/i);
-          return m ? m[1] : null;
+          if (!activeModalOshinagaki.value) return null;
+          return activeModalOshinagaki.value.type === 'pixiv' ? activeModalOshinagaki.value.id : null;
         });
 
         const cleanTwitterId = (id) => {
@@ -1952,12 +2055,17 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
         const extractTwitterIdFromUrl = (circleId, force = true) => {
           const item = editData.value[circleId];
           if (!item || !item.url) return;
-          const match = item.url.match(/(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)\/status\//i);
-          if (match && match[1]) {
-            const extracted = match[1];
-            // 既にIDが入っておらず、または強制抽出の場合
+          const urls = parseOshinagakiUrls(item.url);
+          const foundHandles = [];
+          for (const u of urls) {
+            const match = u.match(/(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)\/status\//i);
+            if (match && match[1] && !foundHandles.includes(match[1])) {
+              foundHandles.push(match[1]);
+            }
+          }
+          if (foundHandles.length > 0) {
             if (force || !item.twitterId) {
-              item.twitterId = extracted;
+              item.twitterId = foundHandles.join(', ');
               markDirty(circleId);
             }
           }
@@ -1969,9 +2077,16 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           circles.value.forEach(c => {
             const d = editData.value[c.circle_id];
             if (d && d.url && !d.twitterId) {
-              const match = d.url.match(/(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)\/status\//i);
-              if (match && match[1]) {
-                d.twitterId = match[1];
+              const urls = parseOshinagakiUrls(d.url);
+              const foundHandles = [];
+              for (const u of urls) {
+                const match = u.match(/(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)\/status\//i);
+                if (match && match[1] && !foundHandles.includes(match[1])) {
+                  foundHandles.push(match[1]);
+                }
+              }
+              if (foundHandles.length > 0) {
+                d.twitterId = foundHandles.join(', ');
                 markDirty(c.circle_id);
                 count++;
               }
@@ -2115,20 +2230,20 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           });
         });
 
-        // モーダル内のお品書きライブプレビュー描画 (X埋め込み / Pixiv画像)
+        // モーダル内のお品書きライブプレビュー描画 (X埋め込み / Pixiv画像 / 複数対応)
         let modalUrlDebounceTimer = null;
         const renderModalOshinagakiPreview = async () => {
           modalPixivError.value = false;
           isModalPreviewZoomed.value = false;
           if (!activeCircleForItems.value) return;
-          const url = (editData.value[activeCircleForItems.value.circle_id]?.url || '').trim();
-          if (!url || modalPixivArtworkId.value) {
+
+          const current = activeModalOshinagaki.value;
+          if (!current || current.type === 'pixiv') {
             isModalTweetLoading.value = false;
             return;
           }
 
-          const tweetMatch = url.match(/(?:twitter\.com|x\.com)\/(?:[^/]+)\/status\/(\d+)/i);
-          if (!tweetMatch || !tweetMatch[1]) {
+          if (current.type !== 'x' || !current.id) {
             isModalTweetLoading.value = false;
             await nextTick();
             const container = document.getElementById('admin-modal-tweet-container');
@@ -2138,7 +2253,7 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
             return;
           }
 
-          const tweetId = tweetMatch[1];
+          const tweetId = current.id;
           isModalTweetLoading.value = true;
           await nextTick();
           const container = document.getElementById('admin-modal-tweet-container');
@@ -2179,6 +2294,7 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
         // 商品モーダルのオープン
         const openItemsModal = (circle) => {
           activeCircleForItems.value = circle;
+          activeModalOshinagakiIndex.value = 0;
           itemInputMode.value = 'list';
           bulkText.value = '';
           const currentItems = editData.value[circle.circle_id]?.items || [];
@@ -2931,10 +3047,11 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
           countHasAuthorTwitter, countHasStaffTwitter, countHasUrl, percentUrl, percentItems,
           countNeedsItems, circlesWithItemsCount, countAbsent, countHasAdminMemo, toggleAbsent,
           filteredCircles, cleanTwitterId, parseAccounts, parseHandles, markDirty, onUrlInput, 
-          extractTwitterIdFromUrl, extractAllTwitterIds, saveAllDirty,
+          extractTwitterIdFromUrl, extractAllTwitterIds, saveAllDirty, parseOshinagakiUrls, parseOshinagakiUrlType,
           // 商品登録モーダル & お品書きライブプレビュー & 定番プリセット
           activeCircleForItems, itemInputMode, tempItems, bulkText, isSavingItems,
           modalPixivArtworkId, modalPixivError, isModalPreviewZoomed, isModalTweetLoading,
+          modalOshinagakiList, activeModalOshinagakiIndex, activeModalOshinagaki,
           renderModalOshinagakiPreview, onModalUrlInput, quickItemPresets, addQuickPresetItem,
           openItemsModal, closeItemsModal, addItemRow, removeItemRow,
           parseAndApplyBulkText, saveItemsAndClose, saveCircle,

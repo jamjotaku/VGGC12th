@@ -1420,7 +1420,7 @@ import { STORAGE_KEY, vspoDict, priorityColors } from './constants';
 import { calculateCurrencyBreakdown } from './utils/currency';
 import { getEventCountdown, checkScheduleActive } from './utils/countdown';
 import { getMemberStyle, getMemberMark } from './utils/memberStyle';
-import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl, getEventLiveSearchUrl, getCircleAuthorTwitterIds, getCircleStaffTwitterIds, getCircleAuthorAccounts, getCircleStaffAccounts } from './utils/xSearch';
+import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl, getEventLiveSearchUrl, getCircleAuthorTwitterIds, getCircleStaffTwitterIds, getCircleAuthorAccounts, getCircleStaffAccounts, parseOshinagakiUrls, parseOshinagakiUrlType } from './utils/xSearch';
 
 import BudgetModal from './components/BudgetModal.vue';
 import MemoDashboard from './components/MemoDashboard.vue';
@@ -1994,35 +1994,40 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
 
         watch(selectedCircle, async (newVal) => {
           if (newVal && circleExtraInfo.value[newVal.circle_id]?.oshinagaki_url) {
-            const url = circleExtraInfo.value[newVal.circle_id].oshinagaki_url;
-            // Pixiv作品URLの場合はCircleDetailModal内のネイティブPixivビューアで表示するためスキップ
-            if (/(?:pixiv\.net\/(?:[a-z]{2}\/)?artworks\/|illust_id=)(\d+)/i.test(url)) {
+            const raw = circleExtraInfo.value[newVal.circle_id].oshinagaki_url;
+            const urls = parseOshinagakiUrls(raw);
+            const xItems = urls.map((u, i) => ({ url: u, index: i, parsed: parseOshinagakiUrlType(u) }))
+                               .filter(item => item.parsed.type === 'x' && item.parsed.id);
+
+            // Xポストが1つもない場合（すべてPixivまたは外部リンク）
+            if (xItems.length === 0) {
               isTweetLoading.value = false;
               return;
             }
 
             isTweetLoading.value = true;
-            // DOMの描画完了を待機
             await nextTick();
-            const container = document.getElementById('tweet-container');
-            if (container && window.twttr) {
-              container.innerHTML = ''; // 以前のツイートをクリア
-              
-              // URLからツイートIDを抽出
-              const match = url.match(/status\/(\d+)/);
-              if (match) {
-                // 公式ウィジェットAPIでツイートを動的に生成
-                window.twttr.widgets.createTweet(match[1], container, {
-                  align: 'center',
-                  conversation: 'all', // スレッド（追加画像）を表示可能にする
-                  dnt: true
-                }).then(() => {
-                  isTweetLoading.value = false;
-                });
-              } else {
-                isTweetLoading.value = false;
-                container.innerHTML = `<a href="${url}" target="_blank" class="text-blue-500 underline font-bold mt-4 block">お品書きを見る (外部サイトへ移動)</a>`;
-              }
+
+            if (window.twttr && window.twttr.widgets && window.twttr.widgets.createTweet) {
+              const renderPromises = xItems.map(async ({ parsed, index }) => {
+                const tweetId = parsed.id;
+                const container = document.getElementById(`tweet-container-${index}`) || document.getElementById('tweet-container');
+                if (container) {
+                  container.innerHTML = '';
+                  try {
+                    await window.twttr.widgets.createTweet(tweetId, container, {
+                      align: 'center',
+                      conversation: 'all',
+                      dnt: true
+                    });
+                  } catch (e) {
+                    console.error('Tweet widget render error:', e);
+                  }
+                }
+              });
+
+              await Promise.allSettled(renderPromises);
+              isTweetLoading.value = false;
             } else {
               isTweetLoading.value = false;
             }

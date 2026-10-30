@@ -70,26 +70,40 @@
                    (!extra?.oshinagaki_url) ? 'order-2 md:order-1' : 'order-1'
                  ]">
               
-              <div class="flex justify-between items-center px-1">
-                <span v-if="pixivArtworkId" class="text-xs font-bold text-blue-700 flex items-center gap-1.5">
+              <div class="flex justify-between items-center px-1 mb-1.5">
+                <span v-if="currentOshinagaki?.type === 'pixiv'" class="text-xs font-bold text-blue-700 flex items-center gap-1.5">
                   <span class="px-1.5 py-0.5 bg-blue-600 text-white text-[10px] font-extrabold rounded">pixiv</span>
                   <span>Pixiv お品書き・サンプル</span>
                 </span>
                 <span v-else class="text-xs font-bold text-gray-600 flex items-center gap-1">
                   <svg class="w-3.5 h-3.5 text-gray-500" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                  公式X お品書きポスト
+                  <span>{{ currentOshinagaki?.type === 'other' ? 'お品書きリンク' : '公式X お品書きポスト' }}</span>
                 </span>
-                <a v-if="extra?.oshinagaki_url" 
-                   :href="extra.oshinagaki_url" target="_blank" 
+                <a v-if="currentOshinagaki?.url" 
+                   :href="currentOshinagaki.url" target="_blank" 
                    class="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-0.5">
-                  <span>{{ pixivArtworkId ? 'Pixivで直接開く' : 'Xで直接開く' }}</span>
+                  <span>{{ currentOshinagaki.type === 'pixiv' ? 'Pixivで直接開く' : (currentOshinagaki.type === 'other' ? '直接開く' : 'Xで直接開く') }}</span>
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                 </a>
               </div>
 
+              <!-- ★ 複数お品書きがある場合の切り替えタブ -->
+              <div v-if="oshinagakiList.length > 1" class="flex items-center gap-1.5 overflow-x-auto py-1 -mx-0.5 px-0.5 mb-2 custom-scrollbar">
+                <button v-for="(item, idx) in oshinagakiList" :key="item.url + '_' + idx"
+                        type="button"
+                        @click="activeOshinagakiIndex = idx"
+                        class="px-3 py-1 rounded-full text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs border"
+                        :class="activeOshinagakiIndex === idx 
+                          ? 'bg-amber-500 text-white border-amber-600 shadow-sm' 
+                          : 'bg-white text-gray-700 border-gray-200 hover:bg-amber-50 hover:text-amber-800'">
+                  <span>{{ item.type === 'pixiv' ? '🎨' : (item.type === 'x' ? '𝕏' : '🔗') }}</span>
+                  <span>{{ item.label }}</span>
+                </button>
+              </div>
+
               <!-- お品書き埋め込みコンテナ -->
               <div class="bg-white border border-gray-200 rounded-2xl p-3 md:p-4 flex items-center justify-center text-gray-400 flex-col shadow-inner w-full relative"
-                   :class="extra?.oshinagaki_url ? 'min-h-[300px]' : 'min-h-[140px] md:min-h-[260px]'">
+                   :class="oshinagakiList.length > 0 ? 'min-h-[300px]' : 'min-h-[140px] md:min-h-[260px]'">
                 <!-- オフライン案内（圏外時） -->
                 <div v-if="!isOnline" class="p-4 text-center space-y-3">
                   <div class="w-11 h-11 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto text-lg shadow-sm">
@@ -111,12 +125,12 @@
 
                 <template v-else>
                   <!-- ★ パターン1: Pixiv お品書き埋め込み (先行公開・イラストID対応) -->
-                  <div v-if="pixivArtworkId" class="w-full flex flex-col items-center gap-3">
+                  <div v-if="currentOshinagaki?.type === 'pixiv'" class="w-full flex flex-col items-center gap-3">
                     <!-- Pixiv公式プレビュー画像 (タップで全画面ピンチズーム拡大、エラー時は公式oEmbed iframeへ自動フォールバック) -->
                     <div v-if="!pixivImgError" class="w-full flex flex-col items-center">
                       <div @click="showImageViewer = true"
                            class="w-full flex flex-col items-center group relative overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-xs cursor-zoom-in">
-                        <img :src="`https://embed.pixiv.net/decorate.php?illust_id=${pixivArtworkId}`"
+                        <img :src="`https://embed.pixiv.net/decorate.php?illust_id=${currentOshinagaki.id}`"
                              alt="Pixiv お品書き画像"
                              referrerpolicy="no-referrer"
                              @load="pixivImgLoaded = true"
@@ -138,7 +152,7 @@
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
                           <span>🔍 全画面ピンチズーム</span>
                         </button>
-                        <a :href="extra.oshinagaki_url"
+                        <a :href="currentOshinagaki.url"
                            target="_blank"
                            rel="noopener noreferrer"
                            class="py-2 px-3 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition">
@@ -151,11 +165,11 @@
                     <!-- 万が一 decorate.php が読み込めない場合の公式 oEmbed iframe フォールバック -->
                     <div v-else class="w-full space-y-2">
                       <div class="w-full rounded-xl overflow-hidden border border-gray-200 bg-gray-50" style="height: 380px;">
-                        <iframe :src="`https://embed.pixiv.net/oembed_iframe.php?type=illust&id=${pixivArtworkId}`"
+                        <iframe :src="`https://embed.pixiv.net/oembed_iframe.php?type=illust&id=${currentOshinagaki.id}`"
                                 class="w-full h-full border-0"
                                 allowfullscreen></iframe>
                       </div>
-                      <a :href="extra.oshinagaki_url" target="_blank" rel="noopener noreferrer"
+                      <a :href="currentOshinagaki.url" target="_blank" rel="noopener noreferrer"
                          class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition">
                         <span>🎨 Pixivでお品書き全画面・複数枚を見る</span>
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
@@ -163,7 +177,18 @@
                     </div>
                   </div>
 
-                  <!-- ★ パターン2: X (Twitter) 埋め込み または その他URL -->
+                  <!-- ★ パターン2: 外部URL -->
+                  <div v-else-if="currentOshinagaki?.type === 'other'" class="p-6 text-center space-y-3">
+                    <div class="text-3xl">🔗</div>
+                    <p class="text-xs text-gray-600 font-bold">外部サイトのお品書きリンク</p>
+                    <a :href="currentOshinagaki.url" target="_blank"
+                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow hover:bg-blue-700 transition">
+                      <span>外部リンクを開く</span>
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>
+                  </div>
+
+                  <!-- ★ パターン3: X (Twitter) 埋め込み または URL未登録時 -->
                   <template v-else>
                     <!-- スケルトンUI -->
                     <div v-if="isTweetLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/80 backdrop-blur-sm rounded-2xl z-10 transition-opacity duration-300">
@@ -171,11 +196,16 @@
                       <p class="text-xs text-gray-500 font-bold animate-pulse">お品書きを読み込み中...</p>
                     </div>
 
-                    <!-- Xの埋め込みポストが表示されるコンテナ -->
-                    <div v-show="extra?.oshinagaki_url" id="tweet-container" class="w-full flex justify-center"></div>
+                    <!-- Xの埋め込みポストが表示されるコンテナ群 (タブごとに独立させて高速・安定表示) -->
+                    <template v-if="oshinagakiList.length > 0">
+                      <div v-for="(item, idx) in oshinagakiList" :key="'container_' + idx"
+                           v-show="activeOshinagakiIndex === idx && item.type === 'x'"
+                           :id="`tweet-container-${idx}`"
+                           class="w-full flex justify-center"></div>
+                    </template>
                     
                     <!-- URL未登録時 -->
-                    <div v-show="!extra?.oshinagaki_url" class="text-center text-gray-500 py-4 space-y-2.5">
+                    <div v-else class="text-center text-gray-500 py-4 space-y-2.5">
                       <div class="flex flex-col items-center">
                         <svg class="w-8 h-8 text-gray-300 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                         <p class="text-xs font-bold text-gray-600">お品書きポストはまだ登録されていません</p>
@@ -422,11 +452,11 @@
 
         <!-- ★ お品書き画像フルスクリーン・ピンチズームビューア (Teleportにより画面最前面に展開) -->
         <ImageViewerModal
-          v-if="pixivArtworkId"
+          v-if="currentOshinagaki?.type === 'pixiv' && currentOshinagaki.id"
           :show="showImageViewer"
-          :image-url="`https://embed.pixiv.net/decorate.php?illust_id=${pixivArtworkId}`"
-          :title="circle ? `${circle.circle_name} お品書き` : 'お品書き画像'"
-          :external-url="extra?.oshinagaki_url || ''"
+          :image-url="`https://embed.pixiv.net/decorate.php?illust_id=${currentOshinagaki.id}`"
+          :title="circle ? `${circle.circle_name} ${currentOshinagaki.label}` : 'お品書き画像'"
+          :external-url="currentOshinagaki.url || ''"
           @close="showImageViewer = false"
         />
       </div>
@@ -440,7 +470,7 @@ import ImageViewerModal from './ImageViewerModal.vue';
 import { getItemBadge } from '../utils/badges';
 import { getMemberStyle, getMemberMark } from '../utils/memberStyle';
 import { priorityColors } from '../constants';
-import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl, cleanTwitterHandle, parseTwitterHandles, getCircleAuthorTwitterIds, getCircleStaffTwitterIds, getCircleAuthorAccounts, getCircleStaffAccounts } from '../utils/xSearch';
+import { getCircleOfficialSearchUrl, getCirclePublicSearchUrl, cleanTwitterHandle, parseTwitterHandles, getCircleAuthorTwitterIds, getCircleStaffTwitterIds, getCircleAuthorAccounts, getCircleStaffAccounts, parseOshinagakiUrls, parseOshinagakiUrlType } from '../utils/xSearch';
 
 const props = defineProps({
   circle: {
@@ -476,6 +506,7 @@ const props = defineProps({
 defineEmits(['close', 'toggleSave', 'toggleBought', 'toggleSoldout', 'toggleItem', 'openCircle', 'jumpToMap', 'addTimeline']);
 
 const mobileModalTab = ref('items');
+const activeOshinagakiIndex = ref(0);
 const pixivImgLoaded = ref(false);
 const pixivImgError = ref(false);
 const showImageViewer = ref(false);
@@ -485,12 +516,30 @@ const extra = computed(() => {
   return props.circleExtraInfo[props.circle.circle_id] || null;
 });
 
-// Pixiv作品URL (https://www.pixiv.net/artworks/150949445 や illust_id=150949445) から作品IDを抽出
+// 複数お品書きURLのパースリスト
+const oshinagakiList = computed(() => {
+  const urls = parseOshinagakiUrls(extra.value?.oshinagaki_url);
+  return urls.map((url, idx) => {
+    const parsed = parseOshinagakiUrlType(url);
+    return {
+      index: idx,
+      url,
+      type: parsed.type,
+      id: parsed.id,
+      label: urls.length > 1 ? `お品書き ${idx + 1}` : 'お品書き'
+    };
+  });
+});
+
+// 現在選択中のお品書き
+const currentOshinagaki = computed(() => {
+  if (oshinagakiList.value.length === 0) return null;
+  return oshinagakiList.value[activeOshinagakiIndex.value] || oshinagakiList.value[0];
+});
+
+// Pixiv作品ID (後方互換対応)
 const pixivArtworkId = computed(() => {
-  const url = extra.value?.oshinagaki_url || '';
-  if (!url) return null;
-  const match = url.match(/(?:pixiv\.net\/(?:[a-z]{2}\/)?artworks\/|illust_id=)(\d+)/i);
-  return match ? match[1] : null;
+  return currentOshinagaki.value?.type === 'pixiv' ? currentOshinagaki.value.id : null;
 });
 
 const isAbsent = computed(() => {
@@ -511,9 +560,25 @@ const staffAccounts = computed(() => {
 
 let imgLoadTimeout = null;
 
+// タブ切替時に画像読み込み状態をリセット
+watch(activeOshinagakiIndex, () => {
+  if (imgLoadTimeout) clearTimeout(imgLoadTimeout);
+  pixivImgLoaded.value = false;
+  pixivImgError.value = false;
+  showImageViewer.value = false;
+  if (currentOshinagaki.value?.type === 'pixiv') {
+    imgLoadTimeout = setTimeout(() => {
+      if (!pixivImgLoaded.value) {
+        pixivImgError.value = true;
+      }
+    }, 5000);
+  }
+});
+
 // モーダルが開かれたらタブ・画像状態を初期化
 watch(() => props.circle, (newCircle) => {
   if (imgLoadTimeout) clearTimeout(imgLoadTimeout);
+  activeOshinagakiIndex.value = 0;
   pixivImgLoaded.value = false;
   pixivImgError.value = false;
   showImageViewer.value = false;
