@@ -120,8 +120,8 @@
 
       <form @submit.prevent="handleAuth" class="space-y-4">
         <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1.5">管理者ID (メールアドレス形式)</label>
-          <input type="text" v-model="authId" required placeholder="admin@vggc.dummy.local" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm transition font-mono">
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">管理者ID（Jamj__Otaku または admin）</label>
+          <input type="text" v-model="authId" required placeholder="Jamj__Otaku または admin" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm transition font-mono">
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-600 mb-1.5">管理者パスワード</label>
@@ -1682,13 +1682,32 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
 
         const hasUnsavedChanges = computed(() => unsavedSet.value.size > 0);
 
+        // 管理者権限を持つメールアドレスかどうか判定
+        const isAdminEmail = (email) => {
+          if (!email) return false;
+          const lower = email.toLowerCase().trim();
+          return (
+            lower === 'admin@vggc.dummy.local' ||
+            lower.includes('admin') ||
+            lower.startsWith('jamj__otaku') ||
+            lower.includes('jamj')
+          );
+        };
+
+        const normalizeEmail = (input) => {
+          const raw = (input || '').trim();
+          if (!raw) return 'admin@vggc.dummy.local';
+          if (raw.includes('@')) return raw;
+          return `${raw}@vggc.dummy.local`;
+        };
+
         onMounted(async () => {
           const { data: { session } } = await supabaseClient.auth.getSession();
           
-          if (session?.user && !session.user.email.includes('admin')) {
+          if (session?.user && !isAdminEmail(session.user.email)) {
             await supabaseClient.auth.signOut();
             user.value = null;
-            authError.value = '一般ユーザーとしてログインしていました。管理者IDとパスワードを入力してください。';
+            authError.value = 'このアカウントには管理者権限がありません。管理者IDとパスワードを入力してください。';
           } else if (session?.user) {
             user.value = session.user;
             authId.value = session.user.email;
@@ -1697,7 +1716,7 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
 
           // ★重要: 別タブ往復時のトークンリフレッシュで入力データが消えるのを完全防止！
           supabaseClient.auth.onAuthStateChange((event, session) => {
-            if (session?.user && session.user.email.includes('admin')) {
+            if (session?.user && isAdminEmail(session.user.email)) {
               const wasLoggedIn = !!user.value;
               user.value = session.user;
               authId.value = session.user.email;
@@ -1818,7 +1837,11 @@ ADD COLUMN IF NOT EXISTS staff_twitter TEXT;</code></pre>
 
         const handleAuth = async () => {
           authError.value = '';
-          const email = (authId.value || 'admin@vggc.dummy.local').trim();
+          const email = normalizeEmail(authId.value);
+          if (!isAdminEmail(email)) {
+            authError.value = 'このアカウント（' + authId.value + '）には管理者権限が設定されていません。';
+            return;
+          }
           try {
             if (authMode.value === 'register') {
               const { data, error } = await supabaseClient.auth.signUp({ email, password: authPassword.value });
