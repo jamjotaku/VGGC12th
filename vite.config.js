@@ -13,8 +13,7 @@ export default defineConfig({
         'data.json',
         'map.jpg',
         'map.pdf',
-        'map_coords.json',
-        'ogp.png'
+        'map_coords.json'
       ],
       manifest: {
         name: 'VGGC 12th サークルリスト＆マップ',
@@ -32,12 +31,6 @@ export default defineConfig({
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any maskable'
-          },
-          {
-            src: '/ogp.png',
-            sizes: '1200x630',
-            type: 'image/png',
-            purpose: 'any'
           }
         ]
       },
@@ -46,6 +39,7 @@ export default defineConfig({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,json}'],
+        globIgnores: ['**/admin.html', '**/simulator.html', '**/map_editor.html', '**/ogp*.png'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6MB (data.json & map.jpg 対応)
         runtimeCaching: [
           // 1. サークルお品書き画像 / 外部CDN画像 (CacheFirst)
@@ -86,5 +80,19 @@ export default defineConfig({
         ]
       }
     })
-  ]
+  ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/vue')) {
+            return 'vendor-vue';
+          }
+          if (id.includes('node_modules/@supabase')) {
+            return 'vendor-supabase';
+          }
+        }
+      }
+    }
+  }
 });

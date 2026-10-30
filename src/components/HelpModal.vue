@@ -27,7 +27,7 @@
                 <span>アプリのバージョン・更新状態</span>
               </h3>
               <span class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full font-mono font-bold">
-                PWA v2.1 (Force-Update)
+                PWA v2.2 (Ultra-Light)
               </span>
             </div>
             <p class="text-[11px] text-slate-500 leading-relaxed">
