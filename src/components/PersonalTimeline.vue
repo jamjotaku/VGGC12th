@@ -48,8 +48,22 @@
       </div>
     </div>
 
-    <!-- 直近の予定 (NEXT) アラートバナー (未完了かつ次の予定がある場合) -->
-    <div v-if="nextUpcomingEvent" 
+    <!-- 📅 事前計画モードバナー (イベント前はクリーンな計画表、11/14当日に自動でNOW連動) -->
+    <div v-if="!isEventDay" 
+         class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-2xs">
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span class="text-sm shrink-0">📅</span>
+        <span class="text-xs font-bold text-slate-700 truncate">
+          事前計画モード（11/14 当日にリアルタイム時間連動）
+        </span>
+      </div>
+      <span class="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full shrink-0">
+        あと{{ daysUntilEvent }}日
+      </span>
+    </div>
+
+    <!-- 直近の予定 (NEXT) アラートバナー (11/14当日かつ未完了で次の予定がある場合のみ) -->
+    <div v-else-if="nextUpcomingEvent" 
          class="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-300 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-xs">
       <div class="flex items-center gap-2 min-w-0">
         <span class="flex h-2.5 w-2.5 relative shrink-0">
@@ -395,6 +409,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { EVENT_INFO } from '../constants';
 
 const props = defineProps({
   timelineEvents: {
@@ -497,6 +512,25 @@ onBeforeUnmount(() => {
   if (timer) clearInterval(timer);
 });
 
+// =========================================
+// イベント当日判定 ＆ リアルタイム時間連動
+// =========================================
+// イベント当日 (2026-11-14) かどうか判定
+const isEventDay = computed(() => {
+  const d = now.value;
+  const targetDayStart = new Date(EVENT_INFO.dayStart);
+  const targetDayEnd = new Date(EVENT_INFO.dayEnd);
+  return d >= targetDayStart && d < targetDayEnd;
+});
+
+// イベント開催前までの日数
+const daysUntilEvent = computed(() => {
+  const d = now.value;
+  const targetDayStart = new Date(EVENT_INFO.dayStart);
+  const diff = targetDayStart - d;
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+});
+
 // 現在時刻 "HH:mm" (24時間制)
 const currentTimeStr = computed(() => {
   const d = now.value;
@@ -537,8 +571,9 @@ const getCategoryMeta = (catKey) => {
   return CATEGORIES[catKey] || CATEGORIES.other;
 };
 
-// 開催中判定
+// 開催中判定 (当日のみ有効)
 const isEventOngoing = (evt) => {
+  if (!isEventDay.value) return false;
   const cur = currentTimeStr.value;
   if (evt.endTime) {
     return cur >= evt.time && cur <= evt.endTime;
@@ -546,13 +581,14 @@ const isEventOngoing = (evt) => {
   return cur === evt.time;
 };
 
-// 次に控えている予定 (NEXT)
+// 次に控えている予定 (NEXT: 当日のみ有効)
 const nextUpcomingEvent = computed(() => {
+  if (!isEventDay.value) return null;
   const cur = currentTimeStr.value;
   return sortedEvents.value.find(e => !e.done && e.time >= cur);
 });
 
-// 次の予定までの分数差
+// 次の予定までの分数差 (当日のみ有効)
 const minutesUntilNext = computed(() => {
   if (!nextUpcomingEvent.value) return null;
   const [curH, curM] = currentTimeStr.value.split(':').map(Number);
@@ -561,11 +597,15 @@ const minutesUntilNext = computed(() => {
   return Math.max(0, diff);
 });
 
-// NOWラインを挿入したタイムラインアイテムリスト
+// NOWラインを挿入したタイムラインアイテムリスト (当日はNOWライン挿入、事前は通常フラット表示)
 const timelineItemsWithNowMarker = computed(() => {
+  const list = sortedEvents.value;
+  if (!isEventDay.value) {
+    return list.map(evt => ({ isNowMarker: false, event: evt, key: 'evt_' + evt.id }));
+  }
+
   const items = [];
   const cur = currentTimeStr.value;
-  const list = sortedEvents.value;
   let nowMarkerInserted = false;
 
   for (let i = 0; i < list.length; i++) {
