@@ -1083,8 +1083,13 @@
                     <div v-if="savedList[circle.circle_id].selectedItems?.length || savedList[circle.circle_id].memo"
                          class="flex flex-wrap items-center gap-1.5 text-xs bg-amber-50/60 border border-amber-200/80 rounded-xl px-2.5 py-1.5">
                       <span v-for="itName in (savedList[circle.circle_id].selectedItems || [])" :key="'cmp_it_'+itName"
-                            class="bg-white text-amber-950 border border-amber-300 px-2 py-0.5 rounded-md text-[11px] font-bold flex items-center gap-0.5">
-                        <span class="text-amber-600 font-black">✓</span>{{ itName }}
+                            class="bg-white text-amber-950 border border-amber-300 px-2 py-0.5 rounded-md text-[11px] font-bold flex items-center gap-1">
+                        <span class="text-amber-600 font-black">✓</span>
+                        <span>{{ itName }}</span>
+                        <span v-if="(savedList[circle.circle_id].itemQuantities?.[itName] || 1) > 1"
+                              class="px-1 py-0.2 bg-amber-500 text-white rounded text-[10px] font-mono font-black">
+                          ×{{ savedList[circle.circle_id].itemQuantities[itName] }}
+                        </span>
                       </span>
                       <span v-if="savedList[circle.circle_id].memo" class="text-gray-800 text-[11px] font-medium break-all">
                         📝 {{ savedList[circle.circle_id].memo }}
@@ -1214,13 +1219,18 @@
                            @click="openDetails(circle)"
                            class="mt-0.5 p-2.5 bg-amber-50/70 hover:bg-amber-50 border border-amber-200 rounded-xl cursor-pointer transition space-y-1.5">
                         <div class="text-[11px] font-extrabold text-amber-900 flex items-center justify-between">
-                          <span>📦 選択中の頒布物 ({{ savedList[circle.circle_id].selectedItems.length }}点):</span>
+                          <span>📦 選択中の頒布物 ({{ getCircleTotalItemCount(circle.circle_id) }}点):</span>
                           <span class="text-[10px] text-amber-700 underline">変更する</span>
                         </div>
                         <div class="flex flex-wrap gap-1.5">
                           <span v-for="itName in savedList[circle.circle_id].selectedItems" :key="itName" 
                                 class="text-xs bg-white text-amber-950 border border-amber-300 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 shadow-sm">
-                            <span class="text-amber-600 font-black">✓</span>{{ itName }}
+                            <span class="text-amber-600 font-black">✓</span>
+                            <span>{{ itName }}</span>
+                            <span v-if="(savedList[circle.circle_id].itemQuantities?.[itName] || 1) > 1"
+                                  class="px-1.5 py-0.2 bg-amber-500 text-white rounded-md text-[10px] font-mono font-black">
+                              ×{{ savedList[circle.circle_id].itemQuantities[itName] }}
+                            </span>
                           </span>
                         </div>
                       </div>
@@ -1390,6 +1400,7 @@
       @toggle-bought="toggleBought"
       @toggle-soldout="toggleSoldout"
       @toggle-item="toggleItemSelection" 
+      @change-item-quantity="changeItemQuantity"
       @open-circle="openDetails" 
       @jump-to-map="jumpToMap"
       @add-timeline="openAddTimelineForCircle"
@@ -1955,6 +1966,13 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           }
         };
 
+        const getCircleTotalItemCount = (circleId) => {
+          const saved = savedList.value[circleId];
+          if (!saved || !saved.selectedItems) return 0;
+          const qMap = saved.itemQuantities || {};
+          return saved.selectedItems.reduce((acc, name) => acc + (qMap[name] || 1), 0);
+        };
+
         const toggleItemSelection = (circleId, item) => {
           if (isReadOnly.value) return;
           
@@ -1962,30 +1980,82 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
             savedList.value[circleId] = {
               memo: '',
               bought: false,
+              soldout: false,
               price: '',
               priority: '',
               forWho: '',
-              selectedItems: []
+              selectedItems: [],
+              itemQuantities: {}
             };
-          } else if (!savedList.value[circleId].selectedItems) {
-            savedList.value[circleId].selectedItems = [];
           }
+          const saved = savedList.value[circleId];
+          if (!saved.selectedItems) saved.selectedItems = [];
+          if (!saved.itemQuantities) saved.itemQuantities = {};
 
-          const selectedList = savedList.value[circleId].selectedItems;
-          const idx = selectedList.indexOf(item.name);
+          const idx = saved.selectedItems.indexOf(item.name);
           if (idx > -1) {
-            selectedList.splice(idx, 1);
+            saved.selectedItems.splice(idx, 1);
+            delete saved.itemQuantities[item.name];
           } else {
-            selectedList.push(item.name);
+            saved.selectedItems.push(item.name);
+            saved.itemQuantities[item.name] = 1;
           }
 
-          // 金額の自動再計算
+          // 金額の自動再計算 (単価 × 個数)
           const items = circleExtraInfo.value[circleId]?.items || [];
           const total = items
-            .filter(it => selectedList.includes(it.name))
-            .reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+            .filter(it => saved.selectedItems.includes(it.name))
+            .reduce((sum, it) => {
+              const q = saved.itemQuantities[it.name] || 1;
+              return sum + (Number(it.price) || 0) * q;
+            }, 0);
           
-          savedList.value[circleId].price = total > 0 ? total : '';
+          saved.price = total > 0 ? total : '';
+        };
+
+        const changeItemQuantity = (circleId, item, delta) => {
+          if (isReadOnly.value) return;
+
+          if (!savedList.value[circleId]) {
+            savedList.value[circleId] = {
+              memo: '',
+              bought: false,
+              soldout: false,
+              price: '',
+              priority: '',
+              forWho: '',
+              selectedItems: [],
+              itemQuantities: {}
+            };
+          }
+          const saved = savedList.value[circleId];
+          if (!saved.selectedItems) saved.selectedItems = [];
+          if (!saved.itemQuantities) saved.itemQuantities = {};
+
+          const currentQty = saved.itemQuantities[item.name] || (saved.selectedItems.includes(item.name) ? 1 : 0);
+          const newQty = Math.max(0, currentQty + delta);
+
+          if (newQty === 0) {
+            const idx = saved.selectedItems.indexOf(item.name);
+            if (idx > -1) saved.selectedItems.splice(idx, 1);
+            delete saved.itemQuantities[item.name];
+          } else {
+            if (!saved.selectedItems.includes(item.name)) {
+              saved.selectedItems.push(item.name);
+            }
+            saved.itemQuantities[item.name] = newQty;
+          }
+
+          // 金額の自動再計算 (単価 × 個数)
+          const items = circleExtraInfo.value[circleId]?.items || [];
+          const total = items
+            .filter(it => saved.selectedItems.includes(it.name))
+            .reduce((sum, it) => {
+              const q = saved.itemQuantities[it.name] || 1;
+              return sum + (Number(it.price) || 0) * q;
+            }, 0);
+
+          saved.price = total > 0 ? total : '';
         };
 
         const openDetails = (circle) => {
@@ -2478,7 +2548,7 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           if (savedList.value[circleId]) {
             delete savedList.value[circleId];
           } else {
-            savedList.value[circleId] = { memo: '', bought: false, soldout: false, price: '', priority: '', forWho: '', selectedItems: [] };
+            savedList.value[circleId] = { memo: '', bought: false, soldout: false, price: '', priority: '', forWho: '', selectedItems: [], itemQuantities: {} };
           }
         };
 
@@ -2550,6 +2620,13 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
             const price = data.price ? ` ¥${data.price}` : '';
             const who = data.forWho ? ` @${data.forWho}` : '';
             text += `${status} ${c.space_sym}-${c.space_num} ${c.circle_name} ${prio}${price}${who}\n`;
+            if (data.selectedItems && data.selectedItems.length > 0) {
+              const itemDetails = data.selectedItems.map(name => {
+                const q = data.itemQuantities?.[name] || 1;
+                return q > 1 ? `${name} ×${q}` : name;
+              });
+              text += `  品名: ${itemDetails.join(', ')}\n`;
+            }
             if (data.memo) text += `  メモ: ${data.memo}\n`;
           });
           navigator.clipboard.writeText(text).then(() => alert("クリップボードにコピーしました！X(Twitter)やメモ帳に貼り付けられます。"));
