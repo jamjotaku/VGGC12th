@@ -104,65 +104,66 @@
               <!-- お品書き埋め込みコンテナ -->
               <div class="bg-white border border-gray-200 rounded-2xl p-3 md:p-4 flex items-center justify-center text-gray-400 flex-col shadow-inner w-full relative"
                    :class="oshinagakiList.length > 0 ? 'min-h-[300px]' : 'min-h-[140px] md:min-h-[260px]'">
-                <!-- オフライン案内（圏外時） -->
-                <div v-if="!isOnline" class="p-4 text-center space-y-3">
-                  <div class="w-11 h-11 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto text-lg shadow-sm">
-                    📡
-                  </div>
-                  <div>
-                    <h4 class="font-bold text-gray-800 text-sm mb-1">現在オフライン（圏外）です</h4>
-                    <p class="text-xs text-gray-500 leading-relaxed">
-                      お品書き画像は電波回復後に表示されます。<br>
-                      <strong class="text-amber-800" v-if="extra?.items?.length">登録済みの頒布物メニューはオフラインでもご利用いただけます！</strong>
-                    </p>
-                  </div>
-                  <button v-if="extra?.items?.length && mobileModalTab !== 'items'" 
-                          @click="mobileModalTab = 'items'" 
-                          class="md:hidden text-xs bg-amber-500 text-white font-bold px-3 py-2 rounded-xl shadow hover:bg-amber-600 transition">
-                    📋 頒布物メニューを開く
-                  </button>
-                </div>
-
-                <template v-else>
-                  <!-- ★ パターン1: Pixiv お品書き埋め込み (先行公開・イラストID対応) -->
-                  <div v-if="currentOshinagaki?.type === 'pixiv'" class="w-full flex flex-col items-center gap-3">
-                    <!-- Pixiv公式プレビュー画像 (タップで全画面ピンチズーム拡大、エラー時は公式oEmbed iframeへ自動フォールバック) -->
-                    <div v-if="!pixivImgError" class="w-full flex flex-col items-center">
-                      <div @click="showImageViewer = true"
-                           class="w-full flex flex-col items-center group relative overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-xs cursor-zoom-in">
-                        <img :src="`https://embed.pixiv.net/decorate.php?illust_id=${currentOshinagaki.id}`"
-                             alt="Pixiv お品書き画像"
-                             referrerpolicy="no-referrer"
-                             @load="pixivImgLoaded = true"
-                             @error="pixivImgError = true"
-                             class="w-full h-auto max-h-[65vh] object-contain transition-transform duration-200 group-hover:scale-[1.01]" />
-                        
-                        <!-- 拡大ヒントバッジ (ホバーやスマホでも分かりやすく) -->
-                        <div class="absolute top-2.5 right-2.5 bg-black/70 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow pointer-events-none group-hover:bg-blue-600 transition">
-                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
-                          <span>タップで全画面拡大</span>
-                        </div>
-                      </div>
-
-                      <!-- 画像下の操作ボタングループ (全画面拡大 & Pixiv外部リンク) -->
-                      <div class="w-full grid grid-cols-2 gap-2 mt-2">
-                        <button @click="showImageViewer = true"
-                                type="button"
-                                class="py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
-                          <span>🔍 全画面ピンチズーム</span>
-                        </button>
-                        <a :href="currentOshinagaki.url"
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           class="py-2 px-3 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition">
-                          <span>Pixivで直接開く</span>
-                          <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                        </a>
+                <!-- ★ パターン1: Pixiv お品書き埋め込み (オフライン時もSWキャッシュにあれば完全表示) -->
+                <template v-if="currentOshinagaki?.type === 'pixiv'">
+                  <!-- Pixiv公式プレビュー画像 (タップで全画面ピンチズーム拡大、エラー時はオフライン案内または公式oEmbed iframeへ自動フォールバック) -->
+                  <div v-if="!pixivImgError" class="w-full flex flex-col items-center">
+                    <div @click="showImageViewer = true"
+                         class="w-full flex flex-col items-center group relative overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-xs cursor-zoom-in">
+                      <img :src="`https://embed.pixiv.net/decorate.php?illust_id=${currentOshinagaki.id}`"
+                           alt="Pixiv お品書き画像"
+                           referrerpolicy="no-referrer"
+                           loading="lazy"
+                           @load="pixivImgLoaded = true"
+                           @error="pixivImgError = true"
+                           class="w-full h-auto max-h-[65vh] object-contain transition-transform duration-200 group-hover:scale-[1.01]" />
+                      
+                      <!-- 拡大ヒントバッジ (ホバーやスマホでも分かりやすく) -->
+                      <div class="absolute top-2.5 right-2.5 bg-black/70 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow pointer-events-none group-hover:bg-blue-600 transition">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                        <span>タップで全画面拡大</span>
                       </div>
                     </div>
 
-                    <!-- 万が一 decorate.php が読み込めない場合の公式 oEmbed iframe フォールバック -->
+                    <!-- 画像下の操作ボタングループ (全画面拡大 & Pixiv外部リンク) -->
+                    <div class="w-full grid grid-cols-2 gap-2 mt-2">
+                      <button @click="showImageViewer = true"
+                              type="button"
+                              class="py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                        <span>🔍 全画面ピンチズーム</span>
+                      </button>
+                      <a :href="currentOshinagaki.url"
+                         target="_blank"
+                         rel="noopener noreferrer"
+                         class="py-2 px-3 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition">
+                        <span>Pixivで直接開く</span>
+                        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                      </a>
+                    </div>
+                  </div>
+
+                  <!-- 画像読み込み失敗時のフォールバック (圏外時とオンライン時で分岐) -->
+                  <div v-else class="w-full space-y-3">
+                    <div v-if="!isOnline" class="p-4 text-center space-y-3">
+                      <div class="w-11 h-11 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto text-lg shadow-sm">
+                        📡
+                      </div>
+                      <div>
+                        <h4 class="font-bold text-gray-800 text-sm mb-1">現在オフライン（圏外）です</h4>
+                        <p class="text-xs text-gray-500 leading-relaxed">
+                          未キャッシュのお品書き画像は電波回復後に取得できます。<br>
+                          <strong class="text-amber-800" v-if="extra?.items?.length">登録済みの頒布物メニューはオフラインでもご利用いただけます！</strong>
+                        </p>
+                      </div>
+                      <button v-if="extra?.items?.length && mobileModalTab !== 'items'" 
+                              @click="mobileModalTab = 'items'" 
+                              class="md:hidden text-xs bg-amber-500 text-white font-bold px-3 py-2 rounded-xl shadow hover:bg-amber-600 transition">
+                        📋 頒布物メニューを開く
+                      </button>
+                    </div>
+
+                    <!-- オンライン時のoEmbedフォールバック -->
                     <div v-else class="w-full space-y-2">
                       <div class="w-full rounded-xl overflow-hidden border border-gray-200 bg-gray-50" style="height: 380px;">
                         <iframe :src="`https://embed.pixiv.net/oembed_iframe.php?type=illust&id=${currentOshinagaki.id}`"
@@ -176,19 +177,42 @@
                       </a>
                     </div>
                   </div>
+                </template>
 
-                  <!-- ★ パターン2: 外部URL -->
-                  <div v-else-if="currentOshinagaki?.type === 'other'" class="p-6 text-center space-y-3">
-                    <div class="text-3xl">🔗</div>
-                    <p class="text-xs text-gray-600 font-bold">外部サイトのお品書きリンク</p>
-                    <a :href="currentOshinagaki.url" target="_blank"
-                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow hover:bg-blue-700 transition">
-                      <span>外部リンクを開く</span>
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                    </a>
+                <!-- ★ パターン2: 外部URL -->
+                <div v-else-if="currentOshinagaki?.type === 'other'" class="p-6 text-center space-y-3">
+                  <div class="text-3xl">🔗</div>
+                  <p class="text-xs text-gray-600 font-bold">外部サイトのお品書きリンク</p>
+                  <p v-if="!isOnline" class="text-[11px] text-amber-700 font-medium">※ 現在圏外のため、電波回復後にタップして閲覧できます</p>
+                  <a :href="currentOshinagaki.url" target="_blank"
+                     class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow hover:bg-blue-700 transition">
+                    <span>外部リンクを開く</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                  </a>
+                </div>
+
+                <!-- ★ パターン3: X (Twitter) 埋め込み または URL未登録時 -->
+                <template v-else>
+                  <!-- オフライン案内（X Widgetは通信が必須なため圏外時は即フォールバック表示） -->
+                  <div v-if="!isOnline && oshinagakiList.length > 0" class="p-4 text-center space-y-3">
+                    <div class="w-11 h-11 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto text-lg shadow-sm">
+                      📡
+                    </div>
+                    <div>
+                      <h4 class="font-bold text-gray-800 text-sm mb-1">現在オフライン（圏外）です</h4>
+                      <p class="text-xs text-gray-500 leading-relaxed">
+                        Xのお品書きポストは電波回復後に表示されます。<br>
+                        <strong class="text-amber-800" v-if="extra?.items?.length">登録済みの頒布物メニューはオフラインでもご利用いただけます！</strong>
+                      </p>
+                    </div>
+                    <button v-if="extra?.items?.length && mobileModalTab !== 'items'" 
+                            @click="mobileModalTab = 'items'" 
+                            class="md:hidden text-xs bg-amber-500 text-white font-bold px-3 py-2 rounded-xl shadow hover:bg-amber-600 transition">
+                      📋 頒布物メニューを開く
+                    </button>
                   </div>
 
-                  <!-- ★ パターン3: X (Twitter) 埋め込み または URL未登録時 -->
+                  <!-- オンライン時：X Widget 読み込み -->
                   <template v-else>
                     <!-- スケルトンUI -->
                     <div v-if="isTweetLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/80 backdrop-blur-sm rounded-2xl z-10 transition-opacity duration-300">

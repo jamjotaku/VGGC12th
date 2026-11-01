@@ -47,12 +47,15 @@ export default defineConfig({
             urlPattern: ({ url }) =>
               url.origin.includes('weserv.nl') ||
               url.origin.includes('twimg.com') ||
-              url.origin.includes('supabase.co') && url.pathname.includes('/storage/'),
+              url.origin.includes('pixiv.net') ||
+              url.origin.includes('pximg.net') ||
+              url.origin.includes('twitter.com') ||
+              (url.origin.includes('supabase.co') && url.pathname.includes('/storage/')),
             handler: 'CacheFirst',
             options: {
               cacheName: 'vggc-remote-images',
               expiration: {
-                maxEntries: 400,
+                maxEntries: 500,
                 maxAgeSeconds: 60 * 60 * 24 * 30 // 30日
               },
               cacheableResponse: {

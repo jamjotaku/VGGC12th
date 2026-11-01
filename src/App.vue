@@ -167,7 +167,23 @@
                  @touchstart.passive="handleMapPointerDown"
                  @click="handleMapClick"
                  @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
-              <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
+              <img v-if="!isMapImageError"
+                   src="/map.jpg"
+                   alt="会場マップ"
+                   class="map-image"
+                   loading="lazy"
+                   :style="{ width: (900 * mapScale) + 'px' }"
+                   @error="isMapImageError = true">
+              <!-- マップ画像ロード失敗時のフォールバック案内 (PC) -->
+              <div v-else class="flex flex-col items-center justify-center p-8 text-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl m-6 space-y-3">
+                <div class="text-3xl">🗺️</div>
+                <p class="text-sm font-bold text-gray-700">会場マップ画像の取得に失敗しました</p>
+                <p class="text-xs text-gray-500">オフラインキャッシュが未完了の場合は公式PDFマップもご利用いただけます。</p>
+                <div class="flex items-center gap-2">
+                  <button @click="retryMapImage" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold shadow hover:bg-blue-700 cursor-pointer">再試行</button>
+                  <a href="/map.pdf" target="_blank" class="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-300">📄 PDFマップを開く</a>
+                </div>
+              </div>
 
               <!-- ★ 買い物リストサークルの極小カラードット (4原色・pointer-events-none・近傍スナップ選択対応) -->
               <div v-for="item in activeListMapPins" :key="'pc_mp_'+item.circle_id"
@@ -400,7 +416,23 @@
                        @touchstart.passive="handleMapPointerDown"
                        @click="handleMapClick"
                        @touchmove="dragPin" @mousemove="dragPin" @mouseup="stopDrag" @mouseleave="stopDrag" @touchend="stopDrag">
-                    <img src="/map.jpg" alt="会場マップ" class="map-image" loading="lazy" :style="{ width: (900 * mapScale) + 'px' }">
+                    <img v-if="!isMapImageError"
+                    src="/map.jpg"
+                    alt="会場マップ"
+                    class="map-image"
+                    loading="lazy"
+                    :style="{ width: (900 * mapScale) + 'px' }"
+                    @error="isMapImageError = true">
+               <!-- マップ画像ロード失敗時のフォールバック案内 (PC) -->
+               <div v-else class="flex flex-col items-center justify-center p-8 text-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl m-6 space-y-3">
+                 <div class="text-3xl">🗺️</div>
+                 <p class="text-sm font-bold text-gray-700">会場マップ画像の取得に失敗しました</p>
+                 <p class="text-xs text-gray-500">オフラインキャッシュが未完了の場合は公式PDFマップもご利用いただけます。</p>
+                 <div class="flex items-center gap-2">
+                   <button @click="retryMapImage" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold shadow hover:bg-blue-700">再試行</button>
+                   <a href="/map.pdf" target="_blank" class="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-300">📄 PDFマップを開く</a>
+                 </div>
+               </div>
 
                     <!-- ★ 買い物リストサークルの極小カラードット (4原色・pointer-events-none・近傍スナップ選択対応) -->
                     <div v-for="item in activeListMapPins" :key="'mb_mp_'+item.circle_id"
@@ -1506,6 +1538,10 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
         const focusedMapCircle = ref(null);
         const showListPins = ref(true);
         const showCompletedPins = ref(false);
+        const isMapImageError = ref(false);
+        const retryMapImage = () => {
+          isMapImageError.value = false;
+        };
         const showPcBlockPanel = ref(true);
         const isListCompactMode = ref(localStorage.getItem('vggc12th_list_compact') === 'true');
         const expandedCompactCircleId = ref(null);
