@@ -331,33 +331,41 @@
           <!-- =========================================
                [スマホ専用] マップ タブ
           ========================================== -->
-          <div v-show="activeTab === 'map'" class="md:hidden p-2.5 space-y-2.5 pb-28">
+          <div v-show="activeTab === 'map'" class="md:hidden p-2.5 space-y-2 pb-28">
             <div class="space-y-2">
+              <!-- 1段目: タイトル & 選択中スペース & PDFリンク -->
               <div class="flex justify-between items-center gap-2">
                 <div class="flex items-center gap-1.5 min-w-0">
-                  <h1 class="text-base font-extrabold text-gray-800 px-0.5 shrink-0">🗺️ 会場マップ</h1>
+                  <h1 class="text-base font-extrabold text-gray-800 px-0.5 shrink-0 flex items-center gap-1">
+                    <span>🗺️</span>
+                    <span>会場マップ</span>
+                  </h1>
                   <span v-if="targetSpace && !focusedMapCircle" class="text-[11px] font-bold bg-pink-100 text-pink-800 border border-pink-200 px-2 py-0.5 rounded-full flex items-center gap-1 truncate">
                     <span class="truncate">📍 {{ targetSpace }}</span>
-                    <button @click="clearMapFocus" class="ml-0.5">×</button>
+                    <button @click="clearMapFocus" class="ml-0.5 font-bold hover:text-pink-950">×</button>
                   </span>
                 </div>
-                <div class="flex items-center gap-1.5 shrink-0">
-                  <a href="/map.pdf" target="_blank" class="text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 px-2 py-1 rounded-lg flex items-center gap-0.5" title="公式会場マップPDFを開く">
-                    <span>📄 PDF ↗</span>
-                  </a>
-                  <!-- スマホ用 買物中マップモード ON/OFF トグル -->
-                  <button @click="toggleShoppingMapMode"
-                          class="text-[11px] font-extrabold px-2 py-1 rounded-lg border transition flex items-center gap-1 shrink-0"
-                          :class="isShoppingMapMode ? 'bg-pink-600 text-white border-pink-700 ring-2 ring-pink-300 animate-pulse' : 'bg-pink-50 text-pink-700 border-pink-200'">
-                    <span>📍 買物中: {{ isShoppingMapMode ? 'ON' : 'OFF' }}</span>
-                  </button>
-                  <button @click="showListPins = !showListPins"
-                          class="text-[11px] font-extrabold px-2 py-1 rounded-lg border transition flex items-center gap-1 shrink-0"
-                          :class="showListPins ? 'bg-slate-800 text-white border-slate-900' : 'bg-gray-200/80 text-gray-700 border-gray-300'">
-                    <span>🛒 リスト: {{ showListPins ? 'ON' : 'OFF' }}</span>
-                    <span v-if="showListPins" class="px-1 bg-white/20 rounded text-[10px] font-mono">{{ activeListMapPins.length }}</span>
-                  </button>
-                </div>
+                <!-- 公式会場マップPDFリンク -->
+                <a href="/map.pdf" target="_blank" class="text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 active:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg flex items-center gap-1 shrink-0 shadow-2xs" title="公式会場マップPDFを開く">
+                  <span>📄 PDF ↗</span>
+                </a>
+              </div>
+
+              <!-- 2段目: 買物中トグル & リストピントグル (2カラム均等配置で誤タップ防止 & 被り解消) -->
+              <div class="grid grid-cols-2 gap-1.5">
+                <!-- スマホ用 買物中マップモード ON/OFF トグル -->
+                <button @click="toggleShoppingMapMode"
+                        class="text-[11px] font-extrabold py-1.5 px-2 rounded-lg border transition flex items-center justify-center gap-1 shrink-0 shadow-2xs active:scale-98"
+                        :class="isShoppingMapMode ? 'bg-pink-600 text-white border-pink-700 ring-2 ring-pink-300 animate-pulse' : 'bg-pink-50 text-pink-700 border-pink-200'">
+                  <span>📍 買物中: {{ isShoppingMapMode ? 'ON' : 'OFF' }}</span>
+                </button>
+                <!-- スマホ用 リストピン ON/OFF トグル -->
+                <button @click="showListPins = !showListPins"
+                        class="text-[11px] font-extrabold py-1.5 px-2 rounded-lg border transition flex items-center justify-center gap-1 shrink-0 shadow-2xs active:scale-98"
+                        :class="showListPins ? 'bg-slate-800 text-white border-slate-900' : 'bg-gray-100 text-gray-700 border-gray-300'">
+                  <span>🛒 リストピン: {{ showListPins ? 'ON' : 'OFF' }}</span>
+                  <span v-if="showListPins" class="px-1.5 bg-white/20 rounded text-[10px] font-mono">{{ activeListMapPins.length }}</span>
+                </button>
               </div>
 
               <!-- スマホ用 4原色カラー凡例バー -->
