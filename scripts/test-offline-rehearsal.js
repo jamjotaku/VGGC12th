@@ -398,6 +398,53 @@ const cloudOldRev = 2;
 const shouldPushLocalToCloud = localRev > cloudOldRev;
 assert(shouldPushLocalToCloud === true, 'オフライン復帰同期: 圏外で進めたローカルの最新リビジョンがクラウドの古いデータで上書きされないこと');
 
+// 担当タグ自動判定（末尾括弧のみ抽出・途中の仕様括弧は無視）＆ 担当別売上集計検証
+const extractTrailingParenText = (name) => {
+  const str = String(name || '').trim();
+  const match = str.match(/[（(]([^）()（）]+)[）)]\s*$/);
+  return match ? match[1].trim() : '';
+};
+
+const sampleCircleItems = [
+  { name: 'ロングTシャツ(XLのみ) (BLΔCK)', price: 5000, soldCount: 2 },
+  { name: 'トートバッグ (BLΔCK)', price: 4000, soldCount: 1 },
+  { name: '新刊 写真集「noah」(B5/34P/フルカラー) (きょこち。)', price: 1300, soldCount: 3 },
+  { name: '全部セット (きょこち。)', price: 3000, soldCount: 1 },
+  { name: '差し入れステッカー(ホロ仕様)', price: 500, soldCount: 2 } // 末尾括弧が担当マスタにない商品 → 未設定
+];
+
+// 1) circle_info.items の末尾括弧から担当マスタ初期値を抽出（ハードコードなし）
+const initialSellers = ['BLΔCK', 'きょこち。'];
+const autoDetectSeller = (itemName, sellersList) => {
+  const trailing = extractTrailingParenText(itemName);
+  return sellersList.includes(trailing) ? trailing : '';
+};
+
+assert(
+  autoDetectSeller('ロングTシャツ(XLのみ) (BLΔCK)', initialSellers) === 'BLΔCK' &&
+  autoDetectSeller('新刊 写真集「noah」(B5/34P/フルカラー) (きょこち。)', initialSellers) === 'きょこち。' &&
+  autoDetectSeller('差し入れステッカー(ホロ仕様)', initialSellers) === '',
+  '担当自動割当: 途中の仕様括弧(XLのみ / B5/34P/フルカラー)を無視し、末尾括弧が担当マスタと一致した時のみ自動割当されること'
+);
+
+// 2) 3人目の担当を設定で追加した場合、後から追加された3人目の商品も自動でタグが付くこと
+const updatedSellers = [...initialSellers, '3人目ゲスト'];
+assert(
+  autoDetectSeller('新作タペストリー(B2) (3人目ゲスト)', updatedSellers) === '3人目ゲスト',
+  '担当マスタ拡張: 3人目の担当名を追加すると、末尾に(3人目ゲスト)がある商品へ自動的にタグが割り当たること'
+);
+
+// 3) 現在のタグ × soldCount による担当別集計（未設定も落とさず集計されること）
+const sellerTotals = {};
+for (const item of sampleCircleItems) {
+  const sellerKey = autoDetectSeller(item.name, initialSellers) || '未設定';
+  sellerTotals[sellerKey] = (sellerTotals[sellerKey] || 0) + item.price * item.soldCount;
+}
+assert(
+  sellerTotals['BLΔCK'] === 14000 && sellerTotals['きょこち。'] === 6900 && sellerTotals['未設定'] === 1000,
+  '担当別売上集計: BLΔCK(¥14,000) / きょこち。(¥6,900) / 未設定(¥1,000) が現在のタグ×soldCountで正確に集計されること'
+);
+
 // ----------------------------------------------------------------------
 // テスト結果集計
 // ----------------------------------------------------------------------
