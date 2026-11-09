@@ -461,10 +461,27 @@
 
         <!-- 全商品の在庫・頒布状況テーブル -->
         <div class="bg-white rounded-2xl border border-slate-200 p-4 md:p-5 shadow-xs space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 class="text-base md:text-lg font-extrabold text-slate-800">📦 商品別 在庫・頒布数管理</h2>
               <p class="text-xs text-slate-500">初期在庫の設定、数え間違い・追加搬入による「現在の残数」の直接修正、手動完売の切り替えができます。</p>
+            </div>
+            <!-- 一括リセットボタングループ -->
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                @click="resetAllStockToUnset"
+                class="px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 active:scale-95 text-slate-700 text-xs font-extrabold transition flex items-center gap-1 cursor-pointer"
+                title="すべての商品の初期在庫設定と手動完売状態を解除して「在庫設定なし」に戻します"
+              >
+                <span>🔄 全在庫を「未設定」に戻す</span>
+              </button>
+              <button
+                @click="resetAllRegisterData"
+                class="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 text-xs font-extrabold transition flex items-center gap-1 cursor-pointer"
+                title="テスト入力した在庫・頒布数・売上履歴をすべて初期状態にリセットします"
+              >
+                <span>🧹 テスト履歴・在庫を完全初期化</span>
+              </button>
             </div>
           </div>
 
@@ -492,7 +509,7 @@
 
               <!-- 在庫コントロール群 -->
               <div class="flex flex-wrap items-center gap-2.5">
-                <!-- 初期在庫数入力 -->
+                <!-- 初期在庫数入力 + 個別「未設定に戻す」ボタン -->
                 <div class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2">
                   <label class="text-xs font-bold text-slate-600">初期在庫:</label>
                   <input
@@ -503,6 +520,14 @@
                     placeholder="未設定"
                     class="w-20 px-2 py-1 bg-white border border-slate-300 rounded-lg font-mono font-bold text-sm text-center"
                   />
+                  <button
+                    v-if="product.initialStock !== null"
+                    @click="resetProductStockToUnset(product)"
+                    class="px-2 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 active:scale-95 text-slate-700 text-[11px] font-extrabold transition cursor-pointer"
+                    title="この商品の在庫設定を「未設定（無制限）」に戻します"
+                  >
+                    未設定に戻す
+                  </button>
                 </div>
 
                 <!-- 現在の残数 直接修正ステッパー (初期在庫が設定されている場合) -->
@@ -1143,6 +1168,57 @@ const setExactRemainingStock = (product, rawRemaining) => {
   const desiredRemaining = Math.max(0, Math.floor(Number(rawRemaining) || 0));
   const newInitial = desiredRemaining + product.soldCount;
   updateInitialStock(product, newInitial);
+};
+
+// 個別商品の在庫設定を「未設定（無制限）」に戻す
+const resetProductStockToUnset = (product) => {
+  if (product.isCustom) {
+    const target = registerState.value.customItems.find(c => c.id === product.id);
+    if (target) {
+      target.initialStock = null;
+      target.manualSoldOut = false;
+    }
+  } else {
+    const ov = ensureOverrideEntry(product);
+    ov.initialStock = null;
+    ov.manualSoldOut = false;
+  }
+  commitRegisterState();
+  showFeedback(`「${product.name}」の在庫設定を未設定に戻しました`);
+};
+
+// 全商品の在庫設定・手動完売を一括で「未設定」に戻す（売上・頒布数は維持）
+const resetAllStockToUnset = () => {
+  if (!window.confirm('すべての商品の初期在庫設定を「未設定（在庫制限なし）」に戻し、手動完売状態を解除しますか？\n（※これまでの売上履歴・頒布数はそのまま維持されます）')) {
+    return;
+  }
+  Object.keys(registerState.value.itemOverrides || {}).forEach((key) => {
+    registerState.value.itemOverrides[key].initialStock = null;
+    registerState.value.itemOverrides[key].manualSoldOut = false;
+  });
+  (registerState.value.customItems || []).forEach((item) => {
+    item.initialStock = null;
+    item.manualSoldOut = false;
+  });
+  commitRegisterState();
+  showFeedback('全商品の在庫状況を「未設定」に戻しました');
+};
+
+// テスト練習後などに在庫・頒布数・売上履歴をすべて初期状態にリセット
+const resetAllRegisterData = () => {
+  if (!window.confirm('【完全初期化の確認】\nテスト入力した在庫設定・頒布数・売上履歴をすべてクリアして初期状態に戻しますか？\n（※追加した当日商品ボタン自体は残ります）')) {
+    return;
+  }
+  registerState.value.itemOverrides = {};
+  (registerState.value.customItems || []).forEach((item) => {
+    item.initialStock = null;
+    item.soldCount = 0;
+    item.manualSoldOut = false;
+  });
+  registerState.value.transactions = [];
+  clearCart();
+  commitRegisterState();
+  showFeedback('レジの在庫・売上履歴を初期状態にリセットしました');
 };
 
 const openQuickAddItemModal = () => {
