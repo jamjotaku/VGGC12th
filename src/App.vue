@@ -88,9 +88,9 @@
     <div class="flex-1 flex overflow-hidden bg-gray-100 min-h-0">
       
       <!-- =========================================
-           左側：マップ ＆ クイックナビエリア (PC専用・マップ表示領域最大化)
+           左側：マップ ＆ クイックナビエリア (PC専用・マップ表示領域最大化 / レジタブ時は非表示にしてタブレット横画面100%幅をレジに開放)
       ========================================== -->
-      <div class="hidden md:flex w-5/12 lg:w-[44%] xl:w-[42%] flex-col bg-white border-r border-gray-200 shadow-sm h-full overflow-hidden p-3.5 gap-2">
+      <div v-show="activeTab !== 'register'" class="hidden md:flex w-5/12 lg:w-[44%] xl:w-[42%] flex-col bg-white border-r border-gray-200 shadow-sm h-full overflow-hidden p-3.5 gap-2">
         <!-- マップヘッダー -->
         <div class="flex justify-between items-center gap-2 shrink-0">
           <div class="flex items-center gap-2 min-w-0">
@@ -335,10 +335,14 @@
             <span>⏰ 準備・予定</span>
             <span v-if="timelineEvents.length > 0" class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-xs font-mono font-bold shadow-xs">{{ timelineEvents.length }}</span>
           </button>
+          <button v-if="isCircleModeEnabled" @click="activeTab = 'register'" :class="activeTab === 'register' ? 'border-amber-500 text-amber-800 bg-amber-50/70' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-3 border-b-2 font-extrabold text-sm transition-colors flex justify-center items-center gap-1.5 cursor-pointer">
+            <span>🏪 レジ (M-15-16)</span>
+            <span class="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full text-[11px] font-bold shadow-2xs">Black Stance</span>
+          </button>
         </div>
 
         <!-- スクロール可能なコンテンツエリア (スクロール連動自動スリムヘッダー検知) -->
-        <div ref="mainScrollContainer" @scroll.passive="handleListScroll" class="flex-1 overflow-y-auto w-full relative min-h-0">
+        <div v-show="activeTab !== 'register'" ref="mainScrollContainer" @scroll.passive="handleListScroll" class="flex-1 overflow-y-auto w-full relative min-h-0">
           
           <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-gray-50/80 z-20 backdrop-blur-sm">
             <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -1377,6 +1381,20 @@
           />
 
         </div>
+
+        <!-- =========================================
+             サークル参加モード（簡易POSレジ機能 v1: M-15-16 Black Stance）
+             タブレット横画面で100%フルワイド・2ペイン表示
+        ========================================== -->
+        <CircleRegisterPanel
+          v-if="isCircleModeEnabled"
+          v-show="activeTab === 'register'"
+          :circle="registerCircle"
+          :circle-extra="registerCircleExtra"
+          :user="user"
+          :is-online="isOnline"
+          :circle-id="REGISTER_CIRCLE_ID"
+        />
       </div>
     </div>
 
@@ -1408,6 +1426,11 @@
         <span v-if="timelineEvents.length > 0" class="absolute top-1 right-2.5 px-1 min-w-[17px] h-4 bg-emerald-600 text-white rounded-full text-[9px] font-mono font-bold flex items-center justify-center shadow-xs">
           {{ timelineEvents.length }}
         </span>
+      </button>
+      <button v-if="isCircleModeEnabled" @click="activeTab = 'register'" class="flex-1 min-h-[54px] py-2 flex flex-col items-center justify-center gap-0.5 transition-colors relative cursor-pointer" :class="activeTab === 'register' ? 'text-amber-600 font-extrabold bg-amber-50/60' : 'text-gray-500 hover:text-gray-800'">
+        <span v-if="activeTab === 'register'" class="absolute top-0 inset-x-4 h-0.5 bg-amber-500 rounded-b-full"></span>
+        <span class="text-base leading-none">🏪</span>
+        <span class="text-[11px] tracking-tight">レジ</span>
       </button>
     </div>
 
@@ -1482,7 +1505,12 @@ import ShareModal from './components/ShareModal.vue';
 import EventCountdownBar from './components/EventCountdownBar.vue';
 import NotificationModal from './components/NotificationModal.vue';
 import PwaUpdateToast from './components/PwaUpdateToast.vue';
+import CircleRegisterPanel from './components/CircleRegisterPanel.vue';
 import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from './utils/timelineNotifier';
+
+        // ★ サークル参加モード（簡易レジ v1: M-15-16 Black Stance / Jamj__Otaku 専用解放）
+        const REGISTER_CIRCLE_ID = '10ebdde686d91dfe1ab4a63376c7b377';
+        const hasRegisterRowInCloud = ref(false);
 
         const circles = ref([]);
         const blocks = ref([]);
@@ -2973,13 +3001,71 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           return result;
         });
 
+        // ★ サークル参加モード解放判定 (Jamj__Otaku アカウント または register_data 行保持者)
+        const isCircleModeEnabled = computed(() => {
+          if (isReadOnly.value) return false;
+          if (user.value && user.value.email) {
+            const emailLower = user.value.email.toLowerCase();
+            if (emailLower.startsWith('jamj__otaku@') || hasRegisterRowInCloud.value) {
+              return true;
+            }
+          }
+          // 圏外リロード時でも直前にJamj__Otakuでログインしていれば解放を維持
+          if (!isOnline.value && localStorage.getItem('vggc12th_circle_mode_unlocked') === 'true') {
+            return true;
+          }
+          return false;
+        });
+
+        watch(user, async (u) => {
+          if (u && u.email && u.email.toLowerCase().startsWith('jamj__otaku@')) {
+            try { localStorage.setItem('vggc12th_circle_mode_unlocked', 'true'); } catch (e) {}
+          } else if (u && isOnline.value) {
+            try {
+              const { data } = await supabaseClient
+                .from('register_data')
+                .select('circle_id')
+                .eq('user_id', u.id)
+                .maybeSingle();
+              if (data && data.circle_id) {
+                hasRegisterRowInCloud.value = true;
+                try { localStorage.setItem('vggc12th_circle_mode_unlocked', 'true'); } catch (e) {}
+              }
+            } catch (e) {}
+          }
+        }, { immediate: true });
+
+        const registerCircle = computed(() => {
+          return circles.value.find(c => c.circle_id === REGISTER_CIRCLE_ID) || {
+            circle_id: REGISTER_CIRCLE_ID,
+            circle_name: 'Black Stance',
+            space_sym: 'M',
+            space_num: '15-16',
+            penname: 'BLΔCK'
+          };
+        });
+
+        const registerCircleExtra = computed(() => {
+          return circleExtraInfo.value[REGISTER_CIRCLE_ID] || { items: [] };
+        });
+
         const onTogglePublic = async (newVal) => {
           isPublic.value = newVal;
           if (user.value) {
             await supabaseClient.from('shopping_lists').update({ is_public: newVal }).eq('user_id', user.value.id);
           }
         };
-        const signOut = async () => { await supabaseClient.auth.signOut(); savedList.value = {}; listId.value = null; isPublic.value = false; freeMemoText.value = ''; timelineEvents.value = []; };
+        const signOut = async () => {
+          await supabaseClient.auth.signOut();
+          savedList.value = {};
+          listId.value = null;
+          isPublic.value = false;
+          freeMemoText.value = '';
+          timelineEvents.value = [];
+          hasRegisterRowInCloud.value = false;
+          try { localStorage.removeItem('vggc12th_circle_mode_unlocked'); } catch (e) {}
+          if (activeTab.value === 'register') activeTab.value = 'search';
+        };
         const exitReadOnly = () => { const url = new URL(window.location.href); url.searchParams.delete('list'); window.location.href = url.toString(); };
 
         

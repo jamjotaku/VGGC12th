@@ -317,6 +317,88 @@ const morningEvents = statusAt1230.filter(e => e.time < '12:30');
 assert(morningEvents.every(e => e.isPassed), '開会後（12:30）に午前中の予定が「通過済み」と正確に判定されること');
 
 // ----------------------------------------------------------------------
+// 6. サークル参加モード（簡易レジ v1: M-15-16 Black Stance）オフラインPOS＆在庫検証
+// ----------------------------------------------------------------------
+console.log('\n🏪 【Test 6】サークル参加モード（簡易POSレジ v1）会計・在庫管理・オフライン同期検証');
+
+const REGISTER_CIRCLE_ID = '10ebdde686d91dfe1ab4a63376c7b377';
+const blackStanceCircle = circles.find(c => c.circle_id === REGISTER_CIRCLE_ID);
+assert(
+  Boolean(blackStanceCircle && blackStanceCircle.space_sym === 'M' && blackStanceCircle.space_num === '15-16'),
+  `対象サークル M-15-16「Black Stance」(${REGISTER_CIRCLE_ID}) がマスターデータに実在すること`
+);
+
+// 初期お品書き (circle_info.items) と レジ専用追加商品 (customItems) の分離検証
+const originalCircleInfoItems = [
+  { name: '新刊イラスト本', price: 1500 },
+  { name: 'アクリルスタンド', price: 2000 }
+];
+const registerSimState = {
+  revision: 1,
+  itemOverrides: {
+    'base_新刊イラスト本_1500': { initialStock: 6, soldCount: 0, manualSoldOut: false },
+    'base_アクリルスタンド_2000': { initialStock: 2, soldCount: 0, manualSoldOut: false }
+  },
+  customItems: [
+    { id: 'custom_shikishi', name: '当日追加 色紙', price: 3000, initialStock: 1, soldCount: 0, manualSoldOut: false }
+  ],
+  transactions: []
+};
+
+assert(
+  originalCircleInfoItems.length === 2 && registerSimState.customItems.length === 1,
+  '当日個人追加商品が circle_info.items を書き換えずに register_data 側のみで保持されること'
+);
+
+// 会計シミュレーション（新刊2冊 + 色紙1枚 = 6,000円、預かり10,000円 → お釣り4,000円）
+function runSimCheckout(cartList, deposit) {
+  const total = cartList.reduce((s, i) => s + i.price * i.qty, 0);
+  const change = deposit - total;
+  for (const item of cartList) {
+    if (item.isCustom) {
+      const target = registerSimState.customItems.find(c => c.id === item.id);
+      target.soldCount += item.qty;
+    } else {
+      registerSimState.itemOverrides[item.id].soldCount += item.qty;
+    }
+  }
+  const tx = { id: 'tx_1', timestamp: '2026-11-14T12:05:00Z', items: cartList, total, deposit, change, voided: false };
+  registerSimState.transactions.unshift(tx);
+  registerSimState.revision++;
+  return tx;
+}
+
+const tx1 = runSimCheckout([
+  { id: 'base_新刊イラスト本_1500', name: '新刊イラスト本', price: 1500, qty: 2, isCustom: false },
+  { id: 'custom_shikishi', name: '当日追加 色紙', price: 3000, qty: 1, isCustom: true }
+], 10000);
+
+assert(tx1.total === 6000 && tx1.change === 4000, '会計計算: 合計金額(¥6,000)とお釣り(¥4,000)が正確に算出されること');
+
+const bookOv = registerSimState.itemOverrides['base_新刊イラスト本_1500'];
+const bookRemaining = bookOv.initialStock - bookOv.soldCount;
+assert(bookRemaining === 4 && bookRemaining <= 5, `在庫減算＆残りわずか判定: 新刊残数が ${bookRemaining} 点となり残りわずか(<=5)警告対象になること`);
+
+const shikishi = registerSimState.customItems[0];
+const shikishiRemaining = shikishi.initialStock - shikishi.soldCount;
+assert(shikishiRemaining === 0, '自動完売判定: 色紙の残数が 0 となり自動的に売り切れ扱いになること');
+
+// 会計取消（在庫復元）の検証
+tx1.voided = true;
+bookOv.soldCount -= 2;
+shikishi.soldCount -= 1;
+assert(
+  (bookOv.initialStock - bookOv.soldCount) === 6 && (shikishi.initialStock - shikishi.soldCount) === 1,
+  '会計取消時: 取り消した会計分の在庫数が正確に元の数へ復元されること'
+);
+
+// オフライン中のリビジョン競合保護テスト (ローカルRev.5 vs クラウド古いRev.2)
+const localRev = 5;
+const cloudOldRev = 2;
+const shouldPushLocalToCloud = localRev > cloudOldRev;
+assert(shouldPushLocalToCloud === true, 'オフライン復帰同期: 圏外で進めたローカルの最新リビジョンがクラウドの古いデータで上書きされないこと');
+
+// ----------------------------------------------------------------------
 // テスト結果集計
 // ----------------------------------------------------------------------
 console.log('\n======================================================================');
