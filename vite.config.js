@@ -13,7 +13,8 @@ export default defineConfig({
         'data.json',
         'map.jpg',
         'map.pdf',
-        'map_coords.json'
+        'map_coords.json',
+        'map_routes.json'
       ],
       manifest: {
         name: 'VGGC 12th サークルリスト＆マップ',

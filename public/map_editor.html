@@ -2,19 +2,20 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Map Coordinate Editor</title>
+  <title>VGGC 12th マップ座標＆巡回ルートグラフ エディタ</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     #map-container {
       position: relative;
       display: inline-block;
       cursor: crosshair;
+      user-select: none;
     }
     .pin {
       position: absolute;
-      width: 12px;
-      height: 12px;
-      background-color: red;
+      width: 10px;
+      height: 10px;
+      background-color: #ef4444;
       border-radius: 50%;
       transform: translate(-50%, -50%);
       pointer-events: none;
@@ -33,67 +34,578 @@
       pointer-events: none;
       white-space: nowrap;
     }
+    #route-svg {
+      position: absolute;
+      inset: 0;
+      width: 900px;
+      height: 400.78125px;
+      pointer-events: none;
+      overflow: visible;
+    }
+    .route-node {
+      cursor: pointer;
+      pointer-events: all;
+      transition: r 0.12s ease;
+    }
+    .route-node:hover {
+      r: 5.5px;
+    }
+    .route-edge-hit {
+      cursor: pointer;
+      pointer-events: stroke;
+    }
+    .route-edge-hit:hover {
+      stroke: rgba(239, 68, 68, 0.45);
+    }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center">
-  <div class="bg-white p-4 rounded-xl shadow-lg w-full max-w-5xl mb-4">
-    <h1 class="text-xl font-bold mb-2">📍 スペース座標 マッピングツール</h1>
-    <p class="text-sm text-gray-600 mb-4">
-      マップ画像上の、目的の島（またはスペース）をクリックしてください。<br>
-      スペース番号（例: <code>A-25</code> や <code>A島</code>）を入力すると、その座標が記録されます。
-    </p>
-    
-    <div class="flex gap-4 items-center">
-      <button onclick="exportJSON()" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 font-bold">
-        JSONを出力 (ダウンロード)
-      </button>
-      <button onclick="clearAll()" class="bg-red-100 text-red-600 px-4 py-2 rounded hover:bg-red-200 font-bold">
-        すべてクリア
-      </button>
-      <div class="text-sm text-gray-500 ml-auto">
-        登録済み: <span id="count" class="font-bold text-black">0</span> ヶ所
+<body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center text-slate-800">
+  <div class="bg-white p-4 rounded-2xl shadow-lg w-full max-w-5xl mb-4 border border-slate-200">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b border-slate-200">
+      <div>
+        <h1 class="text-lg font-black text-slate-900 flex items-center gap-2">
+          <span>🗺️ VGGC 12th マップ座標 ＆ 巡回ルートグラフ エディタ</span>
+          <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-700 border border-pink-200">座標系: 900px幅 (係数 1024/900)</span>
+        </h1>
+        <p class="text-xs text-slate-500 mt-0.5">
+          スペース座標（<code>map_coords.json</code>）と、通路ホワイトリストグラフ（<code>map_routes.json</code>）をブラウザ上で視覚的に確認・編集・自動検証できます。
+        </p>
+      </div>
+      <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+        <button id="tab-routes" onclick="switchEditorMode('routes')" class="px-3 py-1.5 rounded-lg text-xs font-black bg-pink-600 text-white shadow-sm transition">
+          🛣️ 巡回ルートグラフ編集 (map_routes.json)
+        </button>
+        <button id="tab-coords" onclick="switchEditorMode('coords')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition">
+          📍 スペース座標編集 (map_coords.json)
+        </button>
+      </div>
+    </div>
+
+    <!-- 🛣️ 巡回ルートグラフ編集パネル -->
+    <div id="panel-routes" class="space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs font-black text-slate-600 mr-1">操作ツール:</span>
+        <button onclick="setRouteTool('select')" id="tool-select" class="route-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-white">
+          🔍 ノード選択・ドラッグ移動 / エッジ削除
+        </button>
+        <button onclick="setRouteTool('add_node')" id="tool-add_node" class="route-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+          ➕ ノード追加
+        </button>
+        <button onclick="setRouteTool('add_edge')" id="tool-add_edge" class="route-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+          🔗 エッジ接続 (2点クリック)
+        </button>
+        <button onclick="setRouteTool('move_entrance')" id="tool-move_entrance" class="route-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+          ⭐ 起点(入口)を移動
+        </button>
+        <button onclick="setRouteTool('sim_route')" id="tool-sim_route" class="route-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+          🧪 巡回ルート試走 (ブースクリック)
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
+        <span class="text-xs font-black text-slate-600">起点プリセット:</span>
+        <button onclick="applyEntrancePreset(190.0, 140.0, 'west')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-pink-50 text-pink-700 border border-pink-200 hover:bg-pink-100">
+          ★ 北西入口 (190, 140) [デフォルト]
+        </button>
+        <button onclick="applyEntrancePreset(614.4, 118.0, 'east')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100">
+          ★ 北東開口部 (614.4, 118) [当日変更用]
+        </button>
+
+        <label class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 ml-2 cursor-pointer">
+          <input type="checkbox" id="chk-show-cells" checked onchange="renderRouteGraph()" class="rounded text-pink-600">
+          <span>552ブース矩形を表示</span>
+        </label>
+        <label class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 ml-1 cursor-pointer">
+          <input type="checkbox" id="chk-show-nodes" checked onchange="renderRouteGraph()" class="rounded text-pink-600">
+          <span>通路ノードを表示</span>
+        </label>
+
+        <div class="ml-auto flex flex-wrap items-center gap-2">
+          <button onclick="runGraphValidation()" class="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm">
+            ✅ 552ブース交差＆到達チェック
+          </button>
+          <button onclick="exportRoutesJSON()" class="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white hover:bg-blue-700 shadow-sm">
+            💾 map_routes.json 出力
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs">
+        <div class="flex flex-wrap items-center gap-3">
+          <span>ノード数: <strong id="stat-nodes" class="text-slate-900">0</strong></span>
+          <span>エッジ数: <strong id="stat-edges" class="text-slate-900">0</strong></span>
+          <span>起点: <strong id="stat-entrance" class="text-pink-600">(190, 140)</strong></span>
+          <span id="validation-badge" class="px-2 py-0.5 rounded-full font-bold bg-slate-200 text-slate-700">未検証</span>
+        </div>
+        <div id="route-status-msg" class="text-slate-500 font-bold">
+          ノードをドラッグして微調整、またはエッジをクリックして削除できます。
+        </div>
+      </div>
+    </div>
+
+    <!-- 📍 スペース座標編集パネル -->
+    <div id="panel-coords" class="hidden space-y-3">
+      <p class="text-xs text-slate-600">
+        マップ画像上の目的のスペースをクリックし、スペース番号（例: <code>A-25</code>）を入力すると座標が記録されます。
+      </p>
+      <div class="flex gap-3 items-center">
+        <button onclick="exportCoordsJSON()" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-xs shadow hover:bg-blue-700 font-bold">
+          💾 map_coords.json を出力
+        </button>
+        <button onclick="clearAllCoords()" class="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs hover:bg-red-200 font-bold">
+          すべてクリア
+        </button>
+        <div class="text-xs text-slate-500 ml-auto">
+          登録済み: <span id="count" class="font-bold text-slate-900">0</span> ヶ所
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="bg-white p-2 rounded-xl shadow border border-gray-200 overflow-auto max-w-full">
-    <div id="map-container" onclick="handleMapClick(event)">
-      <!-- Vercel本番環境から相対パスで読み込む -->
+  <div class="bg-white p-2 rounded-2xl shadow border border-slate-200 overflow-auto max-w-full">
+    <div id="map-container" onmousedown="handleMapMouseDown(event)" onmousemove="handleMapMouseMove(event)" onmouseup="handleMapMouseUp(event)" onclick="handleMapClick(event)">
       <img src="/map.jpg" alt="Map" id="map-img" style="width: 900px; display: block;">
+      <svg id="route-svg" viewBox="0 0 900 400.78125" preserveAspectRatio="none"></svg>
     </div>
   </div>
 
   <script>
+    let editorMode = 'routes'; // 'routes' | 'coords'
+    let routeTool = 'select';  // 'select' | 'add_node' | 'add_edge' | 'move_entrance' | 'sim_route'
     let coords = {};
+    let routeData = null;
+    let boothCells = [];
+    let draggingNodeId = null;
+    let edgeStartNodeId = null;
+    let simSelectedSpaces = ['N-01', 'M-15', 'L-30', 'G-20', 'A-15', 'B-25'];
 
-    window.onload = () => {
-      const saved = localStorage.getItem('vggc_map_coords');
-      if (saved) {
-        coords = JSON.parse(saved);
-        renderPins();
+    const CELL_HALF_W_VERTICAL = 5.3;
+    const CELL_HALF_H_VERTICAL = 3.0;
+    const CELL_HALF_W_A = 2.95;
+    const CELL_HALF_H_A = 5.3;
+    const INTERSECTION_EPS = 0.05;
+
+    window.onload = async () => {
+      try {
+        const resRoutes = await fetch('/map_routes.json');
+        routeData = await resRoutes.json();
+      } catch (e) {
+        console.error('Failed to load /map_routes.json', e);
       }
+
+      try {
+        const saved = localStorage.getItem('vggc_map_coords');
+        if (saved) {
+          coords = JSON.parse(saved);
+        } else {
+          const resCoords = await fetch('/src/map_coords.json').catch(() => null);
+          if (resCoords && resCoords.ok) {
+            coords = await resCoords.json();
+          }
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+
+      buildBoothCells();
+      renderRouteGraph();
+      runGraphValidation();
     };
 
-    function handleMapClick(e) {
+    function buildBoothCells() {
+      boothCells = [];
+      for (const [key, pos] of Object.entries(coords)) {
+        if (!/^[A-Z]-\d{2}$/.test(key)) continue;
+        const sym = key.split('-')[0];
+        const num = parseInt(key.split('-')[1], 10);
+        const isA = sym === 'A';
+        const hw = isA ? CELL_HALF_W_A : CELL_HALF_W_VERTICAL;
+        const hh = isA ? CELL_HALF_H_A : CELL_HALF_H_VERTICAL;
+        boothCells.push({
+          spaceId: key,
+          sym,
+          num,
+          x: pos.x,
+          y: pos.y,
+          minX: pos.x - hw + INTERSECTION_EPS,
+          maxX: pos.x + hw - INTERSECTION_EPS,
+          minY: pos.y - hh + INTERSECTION_EPS,
+          maxY: pos.y + hh - INTERSECTION_EPS
+        });
+      }
+    }
+
+    function switchEditorMode(mode) {
+      editorMode = mode;
+      document.getElementById('panel-routes').classList.toggle('hidden', mode !== 'routes');
+      document.getElementById('panel-coords').classList.toggle('hidden', mode !== 'coords');
+      document.getElementById('route-svg').classList.toggle('hidden', mode !== 'routes');
+
+      const tabRoutes = document.getElementById('tab-routes');
+      const tabCoords = document.getElementById('tab-coords');
+      if (mode === 'routes') {
+        tabRoutes.className = 'px-3 py-1.5 rounded-lg text-xs font-black bg-pink-600 text-white shadow-sm transition';
+        tabCoords.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+        clearCoordPinsDOM();
+        renderRouteGraph();
+      } else {
+        tabCoords.className = 'px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white shadow-sm transition';
+        tabRoutes.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+        renderPins();
+      }
+    }
+
+    function setRouteTool(tool) {
+      routeTool = tool;
+      edgeStartNodeId = null;
+      document.querySelectorAll('.route-tool-btn').forEach(btn => {
+        btn.className = 'route-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200';
+      });
+      const activeBtn = document.getElementById('tool-' + tool);
+      if (activeBtn) {
+        activeBtn.className = 'route-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-white';
+      }
+      const msgs = {
+        select: 'ノードをドラッグして座標移動、またはエッジをクリックして削除できます。',
+        add_node: 'マップ上の通路部分をクリックすると新しいノードを追加します。',
+        add_edge: '接続したい1つ目のノードをクリックし、続けて2つ目のノードをクリックしてください。',
+        move_entrance: '新しい入口起点の位置をマップ上でクリックしてください（最寄り通路へ自動接続します）。',
+        sim_route: 'マップ上のブース付近をクリックすると試走対象の追加/解除ができます。'
+      };
+      document.getElementById('route-status-msg').innerText = msgs[tool] || '';
+      renderRouteGraph();
+    }
+
+    function getEntranceNodeId() {
+      if (!routeData || !routeData.nodes) return 'n299';
+      const ent = routeData.entrance || { x: 190, y: 140 };
+      let bestId = 'n299';
+      let bestDist = Infinity;
+      for (const [id, pt] of Object.entries(routeData.nodes)) {
+        const d = Math.hypot(pt.x - ent.x, pt.y - ent.y);
+        if (d < bestDist) {
+          bestDist = d;
+          bestId = id;
+        }
+      }
+      return bestId;
+    }
+
+    function applyEntrancePreset(x, y, side) {
+      if (!routeData) return;
+      const entId = getEntranceNodeId();
+      routeData.entrance = { x, y };
+      routeData.nodes[entId] = { x, y };
+      // 既存の起点接続エッジを張り替え
+      routeData.edges = routeData.edges.filter(([u, v]) => u !== entId && v !== entId);
+      if (side === 'west') {
+        if (routeData.nodes['n0']) routeData.edges.push([entId, 'n0']);
+        if (routeData.nodes['n300']) routeData.edges.push([entId, 'n300']);
+      } else {
+        // 北東開口部: 最寄りの北通路ノード2点へ接続
+        const nearest = Object.entries(routeData.nodes)
+          .filter(([id]) => id !== entId)
+          .map(([id, pt]) => ({ id, d: Math.hypot(pt.x - x, pt.y - y) }))
+          .sort((a, b) => a.d - b.d)
+          .slice(0, 2);
+        nearest.forEach(n => routeData.edges.push([entId, n.id]));
+      }
+      renderRouteGraph();
+      runGraphValidation();
+    }
+
+    function segmentIntersectsRect(x1, y1, x2, y2, rect) {
+      if (Math.max(x1, x2) < rect.minX || Math.min(x1, x2) > rect.maxX) return false;
+      if (Math.max(y1, y2) < rect.minY || Math.min(y1, y2) > rect.maxY) return false;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      let t0 = 0, t1 = 1;
+      const p = [-dx, dx, -dy, dy];
+      const q = [x1 - rect.minX, rect.maxX - x1, y1 - rect.minY, rect.maxY - y1];
+      for (let i = 0; i < 4; i++) {
+        if (Math.abs(p[i]) < 1e-9) {
+          if (q[i] < 0) return false;
+        } else {
+          const t = q[i] / p[i];
+          if (p[i] < 0) {
+            if (t > t1) return false;
+            if (t > t0) t0 = t;
+          } else {
+            if (t < t0) return false;
+            if (t < t1) t1 = t;
+          }
+        }
+      }
+      return t0 <= t1;
+    }
+
+    function runGraphValidation() {
+      if (!routeData) return;
+      buildBoothCells();
+      let hitCount = 0;
+      const hitEdgeIndices = new Set();
+      routeData.edges.forEach(([u, v], idx) => {
+        const p1 = routeData.nodes[u];
+        const p2 = routeData.nodes[v];
+        if (!p1 || !p2) return;
+        for (const cell of boothCells) {
+          if (segmentIntersectsRect(p1.x, p1.y, p2.x, p2.y, cell)) {
+            hitCount++;
+            hitEdgeIndices.add(idx);
+            break;
+          }
+        }
+      });
+
+      // BFS from entrance node
+      const entId = getEntranceNodeId();
+      const adj = {};
+      Object.keys(routeData.nodes).forEach(k => { adj[k] = []; });
+      routeData.edges.forEach(([u, v]) => {
+        if (adj[u] && adj[v]) {
+          adj[u].push(v);
+          adj[v].push(u);
+        }
+      });
+      const visited = new Set([entId]);
+      const queue = [entId];
+      while (queue.length > 0) {
+        const cur = queue.shift();
+        for (const nb of (adj[cur] || [])) {
+          if (!visited.has(nb)) {
+            visited.add(nb);
+            queue.push(nb);
+          }
+        }
+      }
+      const totalNodes = Object.keys(routeData.nodes).length;
+      const unreachableNodes = totalNodes - visited.size;
+
+      const badge = document.getElementById('validation-badge');
+      if (hitCount === 0 && unreachableNodes === 0) {
+        badge.className = 'px-2.5 py-0.5 rounded-full font-black bg-emerald-100 text-emerald-800 border border-emerald-300';
+        badge.innerText = `✓ 交差 0件 / 未到達 0件 (全${boothCells.length}ブース検証OK)`;
+      } else {
+        badge.className = 'px-2.5 py-0.5 rounded-full font-black bg-red-100 text-red-700 border border-red-300';
+        badge.innerText = `⚠ ブース交差 ${hitCount}件 / 未接続ノード ${unreachableNodes}件`;
+      }
+      return hitEdgeIndices;
+    }
+
+    function renderRouteGraph() {
+      if (!routeData) return;
+      const svg = document.getElementById('route-svg');
+      svg.innerHTML = '';
+
+      const showCells = document.getElementById('chk-show-cells').checked;
+      const showNodes = document.getElementById('chk-show-nodes').checked;
+      const entId = getEntranceNodeId();
+
+      // 1. 552 Booth Cells
+      if (showCells) {
+        for (const cell of boothCells) {
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x', cell.minX);
+          rect.setAttribute('y', cell.minY);
+          rect.setAttribute('width', cell.maxX - cell.minX);
+          rect.setAttribute('height', cell.maxY - cell.minY);
+          rect.setAttribute('fill', simSelectedSpaces.includes(cell.spaceId) ? 'rgba(236, 72, 153, 0.35)' : 'rgba(16, 185, 129, 0.12)');
+          rect.setAttribute('stroke', simSelectedSpaces.includes(cell.spaceId) ? '#db2777' : 'rgba(16, 185, 129, 0.45)');
+          rect.setAttribute('stroke-width', simSelectedSpaces.includes(cell.spaceId) ? '1.2' : '0.5');
+          svg.appendChild(rect);
+        }
+      }
+
+      // 2. Edges
+      routeData.edges.forEach(([u, v], idx) => {
+        const p1 = routeData.nodes[u];
+        const p2 = routeData.nodes[v];
+        if (!p1 || !p2) return;
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', p1.x);
+        line.setAttribute('y1', p1.y);
+        line.setAttribute('x2', p2.x);
+        line.setAttribute('y2', p2.y);
+        line.setAttribute('stroke', '#2563eb');
+        line.setAttribute('stroke-width', '1.8');
+        line.setAttribute('stroke-opacity', '0.75');
+        svg.appendChild(line);
+
+        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        hit.setAttribute('x1', p1.x);
+        hit.setAttribute('y1', p1.y);
+        hit.setAttribute('x2', p2.x);
+        hit.setAttribute('y2', p2.y);
+        hit.setAttribute('stroke', 'transparent');
+        hit.setAttribute('stroke-width', '7');
+        hit.setAttribute('class', 'route-edge-hit');
+        hit.onclick = (ev) => {
+          ev.stopPropagation();
+          if (routeTool === 'select') {
+            if (confirm(`エッジ (${u} - ${v}) を削除しますか？`)) {
+              routeData.edges.splice(idx, 1);
+              renderRouteGraph();
+              runGraphValidation();
+            }
+          }
+        };
+        svg.appendChild(hit);
+      });
+
+      // 3. Nodes
+      if (showNodes) {
+        for (const [id, pt] of Object.entries(routeData.nodes)) {
+          const isEnt = id === entId;
+          const isEdgeStart = id === edgeStartNodeId;
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', pt.x);
+          circle.setAttribute('cy', pt.y);
+          circle.setAttribute('r', isEnt ? '6.5' : (isEdgeStart ? '5.5' : '3.2'));
+          circle.setAttribute('fill', isEnt ? '#db2777' : (isEdgeStart ? '#f59e0b' : '#ffffff'));
+          circle.setAttribute('stroke', isEnt ? '#ffffff' : '#1d4ed8');
+          circle.setAttribute('stroke-width', isEnt ? '2' : '1.5');
+          circle.setAttribute('class', 'route-node');
+          circle.setAttribute('data-node-id', id);
+
+          circle.onmousedown = (ev) => {
+            ev.stopPropagation();
+            if (routeTool === 'select') {
+              draggingNodeId = id;
+            } else if (routeTool === 'add_edge') {
+              if (!edgeStartNodeId) {
+                edgeStartNodeId = id;
+                renderRouteGraph();
+              } else if (edgeStartNodeId !== id) {
+                routeData.edges.push([edgeStartNodeId, id]);
+                edgeStartNodeId = null;
+                renderRouteGraph();
+                runGraphValidation();
+              }
+            }
+          };
+          svg.appendChild(circle);
+        }
+      }
+
+      // Entrance label
+      const entPt = routeData.nodes[entId] || routeData.entrance;
+      if (entPt) {
+        const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        txt.setAttribute('x', entPt.x);
+        txt.setAttribute('y', entPt.y - 9);
+        txt.setAttribute('text-anchor', 'middle');
+        txt.setAttribute('fill', '#be185d');
+        txt.setAttribute('font-size', '9');
+        txt.setAttribute('font-weight', '900');
+        txt.setAttribute('stroke', '#ffffff');
+        txt.setAttribute('stroke-width', '2.5');
+        txt.setAttribute('paint-order', 'stroke');
+        txt.textContent = `★起点(${entPt.x}, ${entPt.y})`;
+        svg.appendChild(txt);
+      }
+
+      document.getElementById('stat-nodes').innerText = Object.keys(routeData.nodes).length;
+      document.getElementById('stat-edges').innerText = routeData.edges.length;
+      if (entPt) {
+        document.getElementById('stat-entrance').innerText = `(${entPt.x}, ${entPt.y})`;
+      }
+    }
+
+    function getMapEventXY(e) {
       const container = document.getElementById('map-container');
       const rect = container.getBoundingClientRect();
-      const x = Math.round(e.clientX - rect.left);
-      const y = Math.round(e.clientY - rect.top);
+      return {
+        x: Math.round((e.clientX - rect.left) * 10) / 10,
+        y: Math.round((e.clientY - rect.top) * 10) / 10
+      };
+    }
 
-      const spaceName = prompt('この位置のスペース番号を入力してください\\n例: A-25, または A など');
-      if (!spaceName) return; 
+    function handleMapMouseDown(e) {
+      if (editorMode !== 'routes') return;
+    }
 
-      coords[spaceName] = { x, y };
-      localStorage.setItem('vggc_map_coords', JSON.stringify(coords));
-      
-      renderPins();
+    function handleMapMouseMove(e) {
+      if (editorMode !== 'routes' || !draggingNodeId || !routeData) return;
+      const { x, y } = getMapEventXY(e);
+      routeData.nodes[draggingNodeId] = { x, y };
+      if (draggingNodeId === getEntranceNodeId()) {
+        routeData.entrance = { x, y };
+      }
+      renderRouteGraph();
+    }
+
+    function handleMapMouseUp() {
+      if (draggingNodeId) {
+        draggingNodeId = null;
+        runGraphValidation();
+      }
+    }
+
+    function handleMapClick(e) {
+      const { x, y } = getMapEventXY(e);
+      if (editorMode === 'coords') {
+        const spaceName = prompt('この位置のスペース番号を入力してください\n例: A-25, または A など');
+        if (!spaceName) return;
+        coords[spaceName] = { x: Math.round(x), y: Math.round(y) };
+        localStorage.setItem('vggc_map_coords', JSON.stringify(coords));
+        renderPins();
+        return;
+      }
+
+      if (!routeData) return;
+      if (routeTool === 'add_node') {
+        let nextIdx = Object.keys(routeData.nodes).length;
+        while (routeData.nodes['n' + nextIdx]) nextIdx++;
+        const newId = 'n' + nextIdx;
+        routeData.nodes[newId] = { x, y };
+        renderRouteGraph();
+        runGraphValidation();
+      } else if (routeTool === 'move_entrance') {
+        const entId = getEntranceNodeId();
+        routeData.entrance = { x, y };
+        routeData.nodes[entId] = { x, y };
+        renderRouteGraph();
+        runGraphValidation();
+      } else if (routeTool === 'sim_route') {
+        // Find nearest booth cell
+        let best = null;
+        let bestD = 20;
+        for (const cell of boothCells) {
+          const d = Math.hypot(cell.x - x, cell.y - y);
+          if (d < bestD) {
+            bestD = d;
+            best = cell;
+          }
+        }
+        if (best) {
+          const idx = simSelectedSpaces.indexOf(best.spaceId);
+          if (idx >= 0) simSelectedSpaces.splice(idx, 1);
+          else simSelectedSpaces.push(best.spaceId);
+          renderRouteGraph();
+        }
+      }
+    }
+
+    function exportRoutesJSON() {
+      if (!routeData) return;
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(routeData, null, 2));
+      const link = document.createElement('a');
+      link.href = dataStr;
+      link.download = "map_routes.json";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function clearCoordPinsDOM() {
+      const container = document.getElementById('map-container');
+      container.querySelectorAll('.pin, .pin-label').forEach(p => p.remove());
     }
 
     function renderPins() {
+      clearCoordPinsDOM();
       const container = document.getElementById('map-container');
-      const existingPins = container.querySelectorAll('.pin, .pin-label');
-      existingPins.forEach(p => p.remove());
-
       let count = 0;
       for (const [name, pos] of Object.entries(coords)) {
         count++;
@@ -101,7 +613,7 @@
         dot.className = 'pin';
         dot.style.left = pos.x + 'px';
         dot.style.top = pos.y + 'px';
-        
+
         const label = document.createElement('div');
         label.className = 'pin-label';
         label.style.left = pos.x + 'px';
@@ -114,15 +626,15 @@
       document.getElementById('count').innerText = count;
     }
 
-    function clearAll() {
-      if (confirm('すべてのピンを削除しますか？')) {
+    function clearAllCoords() {
+      if (confirm('すべてのスペース座標ピンを削除しますか？')) {
         coords = {};
         localStorage.removeItem('vggc_map_coords');
         renderPins();
       }
     }
 
-    function exportJSON() {
+    function exportCoordsJSON() {
       if (Object.keys(coords).length === 0) {
         alert('まだ一つも登録されていません。');
         return;
@@ -134,8 +646,6 @@
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
-      alert('ダウンロードした map_coords.json をチャットにアップロードしてください！');
     }
   </script>
 </body>

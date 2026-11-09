@@ -104,11 +104,20 @@
             </span>
           </div>
 
-          <div class="flex items-center gap-1.5 shrink-0">
+          <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
             <!-- 公式会場マップPDFリンク -->
             <a href="/map.pdf" target="_blank" class="text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded-lg flex items-center gap-1 transition shadow-xs" title="公式会場マップPDFを開く / 印刷・保存">
               <span>📄 PDF ↗</span>
             </a>
+
+            <!-- ★ 巡回ルート描画 ON/OFF トグル -->
+            <button @click="toggleRouteOverlay"
+                    class="text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition flex items-center gap-1 shrink-0 cursor-pointer shadow-xs"
+                    :class="showRouteOverlay ? 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-200' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'"
+                    title="入口起点・通路グラフ沿いの巡回ルート線と訪問順番号を表示">
+              <span>🧭 ルート: {{ showRouteOverlay ? 'ON' : 'OFF' }}</span>
+              <span v-if="showRouteOverlay && activePatrolRoute.orderedStops.length > 0" class="px-1.5 py-0.2 bg-white/20 rounded text-[10px] font-mono">{{ activePatrolRoute.orderedStops.length }}</span>
+            </button>
 
             <!-- 買物中マップモード ON/OFF トグル (リスト登録サークルを発光強調) -->
             <button @click="toggleShoppingMapMode"
@@ -142,6 +151,57 @@
                   title="購入済・完売サークルのドット表示切り替え">
             {{ showCompletedPins ? '✓ 済も薄く表示中' : '済・完売は自動消去' }}
           </button>
+        </div>
+
+        <!-- ★ 巡回ルート設定＆計画ルート注記バー (PC: ルート表示ON時) -->
+        <div v-if="showRouteOverlay" class="px-2.5 py-1.5 bg-rose-50/80 border border-rose-200 rounded-lg text-[11px] text-slate-700 shrink-0 space-y-1">
+          <div class="flex items-center justify-between gap-1.5 flex-wrap">
+            <!-- 巡回順切替: 優先度順(デフォルト) / 最短順 -->
+            <div class="flex items-center gap-1">
+              <span class="font-extrabold text-rose-900">順路:</span>
+              <div class="inline-flex rounded-md bg-white p-0.5 border border-rose-200 shadow-2xs">
+                <button type="button" @click="routeOrderMode = 'priority'"
+                        class="px-2 py-0.5 rounded text-[10px] font-extrabold transition cursor-pointer"
+                        :class="routeOrderMode === 'priority' ? 'bg-rose-600 text-white shadow-2xs' : 'text-slate-600 hover:bg-rose-50'"
+                        title="優先度 S→A→B→未 の大枠を守り、各優先度内を最短化（完売リスク回避）">
+                  優先度順
+                </button>
+                <button type="button" @click="routeOrderMode = 'shortest'"
+                        class="px-2 py-0.5 rounded text-[10px] font-extrabold transition cursor-pointer"
+                        :class="routeOrderMode === 'shortest' ? 'bg-rose-600 text-white shadow-2xs' : 'text-slate-600 hover:bg-rose-50'"
+                        title="優先度を問わず会場入口から全体を最短距離で一筆書き巡回">
+                  最短順
+                </button>
+              </div>
+            </div>
+
+            <!-- 対象フィルタ (未購入すべて / Sのみ / S+A) -->
+            <div class="flex items-center gap-1">
+              <select v-model="routeTargetFilter" class="h-6 text-[10px] font-extrabold bg-white border border-rose-200 rounded px-1.5 text-slate-800 cursor-pointer outline-none">
+                <option value="all">対象: 未購入すべて</option>
+                <option value="S">対象: S(最優先)のみ</option>
+                <option value="SA">対象: S + A のみ</option>
+                <option value="include_done">対象: 購入済も含む</option>
+              </select>
+
+              <!-- 入口に戻るオプション -->
+              <label class="h-6 px-1.5 bg-white border border-rose-200 rounded flex items-center gap-1 text-[10px] font-extrabold text-slate-700 cursor-pointer select-none hover:bg-rose-50"
+                     title="最後のサークル訪問後に起点（入口）へ戻るルートを追加表示">
+                <input type="checkbox" v-model="routeReturnToEntrance" class="accent-rose-600 w-3 h-3">
+                <span>入口に戻る</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 text-[10px] text-slate-500">
+            <span v-if="activePatrolRoute.orderedStops.length > 0" class="font-bold text-rose-800">
+              ★入口 → {{ activePatrolRoute.orderedStops.length }}件巡回 (距離: {{ Math.round(activePatrolRoute.totalDistance) }})
+            </span>
+            <span v-else class="text-slate-500">※買い物リストに未購入サークルを追加するとルートが描画されます</span>
+            <span class="text-[10px] text-slate-500 truncate" title="計画用ルートのため、当日の混雑・一方通行規制時は現地のスタッフ誘導に従ってください">
+              ※計画用ルート（混雑・一方通行時は現地誘導優先）
+            </span>
+          </div>
         </div>
 
         <!-- PC用マップビューポートラッパー (ズームボタンとアクションバーをスクロール領域外に固定) -->
@@ -185,6 +245,60 @@
                 </div>
               </div>
 
+              <!-- ★ 巡回ルート SVG オーバーレイ (PC: 座標系900×400.78125完全一致・通路ホワイトリスト描画) -->
+              <svg v-if="showRouteOverlay && activePatrolRoute.orderedStops.length > 0 && !isMapImageError"
+                   class="map-route-svg pointer-events-none select-none"
+                   viewBox="0 0 900 400.78125"
+                   preserveAspectRatio="none">
+                <!-- 各ブース前面アクセス点からブース端への短い引き出し線 -->
+                <line v-for="stop in activePatrolRoute.orderedStops"
+                      :key="'pc_rt_tick_'+stop.circle_id"
+                      :x1="stop.ax" :y1="stop.ay"
+                      :x2="stop.fx" :y2="stop.fy"
+                      stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" opacity="0.9" />
+                <line v-for="stop in activePatrolRoute.orderedStops"
+                      :key="'pc_rt_tick_fg_'+stop.circle_id"
+                      :x1="stop.ax" :y1="stop.ay"
+                      :x2="stop.fx" :y2="stop.fy"
+                      stroke="#e11d48" stroke-width="1.6" stroke-dasharray="2 1.5" stroke-linecap="round" opacity="0.9" />
+
+                <!-- 入口へ戻るオプション経路 (破線) -->
+                <template v-if="routeReturnToEntrance && activePatrolRoute.returnPolylinePoints.length > 1">
+                  <polyline :points="formatSvgPoints(activePatrolRoute.returnPolylinePoints)"
+                            fill="none" stroke="#ffffff" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" />
+                  <polyline :points="formatSvgPoints(activePatrolRoute.returnPolylinePoints)"
+                            fill="none" stroke="#4f46e5" stroke-width="2.0" stroke-dasharray="4.5 3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />
+                </template>
+
+                <!-- 巡回ルート本線 (白縁＋ローズレッド実線) -->
+                <polyline :points="formatSvgPoints(activePatrolRoute.polylinePoints)"
+                          fill="none" stroke="#ffffff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.92" />
+                <polyline :points="formatSvgPoints(activePatrolRoute.polylinePoints)"
+                          fill="none" stroke="#e11d48" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.95" />
+
+                <!-- 進行方向シェブロン矢印 -->
+                <g v-for="(arr, aIdx) in activePatrolRoute.directionArrows"
+                   :key="'pc_rt_arr_'+aIdx"
+                   :transform="`translate(${arr.x}, ${arr.y}) rotate(${arr.angle})`">
+                  <path d="M -3.2 -2.6 L 2.4 0 L -3.2 2.6" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M -3.2 -2.6 L 2.4 0 L -3.2 2.6" fill="none" stroke="#be123c" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                </g>
+
+                <!-- 通路上のアクセスポイント小ドット -->
+                <circle v-for="stop in activePatrolRoute.orderedStops"
+                        :key="'pc_rt_ac_'+stop.circle_id"
+                        :cx="stop.ax" :cy="stop.ay" r="2.1"
+                        fill="#e11d48" stroke="#ffffff" stroke-width="0.9" />
+
+                <!-- 固定起点 (★入口: 190, 140) マーカー -->
+                <g :transform="`translate(${activePatrolRoute.entrancePoint.x}, ${activePatrolRoute.entrancePoint.y})`">
+                  <circle cx="0" cy="0" r="6.5" fill="#059669" stroke="#ffffff" stroke-width="1.8" />
+                  <text x="0" y="2.8" text-anchor="middle" fill="#ffffff" font-size="8" font-weight="900">★</text>
+                  <rect x="-16" y="-18" width="32" height="10" rx="3" fill="#064e3b" stroke="#ffffff" stroke-width="0.8" opacity="0.95" />
+                  <text x="0" y="-10.8" text-anchor="middle" fill="#ffffff" font-size="6.5" font-weight="800">入口起点</text>
+                </g>
+              </svg>
+
               <!-- ★ 買い物リストサークルの極小カラードット (4原色・pointer-events-none・近傍スナップ選択対応) -->
               <div v-for="item in activeListMapPins" :key="'pc_mp_'+item.circle_id"
                    class="list-map-dot pointer-events-none select-none"
@@ -193,6 +307,19 @@
                 <span v-if="item.priority === 'S' && !item.isCompleted"
                       class="absolute inset-0 rounded-full bg-rose-500 animate-ping opacity-75 pointer-events-none"></span>
               </div>
+
+              <!-- ★ 巡回ルート 訪問順番号バッジ (1, 2, 3...) -->
+              <template v-if="showRouteOverlay && !isMapImageError">
+                <button v-for="stop in activePatrolRoute.orderedStops"
+                        :key="'pc_rt_bdg_'+stop.circle_id"
+                        type="button"
+                        @click.stop="focusMapPinItem(stop, false)"
+                        class="route-order-badge select-none cursor-pointer"
+                        :style="getRouteBadgeStyle(stop)"
+                        :title="`巡回 #${stop.visitOrder}: ${stop.spaceLabel} ${stop.circle.circle_name}`">
+                  {{ stop.visitOrder }}
+                </button>
+              </template>
 
               <!-- ターゲットピン (案B: targetSpace選択時のみ表示) -->
               <div v-if="targetSpace"
@@ -213,11 +340,12 @@
           <div v-if="isShoppingMapMode && unboughtListMapPins.length > 0 && !focusedMapCircle"
                class="absolute bottom-2 inset-x-2 z-20 bg-slate-950/90 backdrop-blur-md text-white rounded-xl px-2.5 py-1.5 shadow-xl flex items-center gap-1.5 overflow-x-auto border border-pink-500/40 custom-scrollbar">
             <span class="text-[10px] font-extrabold text-pink-400 shrink-0 flex items-center gap-1">
-              <span class="animate-pulse">🎯</span>未購入:
+              <span class="animate-pulse">🎯</span>{{ showRouteOverlay ? '巡回順:' : '未購入:' }}
             </span>
             <button v-for="pin in unboughtListMapPins" :key="'pc_shop_nav_'+pin.circle_id"
                     @click="focusMapCircleById(pin.circle_id)"
                     class="shrink-0 px-2 py-0.5 rounded-lg text-[11px] font-extrabold flex items-center gap-1 transition cursor-pointer bg-white/10 hover:bg-pink-600 hover:text-white border border-white/10">
+              <span v-if="patrolOrderMap[pin.circle_id]" class="px-1 bg-rose-600 text-white rounded text-[9px] font-mono">#{{ patrolOrderMap[pin.circle_id] }}</span>
               <span class="text-pink-300 font-mono">{{ pin.circle.space_sym }}-{{ pin.circle.space_num }}</span>
               <span class="max-w-[80px] truncate text-[10px] opacity-80">{{ pin.circle.circle_name }}</span>
             </button>
@@ -371,20 +499,27 @@
                 </a>
               </div>
 
-              <!-- 2段目: 買物中トグル & リストピントグル (2カラム均等配置で誤タップ防止 & 被り解消) -->
-              <div class="grid grid-cols-2 gap-1.5">
+              <!-- 2段目: ルートトグル & 買物中トグル & リストピントグル (3カラム均等配置で誤タップ防止 & 被り解消) -->
+              <div class="grid grid-cols-3 gap-1.5">
+                <!-- スマホ用 巡回ルート ON/OFF トグル -->
+                <button @click="toggleRouteOverlay"
+                        class="text-[11px] font-extrabold py-1.5 px-1.5 rounded-lg border transition flex items-center justify-center gap-1 shrink-0 shadow-2xs active:scale-98"
+                        :class="showRouteOverlay ? 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-200' : 'bg-rose-50 text-rose-700 border-rose-200'">
+                  <span>🧭 ルート: {{ showRouteOverlay ? 'ON' : 'OFF' }}</span>
+                  <span v-if="showRouteOverlay && activePatrolRoute.orderedStops.length > 0" class="px-1 bg-white/20 rounded text-[9px] font-mono">{{ activePatrolRoute.orderedStops.length }}</span>
+                </button>
                 <!-- スマホ用 買物中マップモード ON/OFF トグル -->
                 <button @click="toggleShoppingMapMode"
-                        class="text-[11px] font-extrabold py-1.5 px-2 rounded-lg border transition flex items-center justify-center gap-1 shrink-0 shadow-2xs active:scale-98"
+                        class="text-[11px] font-extrabold py-1.5 px-1.5 rounded-lg border transition flex items-center justify-center gap-1 shrink-0 shadow-2xs active:scale-98"
                         :class="isShoppingMapMode ? 'bg-pink-600 text-white border-pink-700 ring-2 ring-pink-300 animate-pulse' : 'bg-pink-50 text-pink-700 border-pink-200'">
                   <span>📍 買物中: {{ isShoppingMapMode ? 'ON' : 'OFF' }}</span>
                 </button>
                 <!-- スマホ用 リストピン ON/OFF トグル -->
                 <button @click="showListPins = !showListPins"
-                        class="text-[11px] font-extrabold py-1.5 px-2 rounded-lg border transition flex items-center justify-center gap-1 shrink-0 shadow-2xs active:scale-98"
+                        class="text-[11px] font-extrabold py-1.5 px-1.5 rounded-lg border transition flex items-center justify-center gap-1 shrink-0 shadow-2xs active:scale-98"
                         :class="showListPins ? 'bg-slate-800 text-white border-slate-900' : 'bg-gray-100 text-gray-700 border-gray-300'">
-                  <span>🛒 リストピン: {{ showListPins ? 'ON' : 'OFF' }}</span>
-                  <span v-if="showListPins" class="px-1.5 bg-white/20 rounded text-[10px] font-mono">{{ activeListMapPins.length }}</span>
+                  <span>🛒 リスト: {{ showListPins ? 'ON' : 'OFF' }}</span>
+                  <span v-if="showListPins" class="px-1 bg-white/20 rounded text-[9px] font-mono">{{ activeListMapPins.length }}</span>
                 </button>
               </div>
 
@@ -401,6 +536,44 @@
                         :class="showCompletedPins ? 'bg-slate-200 text-slate-800 border-slate-300 font-bold' : 'bg-gray-50 text-slate-500 border-gray-200'">
                   {{ showCompletedPins ? '✓済表示中' : '済は消去' }}
                 </button>
+              </div>
+
+              <!-- ★ スマホ用 巡回ルート設定＆計画ルート注記バー (ルート表示ON時) -->
+              <div v-if="showRouteOverlay" class="px-2.5 py-1.5 bg-rose-50/90 border border-rose-200 rounded-lg text-[11px] text-slate-700 shadow-2xs space-y-1">
+                <div class="flex items-center justify-between gap-1.5 flex-wrap">
+                  <div class="inline-flex rounded-md bg-white p-0.5 border border-rose-200 shadow-2xs">
+                    <button type="button" @click="routeOrderMode = 'priority'"
+                            class="px-2 py-0.5 rounded text-[10px] font-extrabold transition"
+                            :class="routeOrderMode === 'priority' ? 'bg-rose-600 text-white shadow-2xs' : 'text-slate-600'">
+                      優先度順
+                    </button>
+                    <button type="button" @click="routeOrderMode = 'shortest'"
+                            class="px-2 py-0.5 rounded text-[10px] font-extrabold transition"
+                            :class="routeOrderMode === 'shortest' ? 'bg-rose-600 text-white shadow-2xs' : 'text-slate-600'">
+                      最短順
+                    </button>
+                  </div>
+
+                  <div class="flex items-center gap-1">
+                    <select v-model="routeTargetFilter" class="h-6 text-[10px] font-extrabold bg-white border border-rose-200 rounded px-1 text-slate-800 outline-none">
+                      <option value="all">未購入すべて</option>
+                      <option value="S">S(最優先)のみ</option>
+                      <option value="SA">S + A のみ</option>
+                      <option value="include_done">購入済も含む</option>
+                    </select>
+                    <label class="h-6 px-1.5 bg-white border border-rose-200 rounded flex items-center gap-1 text-[10px] font-extrabold text-slate-700 select-none">
+                      <input type="checkbox" v-model="routeReturnToEntrance" class="accent-rose-600 w-3 h-3">
+                      <span>入口帰還</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between gap-1 text-[10px] text-slate-500">
+                  <span v-if="activePatrolRoute.orderedStops.length > 0" class="font-bold text-rose-800">
+                    ★入口→{{ activePatrolRoute.orderedStops.length }}件 (距離:{{ Math.round(activePatrolRoute.totalDistance) }})
+                  </span>
+                  <span v-else>※未購入サークル追加で描画</span>
+                  <span class="truncate">※計画用ルート(現地誘導優先)</span>
+                </div>
               </div>
 
               <!-- スマホ用マップビューポートラッパー (ズームボタンとアクションバーを固定しガタつきゼロ化) -->
@@ -438,6 +611,54 @@
                  </div>
                </div>
 
+                    <!-- ★ 巡回ルート SVG オーバーレイ (スマホ: 座標系900×400.78125完全一致・通路ホワイトリスト描画) -->
+                    <svg v-if="showRouteOverlay && activePatrolRoute.orderedStops.length > 0 && !isMapImageError"
+                         class="map-route-svg pointer-events-none select-none"
+                         viewBox="0 0 900 400.78125"
+                         preserveAspectRatio="none">
+                      <line v-for="stop in activePatrolRoute.orderedStops"
+                            :key="'mb_rt_tick_'+stop.circle_id"
+                            :x1="stop.ax" :y1="stop.ay"
+                            :x2="stop.fx" :y2="stop.fy"
+                            stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" opacity="0.9" />
+                      <line v-for="stop in activePatrolRoute.orderedStops"
+                            :key="'mb_rt_tick_fg_'+stop.circle_id"
+                            :x1="stop.ax" :y1="stop.ay"
+                            :x2="stop.fx" :y2="stop.fy"
+                            stroke="#e11d48" stroke-width="1.6" stroke-dasharray="2 1.5" stroke-linecap="round" opacity="0.9" />
+
+                      <template v-if="routeReturnToEntrance && activePatrolRoute.returnPolylinePoints.length > 1">
+                        <polyline :points="formatSvgPoints(activePatrolRoute.returnPolylinePoints)"
+                                  fill="none" stroke="#ffffff" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" />
+                        <polyline :points="formatSvgPoints(activePatrolRoute.returnPolylinePoints)"
+                                  fill="none" stroke="#4f46e5" stroke-width="2.0" stroke-dasharray="4.5 3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />
+                      </template>
+
+                      <polyline :points="formatSvgPoints(activePatrolRoute.polylinePoints)"
+                                fill="none" stroke="#ffffff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.92" />
+                      <polyline :points="formatSvgPoints(activePatrolRoute.polylinePoints)"
+                                fill="none" stroke="#e11d48" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.95" />
+
+                      <g v-for="(arr, aIdx) in activePatrolRoute.directionArrows"
+                         :key="'mb_rt_arr_'+aIdx"
+                         :transform="`translate(${arr.x}, ${arr.y}) rotate(${arr.angle})`">
+                        <path d="M -3.2 -2.6 L 2.4 0 L -3.2 2.6" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M -3.2 -2.6 L 2.4 0 L -3.2 2.6" fill="none" stroke="#be123c" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                      </g>
+
+                      <circle v-for="stop in activePatrolRoute.orderedStops"
+                              :key="'mb_rt_ac_'+stop.circle_id"
+                              :cx="stop.ax" :cy="stop.ay" r="2.1"
+                              fill="#e11d48" stroke="#ffffff" stroke-width="0.9" />
+
+                      <g :transform="`translate(${activePatrolRoute.entrancePoint.x}, ${activePatrolRoute.entrancePoint.y})`">
+                        <circle cx="0" cy="0" r="6.5" fill="#059669" stroke="#ffffff" stroke-width="1.8" />
+                        <text x="0" y="2.8" text-anchor="middle" fill="#ffffff" font-size="8" font-weight="900">★</text>
+                        <rect x="-16" y="-18" width="32" height="10" rx="3" fill="#064e3b" stroke="#ffffff" stroke-width="0.8" opacity="0.95" />
+                        <text x="0" y="-10.8" text-anchor="middle" fill="#ffffff" font-size="6.5" font-weight="800">入口起点</text>
+                      </g>
+                    </svg>
+
                     <!-- ★ 買い物リストサークルの極小カラードット (4原色・pointer-events-none・近傍スナップ選択対応) -->
                     <div v-for="item in activeListMapPins" :key="'mb_mp_'+item.circle_id"
                          class="list-map-dot pointer-events-none select-none"
@@ -446,6 +667,18 @@
                       <span v-if="item.priority === 'S' && !item.isCompleted"
                             class="absolute inset-0 rounded-full bg-rose-500 animate-ping opacity-75 pointer-events-none"></span>
                     </div>
+
+                    <!-- ★ 巡回ルート 訪問順番号バッジ (スマホ: 1, 2, 3...) -->
+                    <template v-if="showRouteOverlay && !isMapImageError">
+                      <button v-for="stop in activePatrolRoute.orderedStops"
+                              :key="'mb_rt_bdg_'+stop.circle_id"
+                              type="button"
+                              @click.stop="focusMapPinItem(stop, false)"
+                              class="route-order-badge select-none"
+                              :style="getRouteBadgeStyle(stop)">
+                        {{ stop.visitOrder }}
+                      </button>
+                    </template>
 
                     <!-- ターゲットピン (案B: targetSpace選択時のみ表示) -->
                     <div v-if="targetSpace"
@@ -466,11 +699,12 @@
                 <div v-if="isShoppingMapMode && unboughtListMapPins.length > 0 && !focusedMapCircle"
                      class="absolute bottom-2 inset-x-2 z-20 bg-slate-950/90 backdrop-blur-md text-white rounded-xl px-2 py-1.5 shadow-xl flex items-center gap-1.5 overflow-x-auto border border-pink-500/40 custom-scrollbar">
                   <span class="text-[10px] font-extrabold text-pink-400 shrink-0 flex items-center gap-1">
-                    <span class="animate-pulse">🎯</span>未購入:
+                    <span class="animate-pulse">🎯</span>{{ showRouteOverlay ? '巡回順:' : '未購入:' }}
                   </span>
                   <button v-for="pin in unboughtListMapPins" :key="'mb_shop_nav_'+pin.circle_id"
                           @click="focusMapCircleById(pin.circle_id)"
                           class="shrink-0 px-2 py-0.5 rounded-lg text-[11px] font-extrabold flex items-center gap-1 transition cursor-pointer bg-white/10 active:bg-pink-600 active:text-white border border-white/10">
+                    <span v-if="patrolOrderMap[pin.circle_id]" class="px-1 bg-rose-600 text-white rounded text-[9px] font-mono">#{{ patrolOrderMap[pin.circle_id] }}</span>
                     <span class="text-pink-300 font-mono">{{ pin.circle.space_sym }}-{{ pin.circle.space_num }}</span>
                     <span class="max-w-[70px] truncate text-[10px] opacity-80">{{ pin.circle.circle_name }}</span>
                   </button>
@@ -913,15 +1147,27 @@
               <div class="bg-white rounded-2xl shadow-xs border border-gray-200/90 p-2 md:p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <!-- 左側: ソート ＆ 未購入フィルタ ＆ 当日コンパクト表示トグル -->
                 <div class="flex items-center justify-between sm:justify-start gap-1.5 flex-wrap">
-                  <div class="flex items-center gap-1">
+                  <div class="flex items-center gap-1 flex-wrap">
                     <span class="text-[11px] font-bold text-gray-500 hidden sm:inline">並び:</span>
                     <select v-model="sortOrder" class="h-8 text-xs font-bold bg-gray-50 border border-gray-300 rounded-xl px-2 outline-none focus:ring-2 focus:ring-pink-500 text-gray-800 cursor-pointer">
-                      <option value="route">🗺️ 巡回ルート (最短買い回り順)</option>
+                      <option value="route">🗺️ 巡回ルート (通路グラフ順)</option>
                       <option value="space">配置順 (A→N・島別)</option>
                       <option value="priority">優先度順 (S→B)</option>
                       <option value="recent">🆕 お品書き新着順</option>
                       <option value="default">追加順</option>
                     </select>
+                    <div v-if="sortOrder === 'route'" class="inline-flex rounded-xl bg-rose-50 p-0.5 border border-rose-200 h-8 items-center">
+                      <button type="button" @click="routeOrderMode = 'priority'"
+                              class="px-2 h-6 rounded-lg text-[11px] font-extrabold transition cursor-pointer"
+                              :class="routeOrderMode === 'priority' ? 'bg-rose-600 text-white shadow-2xs' : 'text-rose-800 hover:bg-rose-100'">
+                        優先度順
+                      </button>
+                      <button type="button" @click="routeOrderMode = 'shortest'"
+                              class="px-2 h-6 rounded-lg text-[11px] font-extrabold transition cursor-pointer"
+                              :class="routeOrderMode === 'shortest' ? 'bg-rose-600 text-white shadow-2xs' : 'text-rose-800 hover:bg-rose-100'">
+                        最短順
+                      </button>
+                    </div>
                   </div>
 
                   <div class="flex items-center gap-1.5">
@@ -1076,6 +1322,13 @@
                     <!-- 上段: 配置・優先度・サークル名・予定額・操作アイコン -->
                     <div class="flex items-start justify-between gap-2">
                       <div class="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
+                        <!-- ★ 巡回ルート訪問順バッジ -->
+                        <span v-if="patrolOrderMap[circle.circle_id]"
+                              class="inline-flex items-center justify-center px-1.5 py-0.5 text-[11px] font-black rounded-lg bg-slate-900 text-white border border-slate-700 shadow-2xs shrink-0 font-mono"
+                              :title="`巡回ルート 訪問順 #${patrolOrderMap[circle.circle_id]}`">
+                          #{{ patrolOrderMap[circle.circle_id] }}
+                        </span>
+
                         <button @click="jumpToMap(circle)"
                                 title="タップして会場マップで位置を確認"
                                 class="inline-flex items-center gap-0.5 px-2 py-0.5 text-xs font-extrabold rounded-lg border shadow-2xs transition active:scale-95 cursor-pointer shrink-0"
@@ -1194,6 +1447,13 @@
                     <div class="p-3.5 md:p-4 flex flex-col gap-2.5 relative">
                       <!-- 配置番号とステータスバッジ -->
                       <div class="flex items-center gap-1.5 flex-wrap pr-16">
+                        <!-- ★ 巡回ルート訪問順バッジ -->
+                        <span v-if="patrolOrderMap[circle.circle_id]"
+                              class="inline-flex items-center justify-center px-2 py-1 text-xs font-black rounded-lg bg-slate-900 text-white border border-slate-700 shadow-sm shrink-0 font-mono"
+                              :title="`巡回ルート 訪問順 #${patrolOrderMap[circle.circle_id]}`">
+                          🧭 #{{ patrolOrderMap[circle.circle_id] }}
+                        </span>
+
                         <button @click="jumpToMap(circle)"
                                 title="タップして会場マップで位置を確認"
                                 class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-extrabold rounded-lg border shadow-sm transition active:scale-95 cursor-pointer"
@@ -1489,6 +1749,8 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import mapCoordsData from './map_coords.json';
+import mapRoutesData from './map_routes.json';
+import { calculatePatrolRoute } from './utils/routePlanner';
 import { supabaseClient } from './supabase';
 import { STORAGE_KEY, vspoDict, priorityColors } from './constants';
 import { calculateCurrencyBreakdown } from './utils/currency';
@@ -1594,6 +1856,25 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
         };
         const isPanningMap = ref(false);
         const mapCoords = ref((mapCoordsData && mapCoordsData.default) ? mapCoordsData.default : (mapCoordsData || {}));
+        const mapRoutes = ref((mapRoutesData && mapRoutesData.default) ? mapRoutesData.default : (mapRoutesData || {}));
+
+        // ★ 巡回ルート描画ステート (デフォルト: ルート表示ON / 優先度順 / 最後のブースで終了 / 未購入対象)
+        const showRouteOverlay = ref(localStorage.getItem('vggc12th_show_route') !== 'false');
+        const routeOrderMode = ref(localStorage.getItem('vggc12th_route_order_mode') || 'priority'); // 'priority' | 'shortest'
+        const routeTargetFilter = ref(localStorage.getItem('vggc12th_route_target_filter') || 'all'); // 'all' | 'S' | 'SA' | 'include_done'
+        const routeReturnToEntrance = ref(localStorage.getItem('vggc12th_route_return') === 'true');
+
+        watch(showRouteOverlay, (v) => { try { localStorage.setItem('vggc12th_show_route', String(v)); } catch (e) {} });
+        watch(routeOrderMode, (v) => { try { localStorage.setItem('vggc12th_route_order_mode', v); } catch (e) {} });
+        watch(routeTargetFilter, (v) => { try { localStorage.setItem('vggc12th_route_target_filter', v); } catch (e) {} });
+        watch(routeReturnToEntrance, (v) => { try { localStorage.setItem('vggc12th_route_return', String(v)); } catch (e) {} });
+
+        const toggleRouteOverlay = () => {
+          showRouteOverlay.value = !showRouteOverlay.value;
+          if (showRouteOverlay.value) {
+            showListPins.value = true;
+          }
+        };
 
         const toggleListCompactMode = () => {
           isListCompactMode.value = !isListCompactMode.value;
@@ -1726,9 +2007,100 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           });
         });
 
-        // 未購入のリストマップピン一覧 (買物中ナビゲーション用)
+        // ★ 巡回ルート対象ピンの抽出（未購入のみ / Sのみ / S+Aのみ / 済も含む）
+        const routeTargetPins = computed(() => {
+          const result = [];
+          circles.value.forEach(c => {
+            const saved = savedList.value[c.circle_id];
+            if (!saved) return;
+            const isCompleted = Boolean(saved.bought || saved.soldout || isCircleAbsent(c.circle_id));
+            if (routeTargetFilter.value !== 'include_done' && isCompleted) return;
+            const priority = saved.priority || '';
+            if (routeTargetFilter.value === 'S' && priority !== 'S') return;
+            if (routeTargetFilter.value === 'SA' && priority !== 'S' && priority !== 'A') return;
+            const pos = getCircleMapPos(c);
+            if (!pos) return;
+            result.push({
+              circle: c,
+              circle_id: c.circle_id,
+              spaceLabel: `${c.space_sym}-${c.space_num}`,
+              x: pos.x,
+              y: pos.y,
+              priority,
+              isCompleted
+            });
+          });
+          return result;
+        });
+
+        // ★ 通路グラフ（map_routes.json）に沿った巡回ルートの計算結果
+        const activePatrolRoute = computed(() => {
+          return calculatePatrolRoute(mapRoutes.value, routeTargetPins.value, {
+            orderMode: routeOrderMode.value,
+            returnToEntrance: routeReturnToEntrance.value
+          });
+        });
+
+        // ★ サークルID -> 訪問順番号 (1, 2, 3...) のマップ
+        const patrolOrderMap = computed(() => {
+          const map = {};
+          const stops = activePatrolRoute.value?.orderedStops || [];
+          stops.forEach(stop => {
+            map[stop.circle_id] = stop.visitOrder;
+          });
+          return map;
+        });
+
+        const formatSvgPoints = (pts) => {
+          if (!Array.isArray(pts) || pts.length === 0) return '';
+          return pts.map(p => `${p.x},${p.y}`).join(' ');
+        };
+
+        const getRouteBadgeStyle = (stop) => {
+          const scale = mapScale.value;
+          const isSelected = focusedMapCircle.value && focusedMapCircle.value.circle_id === stop.circle_id;
+          let bg = '#059669'; // 未設定: Emerald
+          let color = '#ffffff';
+          let border = '#ffffff';
+
+          if (stop.isCompleted) {
+            bg = '#64748b';
+          } else if (stop.priority === 'S') {
+            bg = '#dc2626';
+          } else if (stop.priority === 'A') {
+            bg = '#facc15';
+            color = '#0f172a';
+            border = '#713f12';
+          } else if (stop.priority === 'B') {
+            bg = '#2563eb';
+          }
+
+          return {
+            left: (stop.badgeX * scale) + 'px',
+            top: (stop.badgeY * scale) + 'px',
+            backgroundColor: bg,
+            color,
+            borderColor: isSelected ? '#ec4899' : border,
+            zIndex: isSelected ? 32 : 18,
+            transform: isSelected
+              ? 'translate3d(-50%, -50%, 0) scale(1.18)'
+              : 'translate3d(-50%, -50%, 0)'
+          };
+        };
+
+        // 未購入のリストマップピン一覧 (買物中ナビゲーション用：巡回ルート順番を優先)
         const unboughtListMapPins = computed(() => {
-          return spaceOrderedListPins.value.filter(p => !p.isCompleted);
+          const unbought = spaceOrderedListPins.value.filter(p => !p.isCompleted);
+          const orderMap = patrolOrderMap.value;
+          if (Object.keys(orderMap).length > 0) {
+            return [...unbought].sort((a, b) => {
+              const oa = orderMap[a.circle_id] ?? 99999;
+              const ob = orderMap[b.circle_id] ?? 99999;
+              if (oa !== ob) return oa - ob;
+              return 0;
+            });
+          }
+          return unbought;
         });
 
         const toggleShoppingMapMode = () => {
@@ -1888,7 +2260,9 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
         };
 
         const stepMapPin = (dir) => {
-          const list = spaceOrderedListPins.value;
+          const list = (showRouteOverlay.value && activePatrolRoute.value.orderedStops.length > 0)
+            ? activePatrolRoute.value.orderedStops
+            : spaceOrderedListPins.value;
           if (!list.length) return;
           const currentId = focusedMapCircle.value?.circle_id;
           const idx = list.findIndex(item => item.circle_id === currentId);
@@ -2848,9 +3222,16 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
             list = list.filter(c => !savedList.value[c.circle_id].bought && !savedList.value[c.circle_id].soldout);
           }
           if (sortOrder.value === 'route') {
-            // 🗺️ 最短巡回ルート (A->N・ブロック順路 & 未購入優先 & S最優先壁サークル先頭)
+            // 🗺️ 会場入口起点・通路グラフに沿った巡回ルート順 (#1 -> #2 -> #3...)
+            const orderMap = patrolOrderMap.value;
             const prioWeight = { 'S': 3, 'A': 2, 'B': 1, '': 0 };
             list.sort((a, b) => {
+              const oa = orderMap[a.circle_id];
+              const ob = orderMap[b.circle_id];
+              if (oa !== undefined && ob !== undefined) return oa - ob;
+              if (oa !== undefined) return -1;
+              if (ob !== undefined) return 1;
+
               const aData = savedList.value[a.circle_id] || {};
               const bData = savedList.value[b.circle_id] || {};
               // 1. 未購入優先 (0: 未購入 -> 1: 購入済 -> 2: 完売)
@@ -3129,6 +3510,39 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
       transform: translate3d(-50%, -50%, 0);
       will-change: left, top, width, height;
       backface-visibility: hidden;
+    }
+
+    .map-route-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 8;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .route-order-badge {
+      position: absolute;
+      min-width: 15px;
+      height: 15px;
+      padding: 0 3px;
+      border-radius: 9999px;
+      border: 1.5px solid #ffffff;
+      font-size: 9px;
+      font-weight: 900;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.55);
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      will-change: left, top, transform;
+    }
+    .route-order-badge:hover {
+      box-shadow: 0 2px 6px rgba(236, 72, 153, 0.75);
     }
     
     ::-webkit-scrollbar { width: 6px; height: 6px; }
