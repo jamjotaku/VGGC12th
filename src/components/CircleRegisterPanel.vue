@@ -1129,10 +1129,10 @@ const activeSellers = computed(() => {
 });
 
 // 商品名の末尾括弧が担当マスタの名前と一致したら自動割り当て
-const autoDetectSellerFromName = (productName) => {
+const autoDetectSellerFromName = (productName, sellersList = activeSellers.value) => {
   const trailing = extractTrailingParenText(productName);
   if (!trailing) return '';
-  return activeSellers.value.includes(trailing) ? trailing : '';
+  return sellersList.includes(trailing) ? trailing : '';
 };
 
 // 担当別の色分けパレット
@@ -1250,8 +1250,9 @@ const allProducts = computed(() => {
     const isSoldOut = manualSoldOut || (remainingStock !== null && remainingStock <= 0);
     const isLowStock = !isSoldOut && remainingStock !== null && remainingStock <= LOW_STOCK_THRESHOLD;
 
-    const explicitSeller = custom.seller !== undefined && custom.seller !== null ? String(custom.seller).trim() : '';
-    const seller = explicitSeller || autoDetectSellerFromName(custom.name);
+    // 担当タグ: custom.seller が明示設定(空文字 '' の明示的未設定を含む)されていればそれを優先、undefined/null のときのみ末尾括弧から自動割り当て
+    const hasExplicitSeller = custom.seller !== undefined && custom.seller !== null;
+    const seller = hasExplicitSeller ? String(custom.seller).trim() : autoDetectSellerFromName(custom.name);
 
     return {
       id: custom.id,
@@ -1405,7 +1406,8 @@ const addSeller = () => {
 };
 
 const renameSeller = (idx, rawNewName) => {
-  const oldName = activeSellers.value[idx];
+  const oldSellers = [...activeSellers.value];
+  const oldName = oldSellers[idx];
   const newName = String(rawNewName || '').trim();
   if (!oldName) return;
   if (!newName) {
@@ -1414,25 +1416,75 @@ const renameSeller = (idx, rawNewName) => {
     return;
   }
   if (newName === oldName) return;
-  if (activeSellers.value.includes(newName)) {
+  if (oldSellers.includes(newName)) {
     alert(`「${newName}」は既に登録されています。`);
     return;
   }
 
-  const nextSellers = [...activeSellers.value];
+  // sellers 差し替え前に、旧マスタ基準で各商品の実効担当を計算し、新名へ移すべき対象を確定する
+  const baseRawItems = Array.isArray(props.circleExtra?.items) ? props.circleExtra.items : [];
+  if (!registerState.value.itemOverrides) {
+    registerState.value.itemOverrides = {};
+  }
+  const overrides = registerState.value.itemOverrides;
+
+  const baseTargetIds = new Set();
+  baseRawItems.forEach((raw, i) => {
+    const name = String(raw?.name || `頒布物 #${i + 1}`).trim();
+    const price = Math.max(0, Number(raw?.price) || 0);
+    const id = `base_${name}_${price}`;
+    const ov = overrides[id];
+    const hasExplicit = ov && ov.seller !== undefined && ov.seller !== null;
+    if (hasExplicit) {
+      // 明示タグが oldName の場合のみ移行（ov.seller === '' の明示的未設定は対象外）
+      if (ov.seller === oldName) {
+        baseTargetIds.add(id);
+      }
+    } else if (autoDetectSellerFromName(name, oldSellers) === oldName) {
+      // 自動判定任せ (undefined / null) かつ旧マスタで oldName に一致していた商品を移行対象に追加
+      baseTargetIds.add(id);
+    }
+  });
+
+  Object.entries(overrides).forEach(([id, ov]) => {
+    if (ov && ov.seller === oldName) {
+      baseTargetIds.add(id);
+    }
+  });
+
+  const customTargets = [];
+  (registerState.value.customItems || []).forEach((custom) => {
+    if (!custom) return;
+    if (custom.seller === oldName) {
+      customTargets.push(custom);
+    } else if (
+      (custom.seller === undefined || custom.seller === null || custom.seller === '') &&
+      autoDetectSellerFromName(custom.name, oldSellers) === oldName
+    ) {
+      customTargets.push(custom);
+    }
+  });
+
+  // sellers を差し替えたあと、対象商品に ov.seller = newName / custom.seller = newName を明示保存する
+  const nextSellers = [...oldSellers];
   nextSellers[idx] = newName;
   registerState.value.sellers = nextSellers;
 
-  // 既存の上書きタグ・当日追加商品のタグも新しい担当名へ連動更新
-  Object.values(registerState.value.itemOverrides || {}).forEach((ov) => {
-    if (ov && ov.seller === oldName) {
-      ov.seller = newName;
+  baseTargetIds.forEach((id) => {
+    if (!overrides[id]) {
+      overrides[id] = {
+        initialStock: null,
+        soldCount: 0,
+        manualSoldOut: false,
+        seller: newName
+      };
+    } else {
+      overrides[id].seller = newName;
     }
   });
-  (registerState.value.customItems || []).forEach((item) => {
-    if (item && item.seller === oldName) {
-      item.seller = newName;
-    }
+
+  customTargets.forEach((custom) => {
+    custom.seller = newName;
   });
 
   if (posSellerFilter.value === oldName) {
@@ -1758,7 +1810,8 @@ const addCustomItem = () => {
   const rawStock = String(newCustomItem.value.initialStock ?? '').trim();
   const initialStock = rawStock === '' ? null : Math.max(0, Math.floor(Number(rawStock)));
   const explicitSeller = String(newCustomItem.value.seller || '').trim();
-  const seller = explicitSeller || autoDetectSellerFromName(name);
+  // 追加フォームで担当未選択（自動判定）の場合は undefined とし、プルダウンで明示的に「未設定('')」へ倒せるように基本商品と仕様を統一
+  const seller = explicitSeller !== '' ? explicitSeller : undefined;
 
   registerState.value.customItems.push({
     id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,

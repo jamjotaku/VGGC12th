@@ -445,6 +445,101 @@ assert(
   '担当別売上集計: BLΔCK(¥14,000) / きょこち。(¥6,900) / 未設定(¥1,000) が現在のタグ×soldCountで正確に集計されること'
 );
 
+// 4) 担当名「変更 (renameSeller)」時の実体化・未設定維持・当日追加商品移行の検証
+const renameSimState = {
+  sellers: ['BLΔCK', 'きょこち。'],
+  baseRawItems: [
+    { name: 'ロングTシャツ(XLのみ) (BLΔCK)', price: 5000 }, // 自動判定のみ（明示タグなし）
+    { name: 'トートバッグ (BLΔCK)', price: 4000 },          // 明示的に未設定(ov.seller === '')へ倒した商品
+    { name: '限定キャップ', price: 3500 }                   // 明示タグ(ov.seller === 'BLΔCK')付き商品
+  ],
+  itemOverrides: {
+    'base_トートバッグ (BLΔCK)_4000': { initialStock: null, soldCount: 1, manualSoldOut: false, seller: '' },
+    'base_限定キャップ_3500': { initialStock: null, soldCount: 1, manualSoldOut: false, seller: 'BLΔCK' }
+  },
+  customItems: [
+    { id: 'c_auto', name: '当日追加ステッカー (BLΔCK)', price: 500, soldCount: 2 }, // 自動判定任せ（seller未定義）
+    { id: 'c_explicit', name: '当日追加色紙', price: 2000, soldCount: 1, seller: 'BLΔCK' } // 明示タグ付き
+  ]
+};
+
+function simRenameSeller(state, idx, newName) {
+  const oldSellers = [...state.sellers];
+  const oldName = oldSellers[idx];
+  const overrides = state.itemOverrides;
+  const baseTargetIds = new Set();
+
+  state.baseRawItems.forEach((raw) => {
+    const id = `base_${raw.name}_${raw.price}`;
+    const ov = overrides[id];
+    const hasExplicit = ov && ov.seller !== undefined && ov.seller !== null;
+    if (hasExplicit) {
+      if (ov.seller === oldName) baseTargetIds.add(id);
+    } else if (autoDetectSeller(raw.name, oldSellers) === oldName) {
+      baseTargetIds.add(id);
+    }
+  });
+
+  Object.entries(overrides).forEach(([id, ov]) => {
+    if (ov && ov.seller === oldName) baseTargetIds.add(id);
+  });
+
+  const customTargets = [];
+  state.customItems.forEach((custom) => {
+    if (custom.seller === oldName) {
+      customTargets.push(custom);
+    } else if (
+      (custom.seller === undefined || custom.seller === null || custom.seller === '') &&
+      autoDetectSeller(custom.name, oldSellers) === oldName
+    ) {
+      customTargets.push(custom);
+    }
+  });
+
+  state.sellers[idx] = newName;
+  baseTargetIds.forEach((id) => {
+    if (!overrides[id]) {
+      overrides[id] = { initialStock: null, soldCount: 0, manualSoldOut: false, seller: newName };
+    } else {
+      overrides[id].seller = newName;
+    }
+  });
+  customTargets.forEach((custom) => {
+    custom.seller = newName;
+  });
+}
+
+function getEffectiveSeller(state, item, isCustom) {
+  if (isCustom) {
+    const hasExplicit = item.seller !== undefined && item.seller !== null;
+    return hasExplicit ? String(item.seller).trim() : autoDetectSeller(item.name, state.sellers);
+  }
+  const id = `base_${item.name}_${item.price}`;
+  const ov = state.itemOverrides[id] || {};
+  const hasExplicit = ov.seller !== undefined && ov.seller !== null;
+  return hasExplicit ? String(ov.seller).trim() : autoDetectSeller(item.name, state.sellers);
+}
+
+// BLΔCK -> BLΔCK_NEW へ担当名を変更
+simRenameSeller(renameSimState, 0, 'BLΔCK_NEW');
+
+assert(
+  getEffectiveSeller(renameSimState, renameSimState.baseRawItems[0], false) === 'BLΔCK_NEW',
+  '担当名変更(自動判定の基本商品): 明示タグなしの基本商品「ロングTシャツ(XLのみ) (BLΔCK)」が変更後も新名(BLΔCK_NEW)を維持すること'
+);
+
+assert(
+  getEffectiveSeller(renameSimState, renameSimState.baseRawItems[1], false) === '',
+  '担当名変更(明示的未設定の維持): ov.seller === "" に設定した商品は担当名変更後も「未設定("")」のままであること'
+);
+
+assert(
+  getEffectiveSeller(renameSimState, renameSimState.baseRawItems[2], false) === 'BLΔCK_NEW' &&
+  getEffectiveSeller(renameSimState, renameSimState.customItems[0], true) === 'BLΔCK_NEW' &&
+  getEffectiveSeller(renameSimState, renameSimState.customItems[1], true) === 'BLΔCK_NEW',
+  '担当名変更(明示タグ＆当日追加商品): 明示タグ付き基本商品および当日追加商品(自動判定分・明示分とも)が新名(BLΔCK_NEW)へ移行すること'
+);
+
 // ----------------------------------------------------------------------
 // 7. 買い物リスト 端末間クラウド同期・PGRST116新規作成・空データ上書き防止検証
 // ----------------------------------------------------------------------
