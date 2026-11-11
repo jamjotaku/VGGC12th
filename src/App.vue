@@ -2597,20 +2597,85 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           });
         };
 
+        // リストデータが空かどうかを判定（初期メタデータのみの空オブジェクトも「空」とみなす）
+        const isListDataEmpty = (listObj) => {
+          if (!listObj || typeof listObj !== 'object') return true;
+          for (const [key, val] of Object.entries(listObj)) {
+            if (key === '__FREE_MEMO__') {
+              if (val && typeof val.text === 'string' && val.text.trim().length > 0) return false;
+            } else if (key === '__TIMELINE__') {
+              if (Array.isArray(val) && val.length > 0) return false;
+            } else if (key === '__BUDGET__') {
+              if (Number(val) > 0) return false;
+            } else if (key === '__PIN_POS__') {
+              continue;
+            } else if (!key.startsWith('__') && val && typeof val === 'object') {
+              return false;
+            }
+          }
+          return true;
+        };
+
+        const getLocalStoredList = () => {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          let localData = {};
+          if (stored) {
+            try { localData = JSON.parse(stored) || {}; } catch (e) { localData = {}; }
+          }
+          if (isListDataEmpty(localData) && !isListDataEmpty(savedList.value)) {
+            return savedList.value;
+          }
+          return localData;
+        };
+
         const saveToCloud = async (newVal) => {
           if (!user.value || !isOnline.value || isReadOnly.value) return; 
           clearTimeout(saveTimeout); isSaving.value = true;
           saveTimeout = setTimeout(async () => {
             try {
-              const updatePromise = supabaseClient.from('shopping_lists').update({ list_data: newVal, updated_at: new Date().toISOString() }).eq('user_id', user.value.id);
-              const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ error: 'TIMEOUT' }), 3500));
-              await Promise.race([updatePromise, timeoutPromise]);
+              const payload = {
+                user_id: user.value.id,
+                list_data: newVal,
+                updated_at: new Date().toISOString()
+              };
+              const upsertPromise = supabaseClient
+                .from('shopping_lists')
+                .upsert(payload, { onConflict: 'user_id' })
+                .select('id, is_public')
+                .maybeSingle();
+              const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ error: 'TIMEOUT', data: null }), 3500));
+              const { data, error } = await Promise.race([upsertPromise, timeoutPromise]);
+
+              if (!error && data) {
+                if (data.id) listId.value = data.id;
+              } else if (error && error !== 'TIMEOUT') {
+                // 万一 shopping_lists.user_id に UNIQUE 制約が未適用の環境 (42P10) の場合は update -> 0行なら insert にフォールバック
+                if (error.code === '42P10') {
+                  const { data: updatedRows } = await supabaseClient
+                    .from('shopping_lists')
+                    .update({ list_data: newVal, updated_at: payload.updated_at })
+                    .eq('user_id', user.value.id)
+                    .select('id');
+                  if (!updatedRows || updatedRows.length === 0) {
+                    const { data: inserted } = await supabaseClient
+                      .from('shopping_lists')
+                      .insert(payload)
+                      .select('id')
+                      .maybeSingle();
+                    if (inserted?.id) listId.value = inserted.id;
+                  } else if (updatedRows[0]?.id) {
+                    listId.value = updatedRows[0].id;
+                  }
+                } else {
+                  console.warn('shopping_lists save warning:', error);
+                }
+              }
             } catch (err) {
               console.warn('Cloud save deferred (offline/weak signal):', err);
             } finally {
               isSaving.value = false;
             }
-          }, 3000); 
+          }, 1500); 
         };
 
         // デフォルト初期アナウンス (Supabase未接続時やオフライン時の安全フォールバック)
@@ -2941,26 +3006,85 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
           }
         };
 
+        let isCloudListLoading = false;
         const loadCloudList = async (userId) => {
+          if (!userId || isCloudListLoading) return;
+          isCloudListLoading = true;
           try {
             const fetchPromise = supabaseClient.from('shopping_lists').select('*').eq('user_id', userId).single();
             const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ error: 'TIMEOUT', data: null }), 2500));
             const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
+            if (error === 'TIMEOUT') {
+              return;
+            }
+
+            const localData = getLocalStoredList();
+            const localHasData = !isListDataEmpty(localData);
+
             if (data && !error) {
-              savedList.value = data.list_data || {}; 
-              isPublic.value = data.is_public; 
-              listId.value = data.id; 
-              syncFreeMemoFromState();
-            } else if (!error) {
-              const stored = localStorage.getItem(STORAGE_KEY);
-              let initialData = {};
-              if (stored) { try { initialData = JSON.parse(stored); } catch (e) {} }
-              const { data: newData } = await supabaseClient.from('shopping_lists').insert({ user_id: userId, list_data: initialData }).select().single();
-              if (newData) { savedList.value = newData.list_data; listId.value = newData.id; syncFreeMemoFromState(); }
+              const cloudData = data.list_data || {};
+              const cloudIsEmpty = isListDataEmpty(cloudData);
+
+              // 初回同期時のデータ消失防止: クラウドが空({})でローカルにリストがある場合はローカルを採用してクラウドへ保存
+              if (cloudIsEmpty && localHasData) {
+                savedList.value = localData;
+                isPublic.value = Boolean(data.is_public);
+                listId.value = data.id;
+                syncFreeMemoFromState();
+                const nowIso = new Date().toISOString();
+                const { data: upserted, error: upsertErr } = await supabaseClient
+                  .from('shopping_lists')
+                  .upsert({ user_id: userId, list_data: localData, updated_at: nowIso }, { onConflict: 'user_id' })
+                  .select()
+                  .maybeSingle();
+                if (!upsertErr && upserted) {
+                  listId.value = upserted.id;
+                } else if (upsertErr && upsertErr.code === '42P10') {
+                  await supabaseClient
+                    .from('shopping_lists')
+                    .update({ list_data: localData, updated_at: nowIso })
+                    .eq('user_id', userId);
+                }
+              } else {
+                savedList.value = cloudData;
+                isPublic.value = Boolean(data.is_public);
+                listId.value = data.id;
+                syncFreeMemoFromState();
+              }
+            } else if (!error || error.code === 'PGRST116') {
+              // 行が存在しない場合（.single() の 0行エラー PGRST116）はローカルの内容を初期値として新規行を作成
+              const initialData = localHasData ? localData : (savedList.value || {});
+              const nowIso = new Date().toISOString();
+              const { data: newData, error: upsertErr } = await supabaseClient
+                .from('shopping_lists')
+                .upsert({ user_id: userId, list_data: initialData, updated_at: nowIso }, { onConflict: 'user_id' })
+                .select()
+                .maybeSingle();
+              if (!upsertErr && newData) {
+                savedList.value = newData.list_data || initialData;
+                isPublic.value = Boolean(newData.is_public);
+                listId.value = newData.id;
+                syncFreeMemoFromState();
+              } else {
+                // UNIQUE 制約未適用環境 (42P10) 等のフォールバックとして insert を実行
+                const { data: insertedData } = await supabaseClient
+                  .from('shopping_lists')
+                  .insert({ user_id: userId, list_data: initialData })
+                  .select()
+                  .single();
+                if (insertedData) {
+                  savedList.value = insertedData.list_data || initialData;
+                  isPublic.value = Boolean(insertedData.is_public);
+                  listId.value = insertedData.id;
+                  syncFreeMemoFromState();
+                }
+              }
             }
           } catch (e) {
             console.warn('loadCloudList network error, maintaining local list:', e);
+          } finally {
+            isCloudListLoading = false;
           }
         };
 
@@ -3433,7 +3557,20 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
         const onTogglePublic = async (newVal) => {
           isPublic.value = newVal;
           if (user.value) {
-            await supabaseClient.from('shopping_lists').update({ is_public: newVal }).eq('user_id', user.value.id);
+            const nowIso = new Date().toISOString();
+            const { data, error } = await supabaseClient
+              .from('shopping_lists')
+              .upsert(
+                { user_id: user.value.id, list_data: savedList.value, is_public: newVal, updated_at: nowIso },
+                { onConflict: 'user_id' }
+              )
+              .select('id')
+              .maybeSingle();
+            if (!error && data?.id) {
+              listId.value = data.id;
+            } else if (error && error.code === '42P10') {
+              await supabaseClient.from('shopping_lists').update({ is_public: newVal }).eq('user_id', user.value.id);
+            }
           }
         };
         const signOut = async () => {

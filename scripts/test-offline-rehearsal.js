@@ -446,6 +446,108 @@ assert(
 );
 
 // ----------------------------------------------------------------------
+// 7. 買い物リスト 端末間クラウド同期・PGRST116新規作成・空データ上書き防止検証
+// ----------------------------------------------------------------------
+console.log('\n☁️ 【Test 7】買い物リスト 端末間クラウド同期・0行(PGRST116)初期作成・データ消失防止テスト');
+
+const isListDataEmpty = (listObj) => {
+  if (!listObj || typeof listObj !== 'object') return true;
+  for (const [key, val] of Object.entries(listObj)) {
+    if (key === '__FREE_MEMO__') {
+      if (val && typeof val.text === 'string' && val.text.trim().length > 0) return false;
+    } else if (key === '__TIMELINE__') {
+      if (Array.isArray(val) && val.length > 0) return false;
+    } else if (key === '__BUDGET__') {
+      if (Number(val) > 0) return false;
+    } else if (key === '__PIN_POS__') {
+      continue;
+    } else if (!key.startsWith('__') && val && typeof val === 'object') {
+      return false;
+    }
+  }
+  return true;
+};
+
+// 擬似 shopping_lists テーブル (user_id UNIQUE)
+const mockShoppingListsTable = new Map();
+
+function simSelectSingleShoppingList(userId) {
+  if (!mockShoppingListsTable.has(userId)) {
+    return { data: null, error: { code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned' } };
+  }
+  return { data: mockShoppingListsTable.get(userId), error: null };
+}
+
+function simUpsertShoppingList(userId, listData) {
+  const existing = mockShoppingListsTable.get(userId);
+  const row = {
+    id: existing?.id || `list_${userId}`,
+    user_id: userId,
+    list_data: JSON.parse(JSON.stringify(listData)),
+    is_public: existing?.is_public || false,
+    updated_at: new Date().toISOString()
+  };
+  mockShoppingListsTable.set(userId, row);
+  return { data: row, error: null };
+}
+
+function simLoadCloudList(userId, localData) {
+  const { data, error } = simSelectSingleShoppingList(userId);
+  if (error === 'TIMEOUT') return localData;
+
+  const localHasData = !isListDataEmpty(localData);
+  if (data && !error) {
+    const cloudData = data.list_data || {};
+    const cloudIsEmpty = isListDataEmpty(cloudData);
+    if (cloudIsEmpty && localHasData) {
+      const { data: upserted } = simUpsertShoppingList(userId, localData);
+      return upserted.list_data;
+    }
+    return cloudData;
+  } else if (!error || error.code === 'PGRST116') {
+    const initialData = localHasData ? localData : {};
+    const { data: newData } = simUpsertShoppingList(userId, initialData);
+    return newData.list_data;
+  }
+  return localData;
+}
+
+// ケース1: 行が存在しない新規ユーザー (PGRST116) が端末A(PC)でリストを持った状態でログイン → クラウドに行が作成されること
+const userA = 'user_new_001';
+const pcLocalList = {
+  [circles[0].circle_id]: { priority: 'S', price: '1500', bought: false, soldout: false }
+};
+const syncedListA = simLoadCloudList(userA, pcLocalList);
+assert(
+  mockShoppingListsTable.has(userA) && Boolean(syncedListA[circles[0].circle_id]),
+  'PGRST116対応: shopping_lists にまだ行が無いユーザーでもログイン時に初期行が作成されローカルリストが保存されること'
+);
+
+// ケース2: 端末B(スマホ・空リスト)で同一アカウントにログイン → 端末Aのリストが同期されること
+const phoneSyncedList = simLoadCloudList(userA, {});
+assert(
+  Boolean(phoneSyncedList[circles[0].circle_id]) && phoneSyncedList[circles[0].circle_id].priority === 'S',
+  '端末間同期: 別端末(スマホ)でログインした際にPCで作成した買い物リストがそのまま反映されること'
+);
+
+// ケース3: 先に空のスマホでログインして空の行({ __TIMELINE__: [] })が作られた後、PC(ローカルにリストあり)でログインしてもPCのリストが消えずクラウドへ保存されること
+const userB = 'user_phone_first_002';
+simLoadCloudList(userB, { __TIMELINE__: [], __FREE_MEMO__: { text: '' } });
+assert(
+  mockShoppingListsTable.has(userB) && isListDataEmpty(mockShoppingListsTable.get(userB).list_data),
+  '空リスト判定: メタデータ初期値のみのオブジェクトが空リストとして正しく認識されること'
+);
+
+const pcListForUserB = {
+  [circles[1].circle_id]: { priority: 'A', price: '2000', bought: false, soldout: false }
+};
+const afterPcLogin = simLoadCloudList(userB, pcListForUserB);
+assert(
+  Boolean(afterPcLogin[circles[1].circle_id]) && Boolean(mockShoppingListsTable.get(userB).list_data[circles[1].circle_id]),
+  '初回同期データ消失防止: クラウドが空でローカルにリストがある場合はローカルを採用してクラウドへupsertすること'
+);
+
+// ----------------------------------------------------------------------
 // テスト結果集計
 // ----------------------------------------------------------------------
 console.log('\n======================================================================');
