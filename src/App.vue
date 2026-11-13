@@ -1,11 +1,11 @@
 <template>
-<div class="font-sans bg-gray-50 text-gray-900 h-screen flex flex-col pt-12 md:pt-11 pb-14 md:pb-0 overflow-hidden">
+<div class="font-sans bg-gray-50 text-gray-900 h-screen flex flex-col overflow-hidden" :class="activeTab === 'register' ? 'pt-0 pb-0' : 'pt-12 md:pt-11 pb-14 md:pb-0'">
 
     <!-- ★ PWA自動更新＆オフライン通知トースト -->
     <PwaUpdateToast />
 
-    <!-- ナビゲーションバー -->
-    <nav class="bg-white shadow-sm border-b px-3 md:px-4 py-2 md:py-2.5 flex justify-between items-center z-20 flex-shrink-0">
+    <!-- ナビゲーションバー (レジモード時は非表示にして全画面化) -->
+    <nav v-show="activeTab !== 'register'" class="bg-white shadow-sm border-b px-3 md:px-4 py-2 md:py-2.5 flex justify-between items-center z-20 flex-shrink-0">
       <div class="font-bold text-base md:text-lg flex items-center gap-2">
         VGGC 12th 
         <span v-if="isReadOnly" class="text-[10px] md:text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full font-bold">閲覧専用</span>
@@ -81,8 +81,8 @@
       <span class="text-[10px] bg-white/25 hover:bg-white/35 px-2 py-0.5 rounded-full shrink-0">確認する →</span>
     </div>
 
-    <!-- 11/14 当日カウントダウン ＆ 進行状況バー（全画面共通・アコーディオン展開対応） -->
-    <EventCountdownBar :countdown="eventCountdown" :is-current-schedule="isCurrentSchedule" />
+    <!-- 11/14 当日カウントダウン ＆ 進行状況バー（全画面共通・アコーディオン展開対応 / レジモード時は非表示） -->
+    <EventCountdownBar v-show="activeTab !== 'register'" :countdown="eventCountdown" :is-current-schedule="isCurrentSchedule" />
 
     <!-- メインレイアウト -->
     <div class="flex-1 flex overflow-hidden bg-gray-100 min-h-0">
@@ -449,8 +449,8 @@
       ========================================== -->
       <div class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50 relative min-w-0">
         
-        <!-- PC専用タブヘッダー -->
-        <div class="hidden md:flex border-b bg-white shadow-xs z-10 flex-shrink-0">
+        <!-- PC専用タブヘッダー (レジモード時は非表示にして全画面化) -->
+        <div v-show="activeTab !== 'register'" class="hidden md:flex border-b bg-white shadow-xs z-10 flex-shrink-0">
           <button @click="activeTab = 'search'" :class="activeTab === 'search' ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'" class="flex-1 py-3 border-b-2 font-extrabold text-sm transition-colors flex justify-center items-center gap-1.5 cursor-pointer">
             <span>🔍 サークルを探す</span>
             <span class="text-xs px-2 py-0.5 rounded-full" :class="activeTab === 'search' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'">{{ filteredCircles.length }}</span>
@@ -1644,7 +1644,7 @@
 
         <!-- =========================================
              サークル参加モード（簡易POSレジ機能 v1: M-15-16 Black Stance）
-             タブレット横画面で100%フルワイド・2ペイン表示
+             タブレット横画面・スマホともに100%フルスクリーン表示
         ========================================== -->
         <CircleRegisterPanel
           v-if="isCircleModeEnabled"
@@ -1654,12 +1654,13 @@
           :user="user"
           :is-online="isOnline"
           :circle-id="REGISTER_CIRCLE_ID"
+          @exit-register="exitRegisterMode"
         />
       </div>
     </div>
 
-    <!-- スマホ専用ボトムナビゲーション (44px以上のタッチ領域確保) -->
-    <div class="md:hidden bg-white/95 backdrop-blur-md border-t border-gray-200 flex justify-around items-stretch pb-safe fixed bottom-0 w-full z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+    <!-- スマホ専用ボトムナビゲーション (44px以上のタッチ領域確保 / レジモード時は非表示にして全画面化) -->
+    <div v-show="activeTab !== 'register'" class="md:hidden bg-white/95 backdrop-blur-md border-t border-gray-200 flex justify-around items-stretch pb-safe fixed bottom-0 w-full z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
       <button @click="activeTab = 'map'" class="flex-1 min-h-[54px] py-2 flex flex-col items-center justify-center gap-0.5 transition-colors relative cursor-pointer" :class="activeTab === 'map' ? 'text-blue-600 font-extrabold bg-blue-50/40' : 'text-gray-500 hover:text-gray-800'">
         <span v-if="activeTab === 'map'" class="absolute top-0 inset-x-4 h-0.5 bg-blue-600 rounded-b-full"></span>
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
@@ -1795,6 +1796,17 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
         const showSearchFilters = ref(false);
         const searchInputRef = ref(null);
         const activeTab = ref('search');
+        const lastNonRegisterTab = ref('search');
+        watch(activeTab, (newTab, oldTab) => {
+          if (newTab !== 'register' && newTab) {
+            lastNonRegisterTab.value = newTab;
+          } else if (newTab === 'register' && oldTab && oldTab !== 'register') {
+            lastNonRegisterTab.value = oldTab;
+          }
+        });
+        const exitRegisterMode = () => {
+          activeTab.value = lastNonRegisterTab.value || 'search';
+        };
         const isTweetLoading = ref(false);
         
         const savedList = ref({});

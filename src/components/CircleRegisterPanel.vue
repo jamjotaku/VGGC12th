@@ -1,11 +1,19 @@
 <template>
   <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100 select-none">
     <!-- =========================================================
-         上部ヘッダーバー (タブレット横画面で一目で状態が分かるPOSヘッダー)
+         上部ヘッダーバー (タブレット横画面で一目で状態が分かる全画面POSヘッダー)
     ========================================================== -->
-    <div class="bg-slate-900 text-white px-3 md:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 shrink-0 border-b border-slate-800 shadow-sm">
-      <!-- 左: サークル情報 & 同期ステータス -->
-      <div class="flex items-center gap-2.5 min-w-0">
+    <div class="bg-slate-900 text-white px-3 md:px-5 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0 border-b border-slate-800 shadow-sm">
+      <!-- 左: 通常画面へ戻るボタン & サークル情報 & 同期ステータス -->
+      <div class="flex items-center gap-2 md:gap-2.5 min-w-0">
+        <button
+          @click="handleExitRegister"
+          class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 hover:text-white border border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1 shrink-0 cursor-pointer"
+          title="レジ全画面を終了してマップ・買い物リスト画面へ戻ります"
+        >
+          <span>←</span>
+          <span class="hidden sm:inline">通常画面</span>
+        </button>
         <span class="bg-amber-500 text-slate-950 font-black text-xs md:text-sm px-2.5 py-1 rounded-lg shadow-xs shrink-0 flex items-center gap-1">
           <span>🏪</span>
           <span>{{ circleSpaceLabel }}</span>
@@ -25,8 +33,8 @@
         </div>
       </div>
 
-      <!-- 中央〜右: リアルタイム売上サマリーバッジ & サブビュー切替ボタン -->
-      <div class="flex items-center gap-2 md:gap-3 ml-auto">
+      <!-- 中央〜右: リアルタイム売上サマリーバッジ & サブビュー切替ボタン & ブラウザ全画面ボタン -->
+      <div class="flex items-center gap-2 md:gap-2.5 ml-auto">
         <!-- 当日売上クイック表示 -->
         <div class="hidden sm:flex items-center gap-3 bg-slate-800/90 border border-slate-700 px-3.5 py-1.5 rounded-xl">
           <div>
@@ -73,6 +81,18 @@
             </span>
           </button>
         </div>
+
+        <!-- ブラウザ全画面 (Fullscreen API) トグルボタン -->
+        <button
+          @click="toggleBrowserFullscreen"
+          class="px-2.5 py-1.5 rounded-xl border text-xs font-extrabold transition flex items-center gap-1 shrink-0 cursor-pointer active:scale-95"
+          :class="isBrowserFullscreen
+            ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'
+            : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'"
+          :title="isBrowserFullscreen ? 'ブラウザの全画面表示を解除します' : 'ブラウザのアドレスバー等も隠して完全全画面表示にします'"
+        >
+          <span>{{ isBrowserFullscreen ? '🗗 全画面解除' : '⛶ 全画面' }}</span>
+        </button>
       </div>
     </div>
 
@@ -140,7 +160,7 @@
         </div>
 
         <!-- 商品カードグリッド (スクロール領域) -->
-        <div class="flex-1 overflow-y-auto p-3 md:p-4 pb-24 md:pb-6">
+        <div class="flex-1 overflow-y-auto p-3 md:p-4 pb-6">
           <div v-if="allProducts.length === 0" class="bg-white rounded-2xl border-2 border-dashed border-slate-300 p-10 text-center space-y-3">
             <div class="text-4xl">📦</div>
             <div class="text-base font-extrabold text-slate-700">頒布物データがまだ登録されていません</div>
@@ -337,7 +357,7 @@
         </div>
 
         <!-- 会計計算・お釣り・確定エリア (下部固定) -->
-        <div class="p-3.5 md:p-4 bg-slate-900 text-white space-y-3 shrink-0 pb-20 md:pb-4">
+        <div class="p-3.5 md:p-4 bg-slate-900 text-white space-y-3 shrink-0 pb-4">
           <!-- 合計金額バー -->
           <div class="flex items-baseline justify-between border-b border-slate-700 pb-2.5">
             <div class="text-xs font-bold text-slate-300">
@@ -1037,7 +1057,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { supabaseClient } from '../supabase';
 
 const props = defineProps({
@@ -1063,6 +1083,8 @@ const props = defineProps({
   }
 });
 
+const emit = defineEmits(['exit-register']);
+
 const LOW_STOCK_THRESHOLD = 5;
 
 const subTab = ref('pos');
@@ -1072,6 +1094,43 @@ const isSyncing = ref(false);
 const hasPendingSync = ref(false);
 const checkoutFeedbackText = ref('');
 const newSellerInput = ref('');
+const isBrowserFullscreen = ref(false);
+
+const syncFullscreenState = () => {
+  isBrowserFullscreen.value = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+};
+
+const toggleBrowserFullscreen = async () => {
+  try {
+    const docEl = document.documentElement;
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      if (docEl.requestFullscreen) {
+        await docEl.requestFullscreen();
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    }
+  } catch (e) {
+    console.warn('Fullscreen toggle skipped:', e);
+  } finally {
+    syncFullscreenState();
+  }
+};
+
+const handleExitRegister = async () => {
+  try {
+    if (document.fullscreenElement && document.exitFullscreen) {
+      await document.exitFullscreen();
+    }
+  } catch (e) {}
+  emit('exit-register');
+};
 let feedbackTimer = null;
 let cloudSyncTimer = null;
 
@@ -2074,5 +2133,13 @@ onMounted(() => {
   if (props.user && props.isOnline) {
     syncWithCloudOnInitOrOnline();
   }
+  syncFullscreenState();
+  document.addEventListener('fullscreenchange', syncFullscreenState);
+  document.addEventListener('webkitfullscreenchange', syncFullscreenState);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('fullscreenchange', syncFullscreenState);
+  document.removeEventListener('webkitfullscreenchange', syncFullscreenState);
 });
 </script>
