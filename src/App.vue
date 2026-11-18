@@ -1,5 +1,44 @@
 <template>
-<div class="font-sans bg-gray-50 text-gray-900 h-screen flex flex-col overflow-hidden" :class="activeTab === 'register' ? 'pt-0 pb-0' : 'pt-12 md:pt-11 pb-14 md:pb-0'">
+<!-- ★ VGGC 12th サービス終了表示 (2026-11-22 0:00 JST 以降自動切替 / ?preview_eol=1 で事前確認可) -->
+<div v-if="isServiceEnded" class="font-sans bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white min-h-screen flex flex-col items-center justify-center p-4 sm:p-6">
+  <PwaUpdateToast />
+  <div class="w-full max-w-lg bg-white text-gray-900 rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 text-white text-center space-y-1">
+      <div class="inline-block px-3 py-1 rounded-full bg-white/15 text-[11px] font-extrabold tracking-wide mb-1">
+        VGGC 12th サークルリスト＆マップ
+      </div>
+      <h1 class="text-lg sm:text-xl font-black leading-snug">
+        このアプリ（VGGC 12th）のサービスは終了しました
+      </h1>
+    </div>
+
+    <div class="p-6 sm:p-7 space-y-5 text-center">
+      <p class="text-sm sm:text-base font-bold text-gray-800 leading-relaxed">
+        ご利用ありがとうございました。<br>
+        現在、<span class="text-indigo-700 font-black">次回 VGGC 13th 向けアプリを鋭意製作中です</span>！
+      </p>
+
+      <div class="pt-1">
+        <a href="https://vggc-13th.vercel.app/"
+           class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm shadow-md transition">
+          <span>🚀 VGGC 13th アプリを開く</span>
+          <span class="text-xs opacity-90">↗</span>
+        </a>
+        <div class="mt-2 text-[11px] text-gray-500 font-mono break-all">
+          https://vggc-13th.vercel.app/
+        </div>
+      </div>
+
+      <div class="pt-4 border-t border-gray-200 text-left bg-gray-50 rounded-2xl p-4 text-xs text-gray-600 leading-relaxed space-y-1">
+        <p>・当アプリは有志が作成した<strong>非公式ファンメイドサイト</strong>です。</p>
+        <p>・イベント公式様やデータ元のサイト様へのお問い合わせはご遠慮ください。</p>
+        <p>・お問い合わせはこちら：<a href="mailto:vggcappinfo@gmail.com" class="text-blue-600 font-bold underline">vggcappinfo@gmail.com</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div v-else class="font-sans bg-gray-50 text-gray-900 h-screen flex flex-col overflow-hidden" :class="activeTab === 'register' ? 'pt-0 pb-0' : 'pt-12 md:pt-11 pb-14 md:pb-0'">
 
     <!-- ★ PWA自動更新＆オフライン通知トースト -->
     <PwaUpdateToast />
@@ -2375,6 +2414,9 @@ import { checkUpcomingTimelineReminders, generateTestTimelineNotification } from
 
         // ★ イベント日時 & カウントダウン
         const currentTime = ref(new Date());
+        const SERVICE_END_AT_MS = new Date('2026-11-22T00:00:00+09:00').getTime();
+        const isPreviewEol = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview_eol') === '1';
+        const isServiceEnded = computed(() => isPreviewEol || currentTime.value.getTime() >= SERVICE_END_AT_MS);
         setInterval(() => {
           currentTime.value = new Date();
         }, 60000);
